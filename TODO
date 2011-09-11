@@ -1,0 +1,8 @@
+* MMU
+* Funções rcsr, wcsr e scall
+* Interupt handling (pode ser bizu fazer um lm32_pic separado)
+* UART
+* Timer
+* Flash
+* Conectar tudo
+* Emuar o linux
