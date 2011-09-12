@@ -7,7 +7,6 @@
 lm32.Lm32Interrupts = function() {
     this.irq_line = new Array(32);
     var dummy_handler = function() {
-        var masked = 0;
         return {
             handle_it: function() {},
             is_pending: function() { return false; }
@@ -16,9 +15,9 @@ lm32.Lm32Interrupts = function() {
     
     for(var i = 0; i < 32; i++) {
         var d = dummy_handler();
-        this.add_handler(i, d.is_pending, d.set_pending, d.is_masked, d.set_masked);
+        this.add_line(i, d);
     }
-}
+};
 
 lm32.Lm32Interrupts.prototype.add_line = function(irq, line) {
     if(irq < 0 && irq > 31) {
@@ -28,5 +27,5 @@ lm32.Lm32Interrupts.prototype.add_line = function(irq, line) {
         handle_it:  line.handle_it,
         is_pending: line.is_pending
     };
-}
+};
 
