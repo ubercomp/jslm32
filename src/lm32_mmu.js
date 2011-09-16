@@ -13,16 +13,26 @@
  */
 lm32.MMU = function() {
     this.handlers = [];
+    this.last_handler = undefined;
 };
 
-lm32.MMU.prototype.get_handler_for = function(addr) {
+lm32.MMU.prototype.get_handler_for = function(addr, name) {
     var handler = undefined;
+    if(this.last_handler
+        && (addr >= this.last_handler.base_addr)
+        && (addr < this.last_handler.base_addr + this.last_handler.size)) {
+        return this.last_handler;
+    }
     var len = this.handlers.length;
     for(var i = 0; i < len; i++) {
         var curr = this.handlers[i];
         if((addr >= curr.base_addr) && (addr < curr.base_addr + curr.size)) {
             handler = curr;
+            this.last_handler = handler;
         }
+    }
+    if(!handler) {
+        lm32.util.trace("MMU get_handler_for (called by " + name + "): no handler found for address 0x" + addr.toString(16));
     }
     return handler;
 };
@@ -44,80 +54,115 @@ lm32.MMU.prototype.add_memory = function(base, size, funcs) {
     var h = {};
     h.base_addr = base;
     h.size = size;
-    if(funcs.read_8)   { h.read_8 = funcs.read_8;   };
-    if(funcs.read_16)  { h.read_8 = funcs.read_16;  };
-    if(funcs.read_32)  { h.read_8 = funcs.read_32;  };
-    if(funcs.write_8)  { h.read_8 = funcs.write_8;  };
-    if(funcs.write_16) { h.read_8 = funcs.write_16; };
-    if(funcs.write_32) { h.read_8 = funcs.write_32; };
+    if(funcs.read_8)   { h.read_8   = funcs.read_8;   };
+    if(funcs.read_16)  { h.read_16  = funcs.read_16;  };
+    if(funcs.read_32)  { h.read_32  = funcs.read_32;  };
+    if(funcs.write_8)  { h.write_8  = funcs.write_8;  };
+    if(funcs.write_16) { h.write_16 = funcs.write_16; };
+    if(funcs.write_32) { h.write_32 = funcs.write_32; };
     this.handlers.push(h);
+    lm32.util.trace("Adding handlers at address 0x", base.toString(16), " with size", size, "->", h, "n = ", this.handlers.length);
+
 };
 
-lm32.MMU.prototype.read_8 = function(addr) {
-    var handler = this.get_handler_for(addr);
-    if(handler && handler.read_8) {
+lm32.MMU.prototype.read = function(addr, mask, name) {
+    var handler = this.get_handler_for(addr, name);
+    if(handler && (name in handler)) {
         var offset = addr - handler.base_addr;
-        return (handler.read_8(offset) & 0xff);
+        return((handler[name])(offset) & mask);
+    } else {
+        lm32.util.error_report("MMU: Cannot " + name + " at address: 0x" + lm32.bits.unsigned32(addr.toString(16)));
     }
+}
+
+lm32.MMU.prototype.read_8 = function(addr) {
+    return this.read(addr, 0xff, "read_8");
 };
 
 lm32.MMU.prototype.read_16 = function(addr) {
-    var handler = this.get_handler_for(addr);
-    if(handler && handler.read_16) {
-        var offset = addr - handler.base_addr;
-        return (handler.read_16(offset) & 0xffff);
-    }
+    return this.read(addr, 0xffff, "read_16");
 };
 
 lm32.MMU.prototype.read_32 = function(addr) {
-    var handler = this.get_handler_for(addr);
-    if(handler && handler.read_32) {
-        var offset = addr - handler.base_addr;
-        return (handler.read_32(offset) & 0xffffffff);
-    }
+    return this.read(addr, 0xffffffff, "read_32");
 };
 
-lm32.MMU.prototype.write_8 = function(addr, val) {
-    var handler = this.get_handler_for(addr);
+lm32.MMU.prototype.write = function(addr, val, mask, name) {
+    var handler = this.get_handler_for(addr, name);
     var ret = true;
-    if(handler && handler.write_8) {
-        var offset = addr = handler.base_addr;
-        var sval = val & 0xff; // safe
+    if(handler && (name in handler)) {
+        var offset = addr - handler.base_addr;
+        var sval = val & mask; //safe
         try {
-            handler.write_8(offset, sval);
-        } catch (err) {
+            (handler[name])(offset, sval);
+        } catch(err) {
             ret = false;
+            lm32.util.error_report("MMU: Cannot " + name + " at address: 0x" + lm32.bits.unsigned32(addr.toString(16)));
         }
     }
     return ret;
+}
+
+lm32.MMU.prototype.write_8 = function(addr, val) {
+    return this.write(addr, val, 0xff, "write_8");
 };
 
 lm32.MMU.prototype.write_16 = function(addr, val) {
-    var handler = this.get_handler_for(addr);
-    var ret = true;
-    if(handler && handler.write_16) {
-        var offset = addr = handler.base_addr;
-        var sval = val & 0xffff; // safe
-        try {
-            handler.write_16(offset, sval);
-        } catch(err) {
-            ret = false;
-        }
-    }
-    return ret;
+    return this.write(addr, val, 0xffff, "write_16");
 };
 
 lm32.MMU.prototype.write_32 = function(addr, val) {
-    var handler = this.get_handler_for(addr);
-    var ret = true;
-    if(handler && handler.write_32) {
-        var offset = addr = handler.base_addr;
-        var sval = val & 0xffffffff; // safe
-        try {
-            handler.write_32(offset, sval);
-        } catch(err) {
-            ret = false;
+    return this.write(addr, val, 0xffffffff, "write_32");
+};
+
+lm32.MMU.prototype.copy_region = function(from, to, size) {
+    if(size <= 0) {
+        return;
+    }
+    for(var i = 0; i < size; i++) {
+        this.write_8(to + i, this.read_8(from + i));
+    }
+};
+
+lm32.MMU.prototype.load_binary = function (file, addr) {
+    var req, response, size, i, buff, has_typed_arrays;
+    if (typeof ActiveXObject == "function") return this.load_binary_ie9(file, addr);
+    req = new XMLHttpRequest();
+    req.open('GET', file, false);
+    has_typed_arrays = ('ArrayBuffer' in window && 'Uint8Array' in window);
+    if (has_typed_arrays && 'mozResponseType' in req) {
+        req.mozResponseType = 'arraybuffer';
+    } else if (has_typed_arrays && 'responseType' in req) {
+        req.responseType = 'arraybuffer';
+    } else {
+        req.overrideMimeType('text/plain; charset=x-user-defined');
+        has_typed_arrays = false;
+    }
+    req.send(null);
+    if (req.status != 200 && req.status != 0) {
+        throw "Error while loading " + file;
+    }
+    if (has_typed_arrays && 'mozResponse' in req) {
+        response = req.mozResponse;
+    } else if (has_typed_arrays && req.mozResponseArrayBuffer) {
+        response = req.mozResponseArrayBuffer;
+    } else if ('responseType' in req) {
+        response = req.response;
+    } else {
+        response = req.responseText;
+        has_typed_arrays = false;
+    }
+    if (has_typed_arrays) {
+        size = response.byteLength;
+        buff = new Uint8Array(response, 0, size);
+        for (i = 0; i < size; i++) {
+            this.write_8(addr + i, buff[i]);
+        }
+    } else {
+        size = response.length;
+        for (i = 0; i < size; i++) {
+            this.write_8(addr + i, response.charCodeAt(i));
         }
     }
-    return ret;
+    return size;
 };
