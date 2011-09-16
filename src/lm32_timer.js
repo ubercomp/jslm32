@@ -40,6 +40,7 @@ lm32.Lm32Timer = function(params) {
     }
 
     function read_32(addr) {
+        console.log("timer read_32")
         var r = 0;
         addr = addr >> 2;
 
@@ -60,6 +61,7 @@ lm32.Lm32Timer = function(params) {
     }
 
     function write_32(addr, value) {
+        console.log("timer write_32")
         addr = addr >> 2;
 
         switch (addr) {
@@ -106,6 +108,7 @@ lm32.Lm32Timer = function(params) {
         }
         ptimer.stop();
     }
+    this.reset = reset;
 
     function iomem_size() {
         return 4*R_MAX;
@@ -116,8 +119,8 @@ lm32.Lm32Timer = function(params) {
 
     // publication:
     this.regs = new Array(R_MAX);
-    reset();
-    this.iomem_size = iomem_size();
+    this.reset();
+    this.iomem_size = (4 * R_MAX);
     this.update_irq = update_irq;
     this.read_32    = read_32;
     this.write_32   = write_32;
