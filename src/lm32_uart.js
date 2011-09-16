@@ -93,6 +93,7 @@ lm32.UART = function(params) {
     }
     
     function read_32(addr) {
+        console.log("UART read_32");
         var r = 0;
         addr = addr >> 2;
         switch (addr) {
@@ -120,6 +121,7 @@ lm32.UART = function(params) {
     }
 
     function write_32(addr, value) {
+        console.log("UART write_32");
         addr = addr >> 2;
         switch (addr) {
             case R_RXTX:
@@ -165,15 +167,12 @@ lm32.UART = function(params) {
         }
         this.regs[R_LSR] = LSR_THRE | LSR_TEMT;
     }
-
-    function iomem_size() {
-        return 4*R_MAX;
-    }
+    this.reset = reset;
 
     // publication:
     this.regs = new Array(R_MAX);
-    reset();
-    this.iomem_size = iomem_size();
+    this.reset();
+    this.iomem_size = (4 * R_MAX);
     this.update_irq = update_irq;
     this.read_32    = read_32;
     this.write_32   = write_32;
