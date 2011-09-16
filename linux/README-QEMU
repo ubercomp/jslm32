@@ -1,0 +1,15 @@
+To run on QEMU:
+Download qemu-0.15.0
+
+Patch the file qemu-0.15.0/target-lm32/translate.c:
+  comment out the line that says
+  cpu_abort(dc->env, "fetching nop sequence\n");
+
+Build qemu with
+./configure --target-list=lm32-softmmu
+make
+
+Change to qemu-0.15.0/lm32-softmmu directory
+Run the following command
+./qemu-system-lm32 -nographic -M lm32-uclinux -pflash PATH/TO/flash.img
+
