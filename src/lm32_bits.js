@@ -15,14 +15,6 @@ lm32.bits.mask00_31 = 0xffffffff;
 lm32.bits.mask00_25 = 0x03ffffff;
 lm32.bits.mask00_15 = 0x0000ffff;
 
-lm32.bits.overflow_unsigned32 = function(n) {
-    // overflows to an unsigned32 number
-    var pos = n > 0;
-    if(pos) {
-        return lm32.bits.unsigned32()
-    }
-};
-
 lm32.bits.sign_extend_8_32 = function(n) {
     var n8 = n & 0xff; // mask00_07
     var mask_7_7 = 0x80;
