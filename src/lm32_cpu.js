@@ -6,6 +6,9 @@
  *
  * Specification available at:
  *   http://milkymist.org/socdoc/lm32_archman.pdf
+ *
+ * NOTES:
+ *   Contrary to what the manual says, branch instructions are in the xyimm16 format
  */
 "use strict";
 
@@ -99,7 +102,7 @@ lm32.Lm32Cpu = function (params) {
         return {
             rx: bits.rmsr_u(op, bits.mask21_25, 21),
             ry: bits.rmsr_u(op, bits.mask16_20, 16),
-            imm16: op & bits.mask00_16
+            imm16: op & bits.mask00_15
         }
     }
 
@@ -123,7 +126,7 @@ lm32.Lm32Cpu = function (params) {
         this.regs[REG_BA] = this.pc & bits.mask00_31;
         this.ie.bie = this.ie.ie;
         this.ie.ie = 0;
-        this.pc = bits.unsigned32(this.deba + id * 32);
+        this.next_pc = bits.unsigned32(this.deba + id * 32);
     }
     this.raise_debug_exception = raise_debug_exception;
 
@@ -137,7 +140,7 @@ lm32.Lm32Cpu = function (params) {
         this.ie.eie = this.ie.ie;
         this.ie.ie = 0;
         var base = this.dc.re ? this.deba : this.eba;
-        this.pc = bits.unsigned32(base + id * 32);
+        this.next_pc = bits.unsigned32(base + id * 32);
     }
     this.raise_exception = raise_exception;
 
@@ -187,7 +190,7 @@ lm32.Lm32Cpu = function (params) {
 
     function b(op) {
         var rx = bits.rmsr_u(op, bits.mask21_25, 21);
-        this.pc = bits.unsigned32(this.regs[rx]);
+        this.next_pc = bits.unsigned32(this.regs[rx]);
         //disas("b r" + rx);
         //disas("b 0x" + lm32.bits.unsigned32(this.regs[rx]).toString(16));
         this.result = RESULT_BRANCH;
@@ -195,65 +198,65 @@ lm32.Lm32Cpu = function (params) {
     }
 
     function be(op) {
-        var i = instr_yximm16(op);
+        var i = instr_xyimm16(op);
         var vrx = this.regs[i.rx];
         var vry = this.regs[i.ry];
         //disas("be r" + i.rx + ", r" + i.ry +", ", i.imm16);
         this.issue = 1; // issue when not taken
         if (vrx === vry) {
-            this.pc = bits.unsigned32(this.pc + bits.sign_extend_18_32(i.imm16 << 2));
+            this.next_pc = bits.unsigned32(this.pc + bits.sign_extend_18_32(i.imm16 << 2));
             this.issue = 4; // issue when taken
         }
         this.result = RESULT_BRANCH;
     }
 
     function bg(op) {
-        var i = instr_yximm16(op);
+        var i = instr_xyimm16(op);
         var vrx = this.regs[i.rx];
         var vry = this.regs[i.ry];
         //disas("bg r" + i.rx + ", r" + i.ry +", ", i.imm16);
         this.issue = 1; // issue when not taken
         if (vrx > vry) {
-            this.pc = bits.unsigned32(this.pc + bits.sign_extend_18_32(i.imm16 << 2));
+            this.next_pc = bits.unsigned32(this.pc + bits.sign_extend_18_32(i.imm16 << 2));
             this.issue = 4; // issue when taken
         }
         this.result = RESULT_BRANCH;
     }
 
     function bge(op) {
-        var i = instr_yximm16(op);
+        var i = instr_xyimm16(op);
         var vrx = this.regs[i.rx];
         var vry = this.regs[i.ry];
         //disas("bge r" + i.rx + ", r" + i.ry +", ", i.imm16);
         this.issue = 1; // issue when not taken
         if (vrx >= vry) {
-            this.pc = bits.unsigned32(this.pc + bits.sign_extend_18_32(i.imm16 << 2));
+            this.next_pc = bits.unsigned32(this.pc + bits.sign_extend_18_32(i.imm16 << 2));
             this.issue = 4; // issue when taken
         }
         this.result = RESULT_BRANCH;
     }
 
     function bgeu(op) {
-        var i = instr_yximm16(op);
+        var i = instr_xyimm16(op);
         var vrx = this.regs[i.rx];
         var vry = this.regs[i.ry];
         //disas("bgeu r" + i.rx + ", r" + i.ry +", ", i.imm16);
         this.issue = 1; // issue when not taken
         if (bits.unsigned32(vrx) >= bits.unsigned32(vry)) {
-            this.pc = bits.unsigned32(this.pc + bits.sign_extend_18_32(i.imm16 << 2));
+            this.next_pc = bits.unsigned32(this.pc + bits.sign_extend_18_32(i.imm16 << 2));
             this.issue = 4; // issue when taken
         }
         this.result = RESULT_BRANCH;
     }
 
     function bgu(op) {
-        var i = instr_yximm16(op);
+        var i = instr_xyimm16(op);
         var vrx = this.regs[i.rx];
         var vry = this.regs[i.ry];
-        //disas("bgu r" + i.rx + ", r" + i.ry +", ", i.imm16);
+        //disas("bgu r" + i.rx + ", r" + i.ry +", ", bits.sign_extend_18_32(i.imm16 << 2));
         this.issue = 1; // issue when not taken
         if (bits.unsigned32(vrx) > bits.unsigned32(vry)) {
-            this.pc = bits.unsigned32(this.pc + bits.sign_extend_18_32(i.imm16 << 2));
+            this.next_pc = bits.unsigned32(this.pc + bits.sign_extend_18_32(i.imm16 << 2));
             this.issue = 4; // issue when taken
         }
         this.result = RESULT_BRANCH;
@@ -262,19 +265,19 @@ lm32.Lm32Cpu = function (params) {
     function bi(op) {
         var imm26 = op & bits.mask00_25;
         //disas("bi " + imm26<<2);
-        this.pc = bits.unsigned32(this.pc + bits.sign_extend_28_32(imm26 << 2));
+        this.next_pc = bits.unsigned32(this.pc + bits.sign_extend_28_32(imm26 << 2));
         this.issue = 4;
         this.result = RESULT_BRANCH;
     }
 
     function bne(op) {
-        var i = instr_yximm16(op);
+        var i = instr_xyimm16(op);
         var vrx = this.regs[i.rx];
         var vry = this.regs[i.ry];
         //disas("bne r" + i.rx + ", r" + i.ry +", ", i.imm16);
         this.issue = 1; // issue when not taken
         if (vrx !== vry) {
-            this.pc = bits.unsigned32(this.pc + bits.sign_extend_18_32(i.imm16 << 2));
+            this.next_pc = bits.unsigned32(this.pc + bits.sign_extend_18_32(i.imm16 << 2));
             this.issue = 4; // issue when taken
         }
         this.result = RESULT_BRANCH;
@@ -283,11 +286,12 @@ lm32.Lm32Cpu = function (params) {
     function branch(op) {
         // calls the correct branch function, depending on op
         var path = bits.rmsr_u(op, bits.mask21_25, 21);
-        console.log("branch path: " + path);
         switch(path) {
-            case 0x1e:
+            case REG_RA:
+                (ret.bind(this))(op); break;
+            case REG_BA:
                 (eret.bind(this))(op); break;
-            case 0x1f:
+            case REG_EA:
                 (bret.bind(this))(op); break;
             default:
                 (b.bind(this))(op); break;
@@ -301,7 +305,7 @@ lm32.Lm32Cpu = function (params) {
     }
 
     function bret(op) {
-        this.pc = bits.unsigned32(this.regs[REG_BA]);
+        this.next_pc = bits.unsigned32(this.regs[REG_BA]);
         this.ie.ie = this.ie.bie;
         this.issue = 4;
         this.result = RESULT_BRET;
@@ -310,7 +314,7 @@ lm32.Lm32Cpu = function (params) {
     function call(op) {
         var rx = bits.rmsr_u(op, bits.mask21_25, 21);
         this.regs[REG_RA] = (this.pc + 4) & bits.mask00_31;
-        this.pc = bits.unsigned32(this.regs[rx]);
+        this.next_pc = bits.unsigned32(this.regs[rx]);
         this.issue = 4;
         this.result = 1;
     }
@@ -319,7 +323,7 @@ lm32.Lm32Cpu = function (params) {
         var imm26 = op & bits.mask00_25;
         this.regs[REG_RA] = (this.pc + 4) & bits.mask00_31;
         //disas("calli 0x" + bits.sign_extend_28_32(imm26 << 2).toString(16));
-        this.pc = bits.unsigned32(this.pc + bits.sign_extend_28_32(imm26 << 2));
+        this.next_pc = bits.unsigned32(this.pc + bits.sign_extend_28_32(imm26 << 2));
         this.issue = 4;
         this.result = 1;
     }
@@ -491,7 +495,7 @@ lm32.Lm32Cpu = function (params) {
     }
 
     function eret(op) {
-        this.pc = bits.unsigned32(this.regs[REG_EA]);
+        this.next_pc = bits.unsigned32(this.regs[REG_EA]);
         this.ie.ie = this.ie.eie;
         this.issue = 3;
         this.result = RESULT_ERET;
@@ -508,6 +512,7 @@ lm32.Lm32Cpu = function (params) {
         }
         
         if(!ok) {
+            lm32.util.error_report("Error reading byte (lb) at address 0x" + bits.unsigned32(addr).toString(16));
             this.raise_exception(EXCEPT_DATA_BUS_ERROR);
         }
 
@@ -527,6 +532,7 @@ lm32.Lm32Cpu = function (params) {
         }
 
         if(!ok) {
+            lm32.util.error_report("Error reading byte (lbu) at address 0x" + bits.unsigned32(addr).toString(16));
             this.raise_exception(EXCEPT_DATA_BUS_ERROR);
         }
 
@@ -546,6 +552,7 @@ lm32.Lm32Cpu = function (params) {
         }
 
         if(!ok) {
+            lm32.util.error_report("Error reading half-word (lh) at address 0x" + bits.unsigned32(addr).toString(16));
             this.raise_exception(EXCEPT_DATA_BUS_ERROR);
         }
 
@@ -565,6 +572,7 @@ lm32.Lm32Cpu = function (params) {
         }
 
         if(!ok) {
+            lm32.util.error_report("Error reading half-word (lhu) at address 0x" + bits.unsigned32(addr).toString(16));
             this.raise_exception(EXCEPT_DATA_BUS_ERROR);
         }
         
@@ -577,7 +585,7 @@ lm32.Lm32Cpu = function (params) {
         var addr = this.regs[i.ry] + bits.sign_extend_16_32(i.imm16);
         var ok = false;
         var val = this.mmu.read_32(bits.unsigned32(addr));
-        //disas("lw r" + i.rx + ", (r" + i.ry + " + 0x" + bits.unsigned32(bits.sign_extend_16_32(addr)).toString(16) + ")");
+        //disas("lw r" + i.rx + ", (r" + i.ry + " + 0x" + bits.unsigned32(bits.sign_extend_16_32(i.imm16)).toString(16) + ")");
         //disas("lw r" + i.rx + " 0x" + bits.unsigned32(addr).toString(16))
         if(val !== undefined) {
             ok = true;
@@ -710,7 +718,6 @@ lm32.Lm32Cpu = function (params) {
             case CSR_WP1:
             case CSR_WP2:
             case CSR_WP3:
-                // TODO raise exception? raise_exception(EXCEPT_DATA_BUS_ERROR);
                 read = false;
                 break;
 
@@ -763,6 +770,10 @@ lm32.Lm32Cpu = function (params) {
     }
 
     // ret is a pseudo instruction -> do not implement
+    function ret(op) {
+        console.log("ret");
+        this.next_pc = this.regs[REG_RA];
+    }
 
     function sb(op) {
         var i = instr_xyimm16(op);
@@ -873,8 +884,8 @@ lm32.Lm32Cpu = function (params) {
     function sw(op) {
         var i = instr_xyimm16(op);
         var addr = this.regs[i.rx] + bits.sign_extend_16_32(i.imm16);
-        //disas("sw (r" + i.rx + " + 0x" + bits.unsigned32(bits.sign_extend_16_32(i.imm16)).toString(16) + "), r" + i.ry);
         var ok = this.mmu.write_32(bits.unsigned32(addr), this.regs[i.ry]);
+        console.log("mem[0x" + addr.toString(16) + "] = " + bits.unsigned32(this.regs[i.ry]).toString(16));
         if(!ok) {
             this.raise_exception(EXCEPT_DATA_BUS_ERROR);
         }
@@ -1135,6 +1146,7 @@ lm32.Lm32Cpu.prototype.reset = function(params) {
     // control and status registers
     // program counter: unsigned, two lower bits should always be 0
     this.pc = params.bootstrap_pc;
+    this.next_pc = this.pc + 4; // jumps write on next_pc
 
     // interrupt enable
     this.ie = {
@@ -1222,6 +1234,7 @@ lm32.Lm32Cpu.prototype.reset = function(params) {
 
 
 lm32.Lm32Cpu.prototype.set_irq = function(irq_line, irq_value) {
+    console.log("set_irq " + irq_line + " " + irq_value);
     if(irq_line > 32) {
         lm32.util.error_report("Trying to set invalid irq: " + irq_line);
         return;
@@ -1240,16 +1253,17 @@ lm32.Lm32Cpu.prototype.set_irq = function(irq_line, irq_value) {
  * Runs the processor during a certain number of clock cycles.
  * @param clocks the number of clock cycles to run
  */
-lm32.Lm32Cpu.prototype.step = function(clocks) {
+lm32.Lm32Cpu.prototype.step = function(instructions) {
     var bits = lm32.bits;
-    var c = 0;
+    var i = 0;
     var inc;
     var valid;
-    var old_pc, op, opcode;
-    while(c <= clocks) {
-        old_pc = this.pc;
-        //this.next_pc = this.pc + 4;
-        valid = (old_pc & 0x3) === 0;
+    var op, pc, opcode;
+    while(i <= instructions) {
+        pc = this.pc;
+        this.next_pc = bits.unsigned32(pc + 4);
+
+        valid = (pc & 0x3) === 0;
 
         if(!valid) {
             // TODO remove this as it slows down processing?
@@ -1257,24 +1271,19 @@ lm32.Lm32Cpu.prototype.step = function(clocks) {
             this.raise_exception(2); // 2 = instruction bus error
             inc = 2; // arbitrary
         } else {
-            op = this.mmu.read_32(old_pc);
+            op = this.mmu.read_32(pc);
             opcode = bits.rmsr_u(op, bits.mask26_31, 26);
-            lm32.util.trace("Running opcode 0x" + opcode.toString(16) + " at pc 0x" + this.pc.toString(16) + " (" + this.opnames[opcode] + ")");
+            //lm32.util.trace("Running opcode 0x" + opcode.toString(16) + " at pc 0x" + this.pc.toString(16) + " (" + this.opnames[opcode] + ")");
             (this.optable[opcode])(op);
-            lm32.util.trace("DUMP:");
-            for(var dump = 1; dump <= 4; dump++) {
-                lm32.util.trace("    r" + dump + " = 0x" + lm32.bits.unsigned32(this.regs[dump]).toString(16));
-            }
-            // this.pc = this.next_pc
+            this.pc = this.next_pc;
+            //lm32.util.trace("DUMP:");
+            //for(var dump = 1; dump <= 4; dump++) {
+            //    lm32.util.trace("    r" + dump + " = 0x" + lm32.bits.unsigned32(this.regs[dump]).toString(16));
+            //}
+            //lm32.util.trace("   r29" + " = 0x" + lm32.bits.unsigned32(this.regs[29]).toString(16))
 
-            if(old_pc === this.pc) {
-                // TODO usar next pc -> destino das operaçoes de jump
-                // TODO this disallows busy waiting... what is the right way to increment pc?
-                // no jump -> increment pc
-                this.pc = bits.unsigned32(old_pc + 4);
-            }
             inc = this.issue + this.result;
-            c = c + inc;
+            i++;
         }
         
         this.cc = (this.cc + inc) & bits.mask00_31;
