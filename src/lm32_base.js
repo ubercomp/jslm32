@@ -21,7 +21,18 @@ lm32.util.overlaps = function(a, b, c, d) {
 };
 
 lm32.util.error_report = function() {
-    // TODO implement (may be as simple as console.log(arguments)
-    console.log(arguments);
+    var strs = [];
+    for(var i = 0; arguments[i]; i++) {
+        strs[i] = arguments[i].toString();
+    }
+    console.log("ERROR: " + strs.join(" "));
+};
+
+lm32.util.trace = function() {
+    var strs = []
+    for(var i = 0; arguments[i]; i++) {
+        strs[i] = arguments[i].toString();
+    }
+    console.log("TRACE:" + strs.join(" "));
 };
     
