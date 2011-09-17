@@ -85,12 +85,26 @@ lm32.Lm32Cpu = function (params) {
     }
 
     // instruction formats (page 49 of architecture manual)
+    function instr_decode(op) {
+        return {
+            opcode: bits.rmsr_u(op, bits.mask26_31, 26),
+            imm5:   op & 0x1f,
+            imm16:  op & 0xffff,
+            imm26:  op & 0x3ffffff,
+            csr:    bits.rmsr_u(op, bits.mask21_25, 21),
+            r0:     bits.rmsr_u(op, bits.mask21_25, 21),
+            r1:     bits.rmsr_u(op, bits.mask16_20, 16),
+            r2:     bits.rmsr_u(op, bits.mask11_15, 11)
+        };
+    }
+    this.instr_decode = instr_decode;
+
     function instr_yzx(op) {
         // y z x is the order in which the registers appear in the opcode
         return {
-            rx: bits.rmsr_u(op, bits.mask11_15, 11),
             ry: bits.rmsr_u(op, bits.mask21_25, 21),
-            rz: bits.rmsr_u(op, bits.mask16_20, 16)
+            rz: bits.rmsr_u(op, bits.mask16_20, 16),
+            rx: bits.rmsr_u(op, bits.mask11_15, 11)
         };
 
     }
@@ -109,8 +123,8 @@ lm32.Lm32Cpu = function (params) {
     function instr_yximm16(op) {
         // register register
         return {
-            rx: bits.rmsr_u(op, bits.mask16_20, 16),
             ry: bits.rmsr_u(op, bits.mask21_25, 21),
+            rx: bits.rmsr_u(op, bits.mask16_20, 16),
             imm16: op & bits.mask00_15
         }
     }
@@ -175,7 +189,7 @@ lm32.Lm32Cpu = function (params) {
     function andhi(op) {
         var i = instr_yximm16(op);
         this.regs[i.rx] = this.regs[i.ry] & (i.imm16 << 16);
-        //disas("andhi r" + i.rx + ", r" + i.ry, ", 0x" + i.imm16.toString(16));
+        disas("andhi r" + i.rx + ", r" + i.ry, ", 0x" + i.imm16.toString(16));
         this.result = 1;
         this.issue = 1;
     }
@@ -183,7 +197,7 @@ lm32.Lm32Cpu = function (params) {
     function andi(op) {
         var i = instr_yximm16(op);
         this.regs[i.rx] = this.regs[i.ry] & bits.zero_extend_16_32(i.imm16);
-        //disas("andi r" + i.rx + ", r" + i.ry, ", 0x" + bits.zero_extend_16_32(i.imm16).toString(16));
+        disas("andi r" + i.rx + ", r" + i.ry, ", 0x" + bits.zero_extend_16_32(i.imm16).toString(16));
         this.result = 1;
         this.issue = 1;
     }
@@ -289,9 +303,9 @@ lm32.Lm32Cpu = function (params) {
         switch(path) {
             case REG_RA:
                 (ret.bind(this))(op); break;
-            case REG_BA:
-                (eret.bind(this))(op); break;
             case REG_EA:
+                (eret.bind(this))(op); break;
+            case REG_BA:
                 (bret.bind(this))(op); break;
             default:
                 (b.bind(this))(op); break;
@@ -485,7 +499,7 @@ lm32.Lm32Cpu = function (params) {
         var vry = this.regs[i.ry];
         var vrz = this.regs[i.rz];
         var u = bits.unsigned32;
-        if (vrz === 0) {
+        if (vrz == 0) {
             raise_exception(EXCEPT_DIVIDE_BY_ZERO);
         } else {
             this.regs[i.rx] = (Math.floor(u(vry) / u(vrz))) & bits.mask00_31;
@@ -719,6 +733,7 @@ lm32.Lm32Cpu = function (params) {
             case CSR_WP2:
             case CSR_WP3:
                 read = false;
+                throw("Invalid read on csr 0x"+ csr.toString(16));
                 break;
 
             case CSR_IE:
@@ -885,7 +900,7 @@ lm32.Lm32Cpu = function (params) {
         var i = instr_xyimm16(op);
         var addr = this.regs[i.rx] + bits.sign_extend_16_32(i.imm16);
         var ok = this.mmu.write_32(bits.unsigned32(addr), this.regs[i.ry]);
-        console.log("mem[0x" + addr.toString(16) + "] = " + bits.unsigned32(this.regs[i.ry]).toString(16));
+        //console.log("mem[0x" + addr.toString(16) + "] = " + bits.unsigned32(this.regs[i.ry]).toString(16));
         if(!ok) {
             this.raise_exception(EXCEPT_DATA_BUS_ERROR);
         }
@@ -905,6 +920,7 @@ lm32.Lm32Cpu = function (params) {
             case CSR_IP:
             case CSR_CC:
             case CSR_CFG:
+                throw("Cannot write to csr number " + csr);
                 break; // TODO raise exception?
 
             case CSR_IE:
@@ -1259,6 +1275,10 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
     var inc;
     var valid;
     var op, pc, opcode;
+    var stats = [];
+    for(var s = 0; s < 64; s++) {
+        stats[s] = 0;
+    }
     while(i <= instructions) {
         pc = this.pc;
         this.next_pc = bits.unsigned32(pc + 4);
@@ -1273,8 +1293,12 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
         } else {
             op = this.mmu.read_32(pc);
             opcode = bits.rmsr_u(op, bits.mask26_31, 26);
+            stats[opcode] = stats[opcode] + 1;
             //lm32.util.trace("Running opcode 0x" + opcode.toString(16) + " at pc 0x" + this.pc.toString(16) + " (" + this.opnames[opcode] + ")");
             (this.optable[opcode])(op);
+            if(this.next_pc == 201248568) {
+                //console.log("Jumping to addi from 0x" + pc.toString(16));
+            }
             this.pc = this.next_pc;
             //lm32.util.trace("DUMP:");
             //for(var dump = 1; dump <= 4; dump++) {
@@ -1288,4 +1312,26 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
         
         this.cc = (this.cc + inc) & bits.mask00_31;
     }
+    function print_stats(opnames, stats) {
+        var len = stats.length;
+        for(var i = 0; i < len; i++) {
+            if(stats[i] != 0) {
+                console.log(opnames[i] + " = " + stats[i]);
+            }
+        }
+    }
+    
+    print_stats(this.opnames, stats);
+    this.dump();
+};
+
+lm32.Lm32Cpu.prototype.dump = function() {
+    var u = lm32.bits.unsigned32;
+    var s = function(x) { return "0x" + u(x).toString(16) };
+    var i;
+    for(i = 0; i < 32; i++) {
+        if(this.regs[i] != 0) {
+            console.log("r" + i + " = " + s(this.regs[i]));
+        }
+    };
 };

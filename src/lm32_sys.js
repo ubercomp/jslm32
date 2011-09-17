@@ -123,22 +123,16 @@ lm32.start = function(steps) {
 
     mmu.load_binary("../linux/u-boot.bin", RAM_BASE);
     mmu.load_binary("../linux/hwsetup.bin", HWSETUP_BASE);
-    //lm32.start(110069); last number of step that doesn't crash
-    // Finished running at pc: 0xbfdf728
 
     window.flash = flash;
     window.mmu = mmu;
     window.cpu = cpu;
 
     function f() {
-        console.log("Cpu running at pc: 0x" + cpu.pc.toString(16));
+        console.log("Started running at pc: 0x" + cpu.pc.toString(16));
         cpu.step(steps);
         console.log("Finished running at pc: 0x" + cpu.pc.toString(16));
-        console.log("r0 = " + cpu.regs[0]);
-        console.log("r1 = " + cpu.regs[1]);
+
     }
-    var t = setTimeout(f, 1000);
-    window.stop = function() {
-        clearTimeout(t);
-    }
+    setTimeout(f, 0);
 };

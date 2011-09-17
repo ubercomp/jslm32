@@ -44,6 +44,15 @@ lm32.bits.sign_extend_18_32 = function(n) {
     return n18;
 };
 
+lm32.bits.sign_extend_26_32 = function(n) {
+    var n26 = n & 0x3ffffff;
+    var mask_25_25 = 0x2000000;
+    if((n26 & mask_25_25) !== 0) {
+        n26 = n26 | 0xfc000000;
+    }
+    return n26;
+}
+
 lm32.bits.sign_extend_28_32 = function(n) {
     // extends a 28 bit value to 32 bits, preserving sign
     var n28 = n & 0xfffffff; // mask_00_27
