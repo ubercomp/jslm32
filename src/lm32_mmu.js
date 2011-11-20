@@ -61,7 +61,7 @@ lm32.MMU.prototype.add_memory = function(base, size, funcs) {
     if(funcs.write_16) { h.write_16 = funcs.write_16; };
     if(funcs.write_32) { h.write_32 = funcs.write_32; };
     this.handlers.push(h);
-    lm32.util.trace("Adding handlers at address 0x", base.toString(16), " with size", size, "->", h, "n = ", this.handlers.length);
+    // lm32.util.trace("Adding handlers at address 0x", base.toString(16), " with size", size, "->", h, "n = ", this.handlers.length);
 
 };
 

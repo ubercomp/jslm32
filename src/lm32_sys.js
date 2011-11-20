@@ -4,6 +4,9 @@
  */
 "use strict";
 lm32.start = function(steps) {
+    // TODO should be argument
+    var terminal_div = 'termDiv'
+
     var FLASH_BASE        = 0x04000000;
     var FLASH_SECTOR_SIZE = 256*1024;
     var FLASH_SIZE        = 32*1024*1024;
@@ -30,7 +33,6 @@ lm32.start = function(steps) {
     var EBA_BASE = RAM_BASE;
     var DEBA_BASE = RAM_BASE;
     var BOOT_PC = RAM_BASE;
-
     var mmu = new lm32.MMU();
     var cpu_params = {
         mmu: mmu,
@@ -103,10 +105,29 @@ lm32.start = function(steps) {
         write_32: timer2.write_32.bind(timer2)
     };
 
+    // Terminal and UART
+    var terminal;
+    function start_terminal() {
+        function termHandler() {
+            // TODO termHandler should inform UART
+            this.newLine();
+            var line = this.lineBuffer;
+            if (line != "") {
+                this.write("You typed: " + line);
+            }
+            this.prompt();
+        }
+        terminal = new Terminal({
+                handler: termHandler,
+                termDiv: 'termDiv'
+            });
+        terminal.open();
+    }
+    start_terminal();
+
     var uart0 = new lm32.UART({
         putchar: function(c) {
-            var t = document.getElementById('texto');
-            t.innerHTML = t.innerHTML + ' ' + c;
+            terminal.write(String.fromCharCode(c));
         },
         irq_line: UART0_IRQ,
         set_irq: set_irq
@@ -116,6 +137,8 @@ lm32.start = function(steps) {
         write_32: uart0.write_32.bind(uart0)
     };
 
+
+    // Gluing everything together
     mmu.add_memory(RAM_BASE, RAM_SIZE, ram_mem_handlers);
     mmu.add_memory(FLASH_BASE, FLASH_SIZE, flash_mem_handlers);
     mmu.add_memory(UART0_BASE, uart0.iomem_size, uart0_mem_handlers);

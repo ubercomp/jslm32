@@ -95,7 +95,6 @@ lm32.UART = function(params) {
     function read_32(addr) {
         var r = 0;
         addr = addr >> 2;
-        console.log("UART read_32 " + addr + " value = " + this.regs[addr]);
         switch (addr) {
             case R_RXTX:
                 r = this.regs[R_RXTX];

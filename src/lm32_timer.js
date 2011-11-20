@@ -61,8 +61,8 @@ lm32.Lm32Timer = function(params) {
     }
 
     function write_32(addr, value) {
-        console.log("timer write_32")
         addr = addr >> 2;
+        console.log("timer write_32 addr = " + addr + " val = " + value);
 
         switch (addr) {
             case R_SR:

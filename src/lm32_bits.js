@@ -29,55 +29,6 @@ lm32.bits.sign_extend = function(val, width) {
     return sval;
 };
 
-
-lm32.bits.sign_extend_8_32 = function(n) {
-    var n8 = n & 0xff; // mask00_07
-    var mask_7_7 = 0x80;
-    if((n8 & mask_7_7) !== 0) {
-        n8 = n8 | 0xfffffff0;
-    }
-    return n8;
-};
-
-lm32.bits.sign_extend_16_32 = function(n) {
-    // extends a 16 bit value to 32 bits, preserving sign
-    var n16 = n & 0xffff; // mask_00_15
-    var mask_15_15 = 0x8000;
-    if((n16 & mask_15_15) !== 0) {
-        n16 = n16 | 0xffff0000; // mask_16_31
-    }
-    return n16;
-};
-
-lm32.bits.sign_extend_18_32 = function(n) {
-    // extends a 18 bit value to 32 bits, preserving sign
-    var n18 = n & 0x3ffff; // mask_00_17
-    var mask_17_17 = 0x20000;
-    if((n18 & mask_17_17) !== 0) { // number is negative
-        n18 = n18 | 0xfffc0000;
-    }
-    return n18;
-};
-
-lm32.bits.sign_extend_26_32 = function(n) {
-    var n26 = n & 0x3ffffff;
-    var mask_25_25 = 0x2000000;
-    if((n26 & mask_25_25) !== 0) {
-        n26 = n26 | 0xfc000000;
-    }
-    return n26;
-}
-
-lm32.bits.sign_extend_28_32 = function(n) {
-    // extends a 28 bit value to 32 bits, preserving sign
-    var n28 = n & 0xfffffff; // mask_00_27
-    var mask_27_27 = 0x8000000;
-    if((n28 & mask_27_27) !== 0) { // negative
-        n28 = n28 | 0xf0000000;
-    }
-    return n28;
-};
-
 lm32.bits.unsigned32 = function(n) {
     // gets the unsigned 32 bit value of the number
     var s32 = n & 0xffffffff; // signed n value
@@ -88,15 +39,6 @@ lm32.bits.unsigned32 = function(n) {
         u32 = mag + 0x80000000;
     }
     return u32;
-};
-
-lm32.bits.zero_extend_8_32 = function(n) {
-    return (n & 0x0000000f);
-};
-
-lm32.bits.zero_extend_16_32 = function(n) {
-    // extends a 16 bit value to 32 bits, using zeros
-    return (n & 0x0000ffff);
 };
 
 lm32.bits.rmsr = function(dword, mask, bits) {
