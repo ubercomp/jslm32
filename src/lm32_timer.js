@@ -88,7 +88,7 @@ lm32.Lm32Timer = function(params) {
                 lm32.util.error_report("lm32_timer: write access to unknown register 0x" + (addr << 2).toString(16));
                 break;
         }
-        update_irq();
+        this.update_irq();
     }
 
     function hit() {
@@ -99,7 +99,7 @@ lm32.Lm32Timer = function(params) {
             ptimer.run(1);
         }
 
-        update_irq();
+        this.update_irq();
     }
 
     function reset() {
@@ -109,10 +109,6 @@ lm32.Lm32Timer = function(params) {
         ptimer.stop();
     }
     this.reset = reset;
-
-    function iomem_size() {
-        return 4*R_MAX;
-    }
 
     // TODO lm32_timer_init -> de onde vem o BH?
     

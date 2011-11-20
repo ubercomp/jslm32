@@ -15,6 +15,21 @@ lm32.bits.mask00_31 = 0xffffffff;
 lm32.bits.mask00_25 = 0x03ffffff;
 lm32.bits.mask00_15 = 0x0000ffff;
 
+lm32.bits.zero_extend = function(val, width) {
+    return val & ((1 << width) - 1);
+};
+
+lm32.bits.sign_extend = function(val, width) {
+    var sval;
+    /* LSL.  */
+    val <<= 32 - width;
+    sval = val;
+    /* ASR.  */
+    sval >>= 32 - width;
+    return sval;
+};
+
+
 lm32.bits.sign_extend_8_32 = function(n) {
     var n8 = n & 0xff; // mask00_07
     var mask_7_7 = 0x80;

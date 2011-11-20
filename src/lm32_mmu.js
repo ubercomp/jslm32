@@ -66,10 +66,13 @@ lm32.MMU.prototype.add_memory = function(base, size, funcs) {
 };
 
 lm32.MMU.prototype.read = function(addr, mask, name) {
+    if(addr > 0x0bffe000 && addr <= (0x0bffe000 + 4096)) {
+        console.log("hwsetup");
+    }
     var handler = this.get_handler_for(addr, name);
     if(handler && (name in handler)) {
         var offset = addr - handler.base_addr;
-        return((handler[name])(offset) & mask);
+        return (((handler[name])(offset)) & mask);
     } else {
         lm32.util.error_report("MMU: Cannot " + name + " at address: 0x" + lm32.bits.unsigned32(addr.toString(16)));
     }
@@ -97,8 +100,10 @@ lm32.MMU.prototype.write = function(addr, val, mask, name) {
             (handler[name])(offset, sval);
         } catch(err) {
             ret = false;
-            lm32.util.error_report("MMU: Cannot " + name + " at address: 0x" + lm32.bits.unsigned32(addr.toString(16)));
+            lm32.util.error_report("MMU: Cannot " + name + " value 0x" + sval  +  " at address: 0x" + lm32.bits.unsigned32(addr.toString(16)));
         }
+    } else {
+        ret = false;
     }
     return ret;
 }

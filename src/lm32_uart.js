@@ -91,16 +91,16 @@ lm32.UART = function(params) {
         }
         set_irq(irq_line, irq);
     }
-    
+
     function read_32(addr) {
-        console.log("UART read_32");
         var r = 0;
         addr = addr >> 2;
+        console.log("UART read_32 " + addr + " value = " + this.regs[addr]);
         switch (addr) {
             case R_RXTX:
                 r = this.regs[R_RXTX];
                 this.regs[R_LSR] &= ~LSR_DR;
-                update_irq();
+                this.update_irq();
                 break;
             case R_IIR:
             case R_LSR:
@@ -121,7 +121,6 @@ lm32.UART = function(params) {
     }
 
     function write_32(addr, value) {
-        console.log("UART write_32");
         addr = addr >> 2;
         switch (addr) {
             case R_RXTX:
@@ -144,7 +143,7 @@ lm32.UART = function(params) {
                 lm32.util.error_report("lm32_uart: write access to unknown register 0x" + (addr << 2).toString(16));
                 break;
         }
-        update_irq();
+        this.update_irq();
     }
 
     function can_rx() {
@@ -158,7 +157,7 @@ lm32.UART = function(params) {
 
         this.regs[R_LSR]  = this.regs[R_LSR] | LSR_DR;
         this.regs[R_RXTX] = value & 0xff;
-        update_irq();
+        this.update_irq();
     }
 
     function reset() {

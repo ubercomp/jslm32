@@ -104,7 +104,10 @@ lm32.start = function(steps) {
     };
 
     var uart0 = new lm32.UART({
-        putchar: function(c) { console.log("puchar: " + c); },
+        putchar: function(c) {
+            var t = document.getElementById('texto');
+            t.innerHTML = t.innerHTML + ' ' + c;
+        },
         irq_line: UART0_IRQ,
         set_irq: set_irq
     });
