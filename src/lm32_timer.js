@@ -15,7 +15,9 @@ lm32.Lm32Timer = function(params) {
     var bits = lm32.bits;
 
     // parameters
-    var ptimer   = params.ptimer ;  // has methods get_count(), set_count(int), run(int) and stop()
+    var id = params.id;
+    var vm_clock = params.vm_clock;
+    var ptimer   = new lm32.ghw.PTimer(hit.bind(this), vm_clock);
     var set_irq  = params.set_irq;  // function(irq_line, irq_value)
     var irq_line = params.irq_line; // my irq number
 
@@ -40,7 +42,7 @@ lm32.Lm32Timer = function(params) {
     }
 
     function read_32(addr) {
-        console.log("timer read_32")
+        console.log("timer" + id + " read_32")
         var r = 0;
         addr = addr >> 2;
 
@@ -62,7 +64,7 @@ lm32.Lm32Timer = function(params) {
 
     function write_32(addr, value) {
         addr = addr >> 2;
-        console.log("timer write_32 addr = " + addr + " val = " + value);
+        console.log("timer" + id + " write_32 addr = " + addr + " val = " + value);
 
         switch (addr) {
             case R_SR:
@@ -122,5 +124,13 @@ lm32.Lm32Timer = function(params) {
     this.write_32   = write_32;
     this.reset      = reset;
 
+};
+
+lm32.Lm32Timer.prototype.get_mmio_handlers = function() {
+    var handlers = {
+        read_32 : this.read_32.bind(this),
+        write_32: this.write_32.bind(this)
+    };
+    return handlers;
 };
 
