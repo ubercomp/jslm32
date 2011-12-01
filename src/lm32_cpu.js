@@ -88,99 +88,8 @@ lm32.Lm32Cpu = function (params) {
     var CSR_WP3  = 0x1b; // watchpoint address 3
     
     // Helpers:
-    // debug exception
-    function raise_debug_exception(id) {
-        if((id < 0) || (id > 7)) {
-            throw ("Invalid exception ID: " + id);
-        }
-        trace("Raising debug exception (id = " + id +") at 0x" + bits.unsigned32(this.pc).toString(16));
-        this.regs[REG_BA] = this.pc & bits.mask00_31;
-        this.ie.bie = this.ie.ie;
-        this.ie.ie = 0;
-        this.next_pc = bits.unsigned32(this.deba + id * 32);
-    }
-    this.raise_debug_exception = raise_debug_exception;
 
-    // non-debug exception
-    function raise_exception(id) {
-        if((id < 0) || (id > 7)) {
-            throw ("Invalid exception ID: " + id);
-        }
-
-        if(id == 4) {
-            trace("IGNORANDO excecao BUS ERROR");
-            return;
-        }
-        
-        trace("Raising exception (id = " + id + ") at 0x" + bits.unsigned32(this.pc).toString(16));
-        this.regs[REG_EA] = this.pc & bits.mask00_31;
-        this.ie.eie = this.ie.ie;
-        this.ie.ie = 0;
-        var base = this.dc.re ? this.deba : this.eba;
-        this.next_pc = bits.unsigned32(base + id * 32);
-        trace("going to pc + 0x" + this.next_pc.toString(16));
-    }
-    this.raise_exception = raise_exception;
-
-    // instruction implementations:
-    // in these instructions, "this" should be bound to the CPU
-    // op -> operation line (32 bits)
-    function add() {
-        this.regs[this.I_R2] = (this.regs[this.I_R0] + this.regs[this.I_R1]) & bits.mask00_31;
-        this.result = 1;
-        this.issue = 1;
-    }
-
-    function addi() {
-        this.regs[this.I_R1] = (this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16)) & bits.mask00_31;
-        this.result = 1;
-        this.issue = 1;
-    }
-
-    function and() {
-        // logical ops don't need to and with mask00_31
-        this.regs[this.I_R2] = this.regs[this.I_R0] & this.regs[this.I_R1];
-        this.result = 1;
-        this.issue = 1;
-    }
-
-    function andhi() {
-        this.regs[this.I_R1] = this.regs[this.I_R0] & (this.I_IMM16 << 16);
-        this.result = 1;
-        this.issue = 1;
-    }
-
-    function andi() {
-        this.regs[this.I_R1] = this.regs[this.I_R0] & bits.zero_extend(this.I_IMM16, 16);
-        this.result = 1;
-        this.issue = 1;
-    }
-
-    function b() {
-        var r0 = this.I_R0;
-        if(this.pc == 0xbfe2118) {
-            console.log("b " + r0);
-        }
-        if(r0 == REG_EA) {
-            // eret -> restore eie
-            this.ie.ie = this.ie.eie;
-        } else if(r0 == REG_BA) {
-            // bret -> restore bie
-            this.ie.ie = this.ie.bie;
-        }
-
-        this.next_pc = bits.unsigned32(this.regs[r0]);
-        this.result = RESULT_BRANCH;
-        this.issue = 4;
-    }
-
-    function bi() {
-        var imm26 = this.I_IMM26;
-        this.next_pc = bits.unsigned32(this.pc + bits.sign_extend(imm26 << 2, 28));
-        this.issue = 4;
-        this.result = RESULT_BRANCH;
-    }
-
+    // comparison helpers (I think google closure compiler will inline these)
     function fcond_eq(a, b) {
         return (a == b);
     }
@@ -205,57 +114,73 @@ lm32.Lm32Cpu = function (params) {
         return (a != b);
     }
 
-    function branch_conditional(fcond) {
-        // TODO verificar sign_extend_18_32
-        this.issue = 1; // issue when not taken
-        var a = this.regs[this.I_R0];
-        var b = this.regs[this.I_R1];
-        if(fcond(a, b)) {
-            this.next_pc = bits.unsigned32(this.pc + bits.sign_extend(this.I_IMM16 << 2, 18));
-            this.issue = 4; // issue when taken
+    // debug exception
+    function raise_debug_exception(id) {
+        if((id < 0) || (id > 7)) {
+            throw ("Invalid exception ID: " + id);
         }
-        this.result = RESULT_BRANCH;
+        trace("Raising debug exception (id = " + id +") at 0x" + bits.unsigned32(this.pc).toString(16));
+        this.regs[REG_BA] = this.pc | 0;
+        this.ie.bie = this.ie.ie;
+        this.ie.ie = 0;
+        this.next_pc = bits.unsigned32(this.deba + id * 32);
     }
-    this.branch_conditional = branch_conditional;
+    this.raise_debug_exception = raise_debug_exception;
 
-    function be() {
-        this.branch_conditional(fcond_eq);
-    }
+    // non-debug exception
+    function raise_exception(id) {
+        if((id < 0) || (id > 7)) {
+            throw ("Invalid exception ID: " + id);
+        }
 
-    function bg() {
-        this.branch_conditional(fcond_g);
+        if(id == 4) {
+            trace("IGNORANDO excecao BUS ERROR");
+            return;
+        }
+        
+        trace("Raising exception (id = " + id + ") at " + bits.format(this.pc));
+        this.regs[REG_EA] = this.pc | 0;
+        this.ie.eie = this.ie.ie;
+        this.ie.ie = 0;
+        var base = this.dc.re ? this.deba : this.eba;
+        this.next_pc = bits.unsigned32(base + id * 32);
+        trace("going to pc " + bits.format(this.next_pc));
     }
+    this.raise_exception = raise_exception;
 
-    function bge() {
-        this.branch_conditional(fcond_ge);
-    }
+    // instruction implementations:
+    // in these instructions, "this" should be bound to the CPU
 
-    function bgeu() {
-        this.branch_conditional(fcond_geu);
-    }
-
-    function bgu() {
-        this.branch_conditional(fcond_gu);
-    }
-    
-    function bne() {
-        this.branch_conditional(fcond_ne);
-    }
-
-    function call() {
-        var rx = this.I_R0;
-        this.regs[REG_RA] = (this.pc + 4) & bits.mask00_31;
-        this.next_pc = bits.unsigned32(this.regs[rx]);
-        this.issue = 4;
+    // arithmetic and comparison instructions
+    function add() {
+        this.regs[this.I_R2] = (this.regs[this.I_R0] + this.regs[this.I_R1]) | 0;
         this.result = 1;
+        this.issue = 1;
     }
 
-    function calli() {
-        var imm26 = this.I_IMM26;
-        this.regs[REG_RA] = (this.pc + 4) & bits.mask00_31;
-        this.next_pc = bits.unsigned32(this.pc + bits.sign_extend(imm26 << 2, 28));
-        this.issue = 4;
+    function addi() {
+        this.regs[this.I_R1] = (this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16)) | 0;
         this.result = 1;
+        this.issue = 1;
+    }
+
+    function and() {
+        // logical ops don't need to and with mask00_31
+        this.regs[this.I_R2] = this.regs[this.I_R0] & this.regs[this.I_R1];
+        this.result = 1;
+        this.issue = 1;
+    }
+
+    function andhi() {
+        this.regs[this.I_R1] = this.regs[this.I_R0] & (this.I_IMM16 << 16);
+        this.result = 1;
+        this.issue = 1;
+    }
+
+    function andi() {
+        this.regs[this.I_R1] = this.regs[this.I_R0] & bits.zero_extend(this.I_IMM16, 16);
+        this.result = 1;
+        this.issue = 1;
     }
 
     /**
@@ -263,7 +188,6 @@ lm32.Lm32Cpu = function (params) {
      * @param fcond function to compare two values;
      */
     function compare(reg_p, fcond) {
-        // TODO verificar ordem first, second
         var rx = reg_p ? this.I_R2 : this.I_R1;
         var ry = reg_p ? this.I_R0 : this.I_R0;
         var rz = reg_p ? this.I_R1 : -1;
@@ -337,7 +261,7 @@ lm32.Lm32Cpu = function (params) {
         if(vr1 === 0) {
             this.raise_exception(EXCEPT_DIVIDE_BY_ZERO);
         } else {
-            this.regs[this.I_R2] = (Math.floor(vr0/vr1)) & bits.mask00_31;
+            this.regs[this.I_R2] = (Math.floor(vr0/vr1)) | 0;
         }
     }
 
@@ -346,111 +270,13 @@ lm32.Lm32Cpu = function (params) {
         var vr1 = this.regs[this.I_R1];
         var u = bits.unsigned32;
 
-        if(this.I_R2 == 18 && this.I_R0 == 2 && this.I_R1 == 3) {
-            trace("DIVU com pau...")
-            this.dump();
-        }
         if (vr1 === 0) {
             this.raise_exception(EXCEPT_DIVIDE_BY_ZERO);
         } else {
-            this.regs[this.I_R2] = (Math.floor(u(vr0) / u(vr1))) & bits.mask00_31;
+            this.regs[this.I_R2] = (Math.floor(u(vr0) / u(vr1))) | 0;
         }
         this.issue = 34;
         this.result = 34;
-    }
-
-
-    function lb() {
-        var addr = this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16);
-        var ok = false;
-        var val = this.mmu.read_8(bits.unsigned32(addr));
-
-        if(val !== undefined) {
-            ok = true;
-            this.regs[this.I_R1] = bits.sign_extend(val, 8);
-        }
-        
-        if(!ok) {
-            lm32.util.error_report("Error reading byte (lb) at address 0x" + bits.unsigned32(addr).toString(16));
-            this.raise_exception(EXCEPT_DATA_BUS_ERROR);
-        }
-
-        this.issue = 1;
-        this.result = 3;
-    }
-
-    function lbu() {
-        var addr = this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16);
-        var ok = false;
-        var val = this.mmu.read_8(bits.unsigned32(addr));
-
-        if(val !== undefined) {
-            ok = true;
-            this.regs[this.I_R1] = bits.zero_extend(val, 8);
-        }
-
-        if(!ok) {
-            lm32.util.error_report("Error reading byte (lbu) at address 0x" + bits.unsigned32(addr).toString(16));
-            this.raise_exception(EXCEPT_DATA_BUS_ERROR);
-        }
-
-        this.issue = 1;
-        this.result = 3;
-    }
-
-    function lh() {
-        var addr = this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16);
-        var ok = false;
-        var val = this.mmu.read_16(bits.unsigned32(addr));
-
-        if(val !== undefined) {
-            ok = true;
-            this.regs[this.I_R1] = bits.sign_extend(val, 16);
-        }
-
-        if(!ok) {
-            lm32.util.error_report("Error reading half-word (lh) at address 0x" + bits.unsigned32(addr).toString(16));
-            this.raise_exception(EXCEPT_DATA_BUS_ERROR);
-        }
-
-        this.issue = 1;
-        this.result = 3;
-    }
-
-    function lhu() {
-        var addr = this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16);
-        var ok = false;
-        var val = this.mmu.read_16(bits.unsigned32(addr));
-
-        if(val !== undefined) {
-            ok = true;
-            this.regs[this.I_R1] = bits.zero_extend(val, 16);
-        }
-
-        if(!ok) {
-            lm32.util.error_report("Error reading half-word (lhu) at address 0x" + bits.unsigned32(addr).toString(16));
-            this.raise_exception(EXCEPT_DATA_BUS_ERROR);
-        }
-        
-        this.issue = 1;
-        this.result = 3;
-    }
-
-    function lw() {
-        var addr = this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16);
-        var ok = false;
-        var val = this.mmu.read_32(bits.unsigned32(addr));
-        if(val !== undefined) {
-            ok = true;
-            this.regs[this.I_R1] = val & 0xffffffff;
-        }
-
-        if(!ok) {
-            this.raise_exception(EXCEPT_DATA_BUS_ERROR);
-        }
-
-        this.issue = 1;
-        this.result = 3;
     }
 
     function mod() {
@@ -459,7 +285,7 @@ lm32.Lm32Cpu = function (params) {
         if (vr1 === 0) {
             this.raise_exception(EXCEPT_DIVIDE_BY_ZERO);
         } else {
-            this.regs[this.I_R2] = (vr0 % vr1) & bits.mask00_31;
+            this.regs[this.I_R2] = (vr0 % vr1) | 0;
         }
         this.issue = 34;
         this.result = 34;
@@ -472,25 +298,23 @@ lm32.Lm32Cpu = function (params) {
         if (vr1 === 0) {
             this.raise_exception(EXCEPT_DIVIDE_BY_ZERO);
         } else {
-            this.regs[this.I_R2] = (u(vr0) % u(vr1)) & bits.mask00_31;
+            this.regs[this.I_R2] = (u(vr0) % u(vr1)) | 0;
         }
         this.issue = 34;
         this.result = 34;
     }
 
     function mul() {
-        this.regs[this.I_R2] = (this.regs[this.I_R0] * this.regs[this.I_R1]) & bits.mask00_31;
+        this.regs[this.I_R2] = (this.regs[this.I_R0] * this.regs[this.I_R1]) | 0;
         this.result = 3;
         this.issue = 1;
     }
 
     function muli() {
-        this.regs[this.I_R1] = (this.regs[this.I_R0] * bits.sign_extend(this.I_IMM16, 16)) & bits.mask00_31;
+        this.regs[this.I_R1] = (this.regs[this.I_R0] * bits.sign_extend(this.I_IMM16, 16)) | 0;
         this.result = 3;
         this.issue = 1;
     }
-
-    // mv and mvhi are pseudo ops -> not implemented
 
     function nor() {
         this.regs[this.I_R2] = ~(this.regs[this.I_R0] | this.regs[this.I_R1]);
@@ -503,8 +327,6 @@ lm32.Lm32Cpu = function (params) {
         this.issue = 1;
         this.result = 1;
     }
-
-    // not is a pseudo instruction -> not implemented
 
     function or() {
         this.regs[this.I_R2] = (this.regs[this.I_R0] | this.regs[this.I_R1]);
@@ -524,6 +346,161 @@ lm32.Lm32Cpu = function (params) {
         this.result = 1;
     }
 
+    function sextb() {
+        // sign extend byte to word
+        this.regs[this.I_R2] = (this.regs[this.I_R0] << 24) >> 24;
+        this.issue = 1;
+        this.result = 1;
+    }
+
+    function sexth() {
+        // sign extend half-word to word
+        this.regs[this.I_R2] = (this.regs[this.I_R0] << 16) >> 16;
+        this.issue = 1;
+        this.result = 1;
+    }
+
+    function sl() {
+        this.regs[this.I_R2] = this.regs[this.I_R0] << (this.regs[this.I_R1] & 0x1f);
+        this.issue = 1;
+        this.result = 2;
+    }
+
+    function sli() {
+        this.regs[this.I_R1] = this.regs[this.I_R0] << this.I_IMM5;
+        this.issue = 1;
+        this.result = 2;
+    }
+
+    function sr() {
+        this.regs[this.I_R2] = this.regs[this.I_R0] >> (this.regs[this.I_R1] & 0x1f);
+        this.issue = 1;
+        this.result = 2;
+    }
+
+    function sri() {
+        this.regs[this.I_R1] = this.regs[this.I_R0] >> this.I_IMM5;
+        this.issue = 1;
+        this.result = 2;
+    }
+
+    function sru() {
+        this.regs[this.I_R2] = this.regs[this.I_R0] >>> (this.regs[this.I_R1] & 0x1f);
+        this.issue = 1;
+        this.result = 2;
+    }
+
+    function srui() {
+        this.regs[this.I_R1] = this.regs[this.I_R0] >>> this.I_IMM5;
+        this.issue = 1;
+        this.result = 2;
+    }
+
+    function sub() {
+        this.regs[this.I_R2] = (this.regs[this.I_R0] - this.regs[this.I_R1]) | 0;
+        this.issue = 1;
+        this.result = 1;
+    }
+
+    function xnor() {
+        this.regs[this.I_R2] = ~(this.regs[this.I_R0] ^ this.regs[this.I_R1]);
+        this.issue = 1;
+        this.result = 1;
+    }
+
+    function xnori() {
+        this.regs[this.I_R1] = ~(this.regs[this.I_R0] ^ bits.zero_extend(this.I_IMM16, 16));
+        this.issue = 1;
+        this.result = 1;
+    }
+
+    function xor() {
+        this.regs[this.I_R2] = this.regs[this.I_R0] ^ this.regs[this.I_R1];
+        this.issue = 1;
+        this.result = 1;
+    }
+
+    function xori() {
+        this.regs[this.I_R1] = this.regs[this.I_R0] ^ bits.zero_extend(this.I_IMM16, 16);
+        this.issue = 1;
+        this.result = 1;
+    }
+
+    // branch and call implementations
+    function b() {
+        var r0 = this.I_R0;
+
+        if(r0 == REG_EA) {
+            // eret -> restore eie
+            this.ie.ie = this.ie.eie;
+        } else if(r0 == REG_BA) {
+            // bret -> restore bie
+            this.ie.ie = this.ie.bie;
+        }
+
+        this.next_pc = bits.unsigned32(this.regs[r0]);
+        this.result = RESULT_BRANCH;
+        this.issue = 4;
+    }
+
+    function bi() {
+        var imm26 = this.I_IMM26;
+        this.next_pc = bits.unsigned32(this.pc + bits.sign_extend(imm26 << 2, 28));
+        this.issue = 4;
+        this.result = RESULT_BRANCH;
+    }
+
+    function branch_conditional(fcond) {
+        this.issue = 1; // issue when not taken
+        var a = this.regs[this.I_R0];
+        var b = this.regs[this.I_R1];
+        if(fcond(a, b)) {
+            this.next_pc = bits.unsigned32(this.pc + bits.sign_extend(this.I_IMM16 << 2, 18));
+            this.issue = 4; // issue when taken
+        }
+        this.result = RESULT_BRANCH;
+    }
+    this.branch_conditional = branch_conditional;
+
+    function be() {
+        this.branch_conditional(fcond_eq);
+    }
+
+    function bg() {
+        this.branch_conditional(fcond_g);
+    }
+
+    function bge() {
+        this.branch_conditional(fcond_ge);
+    }
+
+    function bgeu() {
+        this.branch_conditional(fcond_geu);
+    }
+
+    function bgu() {
+        this.branch_conditional(fcond_gu);
+    }
+
+    function bne() {
+        this.branch_conditional(fcond_ne);
+    }
+
+    function call() {
+        this.regs[REG_RA] = (this.pc + 4) | 0;
+        this.next_pc = bits.unsigned32(this.regs[this.I_R0]);
+        this.issue = 4;
+        this.result = 1;
+    }
+
+    function calli() {
+        var imm26 = this.I_IMM26;
+        this.regs[REG_RA] = (this.pc + 4) | 0;
+        this.next_pc = bits.unsigned32(this.pc + bits.sign_extend(imm26 << 2, 28));
+        this.issue = 4;
+        this.result = 1;
+    }
+
     function scall() {
         var imm5 = this.I_IMM5;
         if(imm5 == 7) {
@@ -538,6 +515,129 @@ lm32.Lm32Cpu = function (params) {
         this.result = RESULT_SCALL;
     }
 
+    // load and store instructions
+    // helper functions
+    function sign_extend_8(val) {
+        return bits.sign_extend(val, 8);
+    }
+
+    function sign_extend_16(val) {
+        return bits.sign_extend(val, 16);
+    }
+
+    function zero_extend_8(val) {
+        return bits.zero_extend(val, 8);
+    }
+
+    function zero_extend_16(val) {
+        return bits.zero_extend(val, 16);
+    }
+
+    function to_32_bits(val) {
+        return val | 0;
+    }
+
+    /**
+     *
+     * @param width the width to read (8, 16 or 32)
+     * @param func the function to apply before assigning the result to a register
+     */
+    function load(width, func) {
+        var addr = this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16);
+        var uaddr = bits.unsigned32(addr);
+        var ok = false;
+        var val = undefined;
+        switch(width) {
+            case 8:
+                val = this.mmu.read_8(uaddr);
+                break;
+            case 16:
+                val = this.mmu.read_16(uaddr);
+                break;
+            case 32:
+                val = this.mmu.read_32(uaddr);
+                break;
+            default:
+                throw ("invalid width - should never happen");
+                break;
+        }
+
+        if(val !== undefined) {
+            ok = true;
+            this.regs[this.I_R1] = func(val);
+        }
+
+        if(!ok) {
+            lm32.util.error_report("Error reading at address " + bits.format(uaddr) + " with width " + width);
+            this.raise_exception(EXCEPT_DATA_BUS_ERROR);
+        }
+
+        this.issue = 1;
+        this.result = 3;
+    }
+    this.load = load;
+
+    function lb() {
+        this.load(8, sign_extend_8);
+    }
+
+    function lbu() {
+        this.load(8, zero_extend_8);
+    }
+
+    function lh() {
+        this.load(16, sign_extend_16);
+    }
+
+    function lhu() {
+        this.load(16, zero_extend_16);
+    }
+
+    function lw() {
+        this.load(32, to_32_bits);
+    }
+
+    function store(width) {
+        var addr = this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16);
+        var uaddr = bits.unsigned32(addr); // TODO remove constant
+        var ok;
+        switch(width) {
+            case 8:
+                ok = this.mmu.write_8(uaddr, this.regs[this.I_R1]);
+                break;
+            case 16:
+                ok = this.mmu.write_16(uaddr, this.regs[this.I_R1]);
+                break;
+            case 32:
+                ok = this.mmu.write_32(uaddr, this.regs[this.I_R1]);
+                break;
+            default:
+                lm32.util.error_report("Error writing to address " + bits.format(uaddr) + " with width " + width);
+                break;
+        }
+        if(!ok) {
+            this.raise_exception(EXCEPT_DATA_BUS_ERROR);
+        }
+
+        this.issue = 1;
+        this.result = RESULT_STORE;
+    }
+    this.store = store;
+
+    function sb() {
+        this.store(8);
+    }
+
+    function sh() {
+        this.store(16);
+    }
+
+    function sw() {
+        this.store(32);
+    }
+
+
+    // csr instructions
     function rcsr() {
         var csr = this.I_CSR;
         var r2 = this.I_R2;
@@ -593,113 +693,17 @@ lm32.Lm32Cpu = function (params) {
 
             default:
                 read = false;
-                throw ("No such CSR register: " + csr);
                 trace ("No such CSR")
+                throw ("No such CSR register: " + csr);
                 break;
         }
         if(read) {
-            this.regs[r2] = (val) & bits.mask00_31;
+            this.regs[r2] = (val) | 0;
         } else {
             lm32.util.error_report("Reading from invalid CSR: 0x" + csr.toString(16));
         }
         this.issue = 1;
         this.result = 2;
-    }
-    function reserved() {
-        throw "This should never be  called";
-    }
-
-
-    function sb() {
-        var addr = this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16);
-        var ok = this.mmu.write_8(bits.unsigned32(addr), this.regs[this.I_R1]);
-
-        if(!ok) {
-            this.raise_exception(EXCEPT_DATA_BUS_ERROR);
-        }
-        
-        this.issue = 1;
-        this.result = RESULT_STORE;
-    }
-
-
-    function sextb() {
-        // sign extend byte to word
-        this.regs[this.I_R2] = (this.regs[this.I_R0] << 24) >> 24;
-        this.issue = 1;
-        this.result = 1;
-    }
-
-    function sexth() {
-        // sign extend half-word to word
-        this.regs[this.I_R2] = (this.regs[this.I_R0] << 16) >> 16;
-        this.issue = 1;
-        this.result = 1;
-    }
-
-    function sh() {
-        var addr = this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16);
-        var ok = this.mmu.write_16(bits.unsigned32(addr), this.regs[this.I_R1]);
-        if(!ok) {
-            this.raise_exception(EXCEPT_DATA_BUS_ERROR);
-        }
-
-        this.issue = 1;
-        this.result = RESULT_STORE;
-    }
-
-    function sl() {
-        this.regs[this.I_R2] = this.regs[this.I_R0] << (this.regs[this.I_R1] & 0x1f);
-        this.issue = 1;
-        this.result = 2;
-    }
-
-    function sli() {
-        this.regs[this.I_R1] = this.regs[this.I_R0] << this.I_IMM5;
-        this.issue = 1;
-        this.result = 2;
-
-    }
-
-    function sr() {
-        this.regs[this.I_R2] = this.regs[this.I_R0] >> (this.regs[this.I_R1] & 0x1f);
-        this.issue = 1;
-        this.result = 2;
-    }
-
-    function sri() {
-        this.regs[this.I_R1] = this.regs[this.I_R0] >> this.I_IMM5;
-        this.issue = 1;
-        this.result = 2;
-    }
-
-    function sru() {
-        this.regs[this.I_R2] = this.regs[this.I_R0] >>> (this.regs[this.I_R1] & 0x1f);
-        this.issue = 1;
-        this.result = 2;
-    }
-
-    function srui() {
-        this.regs[this.I_R1] = this.regs[this.I_R0] >>> this.I_IMM5;
-        this.issue = 1;
-        this.result = 2;
-    }
-
-    function sub() {
-        this.regs[this.I_R2] = (this.regs[this.I_R0] - this.regs[this.I_R1]) & bits.mask00_31;
-        this.issue = 1;
-        this.result = 1;
-    }
-
-    function sw() {
-        var addr = this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16);
-        var ok = this.mmu.write_32(bits.unsigned32(addr), this.regs[this.I_R1]);
-        if(!ok) {
-            this.raise_exception(EXCEPT_DATA_BUS_ERROR);
-        }
-
-        this.issue =1;
-        this.result = RESULT_STORE;
     }
 
     function wcsr() {
@@ -766,29 +770,12 @@ lm32.Lm32Cpu = function (params) {
         this.result = 1;
     }
 
-    function xnor() {
-        this.regs[this.I_R2] = ~(this.regs[this.I_R0] ^ this.regs[this.I_R1]);
-        this.issue = 1;
-        this.result = 1;
+    // reserved instruction
+    function reserved() {
+        trace("Someone called the reserved instruction. Not cool!");
+        throw "This should never be  called";
     }
 
-    function xnori() {
-        this.regs[this.I_R1] = ~(this.regs[this.I_R0] ^ bits.zero_extend(this.I_IMM16, 16));
-        this.issue = 1;
-        this.result = 1;
-    }
-
-    function xor() {
-        this.regs[this.I_R2] = this.regs[this.I_R0] ^ this.regs[this.I_R1];
-        this.issue = 1;
-        this.result = 1;
-    }
-
-    function xori() {
-        this.regs[this.I_R1] = this.regs[this.I_R0] ^ bits.zero_extend(this.I_IMM16, 16);
-        this.issue = 1;
-        this.result = 1;
-    }
 
     this.optable = [
         /* OPCODE      OP */
@@ -1036,16 +1023,19 @@ lm32.Lm32Cpu.prototype.reset = function(params) {
 
 
 lm32.Lm32Cpu.prototype.set_irq = function(irq_line, irq_value) {
-    // console.log("set_irq " + irq_line + " " + irq_value);
     if(irq_line > 32) {
         lm32.util.error_report("Trying to set invalid irq: " + irq_line);
         return;
     }
     if(irq_value) {
         this.ip = this.ip | (1 << irq_value);
-        //if(this.ie && (this.ip & this.im)) {
-        //    this.raise_exception(6); //except_interrupt
-        //}
+        if((this.ie.ie == 1) && ((this.ip & this.im) != 0)) {
+            //this.raise_exception(6);
+            //console.log('ie = ' + this.ie.ie);
+            //console.log('ip = ' + this.ip);
+            //console.log('im = ' + this.im);
+            //console.log('xupa should interrupt at pc = ' + lm32.bits.format(this.pc));
+        }
     } else {
         this.ip = this.ip & (~(1 << irq_value));
     }
@@ -1071,7 +1061,7 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
 
         valid = (pc & 0x3) === 0;
         if(!valid) {
-            console.log("invalid pc: 0x" + pc.toString(16));
+            console.log("invalid pc " + lm32.bits.format(pc));
         }
 
         op = this.mmu.read_32(pc);
@@ -1110,7 +1100,7 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
         inc = this.issue + this.result;
         i++;
 
-        this.cc = (this.cc + inc) & bits.mask00_31;
+        this.cc = (this.cc + inc) | 0;
     }
 
     
@@ -1128,12 +1118,18 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
 };
 
 lm32.Lm32Cpu.prototype.dump = function() {
-    var u = lm32.bits.unsigned32;
-    var s = function(x) { return "0x" + u(x).toString(16) };
     var i;
+    var fmt = lm32.bits.format;
+    console.log("DUMP:");
+    console.log('');
+    console.log('IN: PC=' + fmt(this.pc));
+    console.log('ie=' + fmt(this.ie_val()) + '(IE=' + this.ie.ie + ' EIE=' + this.ie.eie + ' BIE=' + this.ie.bie + ')');
+    console.log('im='+ fmt(this.im) + ' ip=' + fmt(this.ip));
+    console.log('eba=' + fmt(this.eba) + ' deba=' + fmt(this.deba));
+    
     for(i = 0; i < 32; i++) {
         if(this.regs[i] != 0) {
-            console.log("r" + i + " = " + s(this.regs[i]));
+            console.log("r" + i + " = " + lm32.bits.format(this.regs[i]));
         }
     };
 };
