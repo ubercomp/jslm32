@@ -178,3 +178,11 @@ lm32.UART = function(params) {
     this.do_rx      = do_rx;
     this.reset      = reset;
 };
+
+lm32.UART.prototype.get_mmio_handlers = function() {
+    var handlers = {
+        read_32 : this.read_32.bind(this),
+        write_32: this.write_32.bind(this)
+    };
+    return handlers;
+};
