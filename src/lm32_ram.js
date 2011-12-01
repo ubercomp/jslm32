@@ -1,5 +1,5 @@
 /**
- * Big Endian RAM Memory
+ * RAM Memory
  *
  * Copyright (c) 2011 Reginaldo Silva (reginaldo@ubercomp.com)
  * Created: 11/09/11 21:30
@@ -7,9 +7,24 @@
  */
 "use strict";
 
-lm32.RAM = function(size) {
+/**
+ *
+ * @param size the memory size in bytes
+ * @param be is it big endian?
+ */
+lm32.RAM = function(size, be) {
+    // TODO implement non-ArrayBuffer fallback version
     this.buff = new ArrayBuffer(size);
     this.v8 = new Uint8Array(this.buff);
+    var i;
+    // TODO remove:  not strictly necessary
+    for(i = 0; i < size; i++) {
+        this.v8[i] = 0xff;
+    }
+    if(!be) {
+        // TODO implement little endian
+        throw ("Little Endian is not supported for now");
+    }
 };
 
 lm32.RAM.prototype.read_8 = function(offset) {
@@ -51,3 +66,17 @@ lm32.RAM.prototype.write_32 = function(offset, value) {
     this.v8[offset + 2] = l0;
     this.v8[offset + 3] = l1;
 };
+
+lm32.RAM.prototype.get_mmio_handlers = function() {
+    // TODO little endian version
+    var handlers = {
+        read_8  : this.read_8.bind(this),
+        read_16 : this.read_16.bind(this),
+        read_32 : this.read_32.bind(this),
+        write_8 : this.write_8.bind(this),
+        write_16: this.write_16.bind(this),
+        write_32: this.write_32.bind(this)
+    };
+    return handlers;
+};
+
