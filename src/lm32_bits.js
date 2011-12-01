@@ -41,9 +41,16 @@ lm32.bits.unsigned32 = function(n) {
     return u32;
 };
 
+lm32.bits.format = function(n) {
+    var u32 = lm32.bits.unsigned32(n);
+    var u32s = u32.toString(16);
+    var pad = (new Array(8 - u32s.length + 1)).join('0');
+    return "0x" + pad + u32s;
+}
+
 lm32.bits.rmsr = function(dword, mask, bits) {
     // read masked and shift right
-    return (dword&mask)>>bits;
+    return (dword & mask) >> bits;
 };
 
 // read masked and shift (unsigned) right
@@ -51,5 +58,68 @@ lm32.bits.rmsr_u = function(dword, mask, bits) {
     // params: dword (a 32 bit value)
     // mask: a 32 bit mask
     // the number of bits to shift right
-    return (dword&mask)>>>bits;
+    return (dword & mask) >>> bits;
 };
+
+// Count trailing zeroes of a 32 bits quantity
+lm32.bits.ctz32 = function(n) {
+    // TODO check this
+    n = lm32.bits.unsigned32(n);
+    if(n == 0) {
+        return 32;
+    }
+
+    var ret = 0;
+    if (!(n & 0xFFFF)) {
+        ret += 16;
+        n = n >> 16;
+    }
+    if (!(n & 0xFF)) {
+        ret += 8;
+        n = n >> 8;
+    }
+    if (!(n & 0xF)) {
+        ret += 4;
+        n = n >> 4;
+    }
+    if (!(n & 0x3)) {
+        ret += 2;
+        n = n >> 2;
+    }
+    if (!(n & 0x1)) {
+        ret++;
+    }
+    return ret;
+};
+
+// Cound leading zeros of a 32 bits quantity
+lm32.bits.clz32 = function(val) {
+    val = val | 0;
+    var cnt = 0;
+
+    if (!(val & 0xffff0000)) {
+        cnt += 16;
+        val <<= 16;
+    }
+    if (!(val & 0xff000000)) {
+        cnt += 8;
+        val <<= 8;
+    }
+    if (!(val & 0xf0000000)) {
+        cnt += 4;
+        val <<= 4;
+    }
+    if (!(val & 0xc0000000)) {
+        cnt += 2;
+        val <<= 2;
+    }
+    if (!(val & 0x80000000)) {
+        cnt++;
+        val <<= 1;
+    }
+    if (!(val & 0x80000000)) {
+        cnt++;
+    }
+    return cnt;
+};
+
