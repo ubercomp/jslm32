@@ -17,12 +17,13 @@ lm32.MMU = function() {
 };
 
 lm32.MMU.prototype.get_handler_for = function(addr, name) {
-    var handler = undefined;
-    if(this.last_handler
+    if((this.last_handler != undefined)
         && (addr >= this.last_handler.base_addr)
         && (addr < this.last_handler.base_addr + this.last_handler.size)) {
         return this.last_handler;
     }
+
+    var handler = undefined;
     var len = this.handlers.length;
     for(var i = 0; i < len; i++) {
         var curr = this.handlers[i];
@@ -45,8 +46,8 @@ lm32.MMU.prototype.add_memory = function(base, size, funcs) {
     for(var i = 0; i < len; i++) {
         var curr = this.handlers[i];
         if(lm32.util.overlaps(base, base + size - 1, curr.base_addr, curr.base_addr + curr.size - 1)) {
-            var ctext = "(base_addr = " + curr.base_addr.toString(16) + ", size = " + curr.size.toString(16) + ")";
-            var ttext = "(base_addr = " + base.toString(16) + ", size = " + size.toString(16) + ")";
+            var ctext = "(base_addr = " + lm32.bits.format(curr.base_addr) + ", size = " + lm32.bits.format(curr.size) + ")";
+            var ttext = "(base_addr = " + lm32.bits.format(base) + ", size = " + lm32.bits.format(size) + ")";
             throw("ERROR: Bank at " + ttext + " overlaps with " + ctext + ".");
         }
     }
@@ -66,15 +67,16 @@ lm32.MMU.prototype.add_memory = function(base, size, funcs) {
 };
 
 lm32.MMU.prototype.read = function(addr, mask, name) {
-    if(addr > 0x0bffe000 && addr <= (0x0bffe000 + 4096)) {
-        console.log("hwsetup");
-    }
     var handler = this.get_handler_for(addr, name);
     if(handler && (name in handler)) {
         var offset = addr - handler.base_addr;
-        return (((handler[name])(offset)) & mask);
+        var val = (handler[name])(offset);
+        if(val == undefined) {
+            console.log("reading undefined at addr " + lm32.bits.format(addr));
+        }
+        return (val & mask);
     } else {
-        lm32.util.error_report("MMU: Cannot " + name + " at address: 0x" + lm32.bits.unsigned32(addr.toString(16)));
+        lm32.util.error_report("MMU: Cannot " + name + " at address: 0x" + lm32.bits.format(addr));
     }
 }
 
@@ -100,7 +102,7 @@ lm32.MMU.prototype.write = function(addr, val, mask, name) {
             (handler[name])(offset, sval);
         } catch(err) {
             ret = false;
-            lm32.util.error_report("MMU: Cannot " + name + " value 0x" + sval  +  " at address: 0x" + lm32.bits.unsigned32(addr.toString(16)));
+            lm32.util.error_report("MMU: Cannot " + name + " value " + lm32.bits.format(sval)  +  " at address: " + lm32.bits.format(addr));
         }
     } else {
         ret = false;
