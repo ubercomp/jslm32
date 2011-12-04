@@ -21,8 +21,7 @@ lm32.TestDev = function(params) {
 
     
     function copy_testname() {
-        // TODO why is this constant needed?
-        var addr = this.regs[R_TESTNAME] + 0x1000;
+        var addr = this.regs[R_TESTNAME];
         for(var i = 0; i < MAX_TESTNAME_LEN; i++) {
             var val = mmu.read_8(addr + i);
             this.testname[i] = val;
