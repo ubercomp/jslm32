@@ -186,3 +186,12 @@ lm32.UART.prototype.get_mmio_handlers = function() {
     };
     return handlers;
 };
+
+lm32.UART.prototype.send_char = function(charCode) {
+    var ch = String.fromCharCode(charCode)
+    if(this.can_rx()) {
+        this.do_rx(charCode);
+    } else {
+        console.log('Dropping unreceived char: ' + ch);
+    }
+};
