@@ -34,7 +34,6 @@ lm32.PFlashCFI01 = function(load_imgs,
     this.bypass = 0;
     this.counter = 0;
 
-    // TODO read initial data (use fake mmu)
     this.ro = 0;
 
     this.be = be;
@@ -106,7 +105,7 @@ lm32.PFlashCFI01 = function(load_imgs,
     /* Max timeout for chip erase */
     this.cfi_table[0x26] = 0x00;
     /* Device size */
-    this.cfi_table[0x27] = lm32.bits.ctz32(this.total_len); // TODO ctz32 funciona?
+    this.cfi_table[0x27] = lm32.bits.ctz32(this.total_len);
     /* Flash device interface (8 & 16 bits) */
     this.cfi_table[0x28] = 0x02;
     this.cfi_table[0x29] = 0x00;
@@ -325,7 +324,6 @@ lm32.PFlashCFI01.prototype.write = function(offset, value, width, be) {
                     offset &= ~(this.sector_len - 1);
 
                     this.DPRINTF("pflash_write: block erase at " + fmt(offset) + " bytes " + fmt(this.sector_len));
-                    //memset(p + offset, 0xff, this.sector_len); // TODO check the conversion
                     for(var k = 0 ; k < this.sector_len; k++) {
                         p.write_8(offset + k, 0xff);
                     }
