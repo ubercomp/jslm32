@@ -14,11 +14,30 @@
     <script src="lm32_sys.js"></script>
     <script src="lm32_timer.js"></script>
     <script src="lm32_pflash.js"></script>
-    <script src="lm32_fake_flash.js"></script>
     <script src="lm32_uart.js"></script>
+
+    <script>
+        var lm32_boot_linux = false;
+        function lm32_start() {
+            lm32.start(lm32_boot_linux);
+        }
+
+        function pick_uboot() {
+            lm32_boot_linux = false;
+        }
+
+        function pick_linux() {
+            lm32_boot_linux = true;
+        }
+    </script>
 
 </head>
 <body>
+<form id="option">
+    <input type="radio" name="boot_linux" value="true" onclick="pick_linux()"/> Boot Full Linux (doesn't work yet) <br />
+    <input type="radio" name="boot_linux" value="false" onclick="pick_uboot()" checked="checked"/> Load U-Boot Only
+</form>
+<button onclick="lm32_start()">Start Linux!</button>
 <div id="termDiv"> </div>
 </body>
 </html>
