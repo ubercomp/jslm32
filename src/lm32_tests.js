@@ -9,7 +9,7 @@ lm32.run_tests = function(wait_time, first_test, last_test) {
     if(! wait_time) {
         wait_time = 500;
     }
-    var termDiv = 'termDiv';
+    var term_element = 'terminal';
     var tests = [
         'test_add.tst.bin',
         'test_addi.tst.bin',
@@ -81,7 +81,7 @@ lm32.run_tests = function(wait_time, first_test, last_test) {
         last_test = tests.length - 1;
     }
     console.log("Running tests " + first_test + " through " + last_test);
-    var sys = lm32.start_sys(termDiv);
+    var sys = lm32.start_sys(term_element);
     var i = first_test;
     var f = function() {
         sys.shutdown.value = false;
