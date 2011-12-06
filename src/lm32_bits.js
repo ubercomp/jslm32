@@ -63,7 +63,6 @@ lm32.bits.rmsr_u = function(dword, mask, bits) {
 
 // Count trailing zeroes of a 32 bits quantity
 lm32.bits.ctz32 = function(n) {
-    // TODO check this
     n = lm32.bits.unsigned32(n);
     if(n == 0) {
         return 32;
