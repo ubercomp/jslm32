@@ -17,6 +17,8 @@ lm32.Lm32Timer = function(params) {
     // parameters
     var id = params.id;
     var vm_clock = params.vm_clock;
+
+    // TODO eliminate ptimer
     var ptimer   = new lm32.ghw.PTimer(hit.bind(this), vm_clock);
     var set_irq  = params.set_irq;  // function(irq_line, irq_value)
     var irq_line = params.irq_line; // my irq number
@@ -111,9 +113,6 @@ lm32.Lm32Timer = function(params) {
         ptimer.stop();
     }
     this.reset = reset;
-
-    // TODO lm32_timer_init -> de onde vem o BH?
-    
 
     // publication:
     this.regs = new Array(R_MAX);
