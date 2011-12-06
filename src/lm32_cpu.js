@@ -23,7 +23,6 @@ lm32.Lm32Cpu = function (params) {
     var trace = lm32.util.trace;
     var disas = lm32.util.trace; // disassemble message
 
-
     // current instruction
     this.I_OPC   = 0;  // opcode
     this.I_IMM5  = 0;  // immediate (5 bits)
@@ -134,10 +133,10 @@ lm32.Lm32Cpu = function (params) {
         }
 
         if(id == 4) {
-            trace("IGNORANDO excecao BUS ERROR");
+            trace("IGNORING BUS_ERROR EXCEPTION");
             return;
         }
-        
+
         trace("Raising exception (id = " + id + ") at " + bits.format(this.pc));
         this.regs[REG_EA] = this.pc | 0;
         this.ie.eie = this.ie.ie;
@@ -599,7 +598,7 @@ lm32.Lm32Cpu = function (params) {
 
     function store(width) {
         var addr = this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16);
-        var uaddr = bits.unsigned32(addr); // TODO remove constant
+        var uaddr = bits.unsigned32(addr);
         var ok;
         switch(width) {
             case 8:
@@ -658,7 +657,6 @@ lm32.Lm32Cpu = function (params) {
             case CSR_WP3:
                 read = false;
                 trace("Invalid read on csr 0x" + csr.toString(16));
-                throw("Invalid read on csr 0x"+ csr.toString(16));
                 break;
 
             case CSR_IE:
@@ -715,8 +713,8 @@ lm32.Lm32Cpu = function (params) {
             case CSR_IP:
             case CSR_CC:
             case CSR_CFG:
-                throw("Cannot write to csr number " + csr);
-                break; // TODO raise exception?
+                trace("Cannot write to csr number " + csr);
+                break;
 
             case CSR_IE:
                 this.ie_wrt(val);
@@ -1030,11 +1028,9 @@ lm32.Lm32Cpu.prototype.set_irq = function(irq_line, irq_value) {
     if(irq_value) {
         this.ip = this.ip | (1 << irq_value);
         if((this.ie.ie == 1) && ((this.ip & this.im) != 0)) {
-            //this.raise_exception(6);
-            //console.log('ie = ' + this.ie.ie);
-            //console.log('ip = ' + this.ip);
-            //console.log('im = ' + this.im);
-            //console.log('xupa should interrupt at pc = ' + lm32.bits.format(this.pc));
+            this.raise_exception(6);
+        } else {
+            console.log('set_irq called but did not go to interrupt');
         }
     } else {
         this.ip = this.ip & (~(1 << irq_value));
@@ -1049,29 +1045,23 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
     var bits = lm32.bits;
     var i = 0;
     var inc;
-    var valid;
+//    var valid;
     var op, pc, opcode;
-    var stats = [];
-    for(var s = 0; s < 64; s++) {
-        stats[s] = 0;
-    }
-    while(i <= instructions) {
+//    var stats = [];
+//    for(var s = 0; s < 64; s++) {
+//        stats[s] = 0;
+//    }
+    while(i < instructions) {
         pc = this.pc;
         this.next_pc = bits.unsigned32(pc + 4);
 
-        valid = (pc & 0x3) === 0;
-        if(!valid) {
-            console.log("invalid pc " + lm32.bits.format(pc));
-        }
+//        valid = (pc & 0x3) === 0;
+//        if(!valid) {
+//            console.log("invalid pc " + lm32.bits.format(pc));
+//        }
 
         op = this.mmu.read_32(pc);
 
-
-        // TODO remove
-        var pc_before = this.pc;
-        var r28_before = this.regs[28];
-        var r29_before = this.regs[29];
-        // END of to remove
 
         // Instruction decoding:
         this.I_OPC   = bits.rmsr_u(op, bits.mask26_31, 26);
@@ -1084,18 +1074,9 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
         this.I_R2    = bits.rmsr_u(op, bits.mask11_15, 11);
 
         opcode = this.I_OPC;
-        stats[opcode] = stats[opcode] + 1;
+//        stats[opcode] = stats[opcode] + 1;
         (this.optable[opcode])();
         this.pc = this.next_pc;
-
-        // TODO remove
-        var r29_after = this.regs[29];
-        if(r29_before != 0 && r29_after == 0) {
-            console.log("r28_before = 0x" + r28_before.toString(16));
-            console.log("writing r29 to 0 at pc = 0x" + pc_before.toString(16));
-        }
-        // END of to remove
-
 
         inc = this.issue + this.result;
         i++;
@@ -1104,14 +1085,14 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
     }
 
     
-    function print_stats(opnames, stats) {
-        var len = stats.length;
-        for(var i = 0; i < len; i++) {
-            if(stats[i] != 0) {
-                console.log(opnames[i] + " = " + stats[i]);
-            }
-        }
-    }
+//    function print_stats(opnames, stats) {
+//        var len = stats.length;
+//        for(var i = 0; i < len; i++) {
+//            if(stats[i] != 0) {
+//                console.log(opnames[i] + " = " + stats[i]);
+//            }
+//        }
+//    }
     
     //print_stats(this.opnames, stats);
     //this.dump();
