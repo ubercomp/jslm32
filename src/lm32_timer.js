@@ -16,35 +16,31 @@ lm32.Lm32Timer = function(params) {
 
     // parameters
     var id = params.id;
-    var vm_clock = params.vm_clock;
-
-    // TODO eliminate ptimer
-    var ptimer   = new lm32.ghw.PTimer(hit.bind(this), vm_clock);
     var set_irq  = params.set_irq;  // function(irq_line, irq_value)
     var irq_line = params.irq_line; // my irq number
 
     // constants
-    var R_SR       = 0;
-    var R_CR       = 1;
-    var R_PERIOD   = 2;
-    var R_SNAPSHOT = 3;
+    var R_SR       = 0; // status register
+    var R_CR       = 1; // control register
+    var R_PERIOD   = 2; // period register
+    var R_SNAPSHOT = 3; // snapshot register
     var R_MAX      = 4;
 
-    var SR_TO  = (1 << 0);
-    var SR_RUN = (1 << 1);
+    var SR_TO  = (1 << 0); // time out
+    var SR_RUN = (1 << 1); // running
 
-    var CR_ITO   = (1 << 0);
-    var CR_CONT  = (1 << 1);
-    var CR_START = (1 << 2);
-    var CR_STOP  = (1 << 3);
+    var CR_ITO   = (1 << 0); // interrupt
+    var CR_CONT  = (1 << 1); // continuous?
+    var CR_START = (1 << 2); // start?
+    var CR_STOP  = (1 << 3); // stop?
 
     function update_irq() {
         var state = (this.regs[R_SR] & SR_TO) && (this.regs[R_CR] & CR_ITO);
         set_irq(irq_line, state);
+        return state;
     }
 
     function read_32(addr) {
-        console.log("timer" + id + " read_32")
         var r = 0;
         addr = addr >> 2;
 
@@ -52,13 +48,12 @@ lm32.Lm32Timer = function(params) {
             case R_SR:
             case R_CR:
             case R_PERIOD:
+            case R_SNAPSHOT:
                 r = this.regs[addr];
                 break;
-            case R_SNAPSHOT:
-                r = ptimer.get_count();
-                break;
             default:
-                lm32.util.error_report("lm32_timer: read access to unknown register 0x" + (addr << 2).toString(16));
+                r = 0;
+                console.log("lm32_timer: read access to unknown register 0x" + (addr << 2).toString(16));
                 break;
         }
         return r;
@@ -66,51 +61,67 @@ lm32.Lm32Timer = function(params) {
 
     function write_32(addr, value) {
         addr = addr >> 2;
-        console.log("timer" + id + " write_32 addr = " + addr + " val = " + value);
-
+        value = value | 0;
+        var names = ['STATUS', 'CONTROL', 'PERIOD', 'SNAPSHOT'];
+        //console.log('timer' + id + ' write_32 reg=' + names[addr] + ' val=' + value);
         switch (addr) {
             case R_SR:
-                this.regs[R_SR] &= ~SR_TO;
+                this.regs[R_SR] = value & (~SR_TO); // do not write timeout
+                if((this.regs[R_CR] & CR_CONT) != 0) {
+                    this.regs[R_SR] |= SR_RUN;
+                }
                 break;
             case R_CR:
-                this.regs[R_CR] = value & bits.mask00_31;
-                if (this.regs[R_CR] & CR_START) {
-                    ptimer.run(1);
+                this.regs[R_CR] = value;
+                if((value & CR_STOP) != 0) {
+                    this.regs[R_SR] &= ~SR_RUN;
                 }
-                if (this.regs[R_CR] & CR_STOP) {
-                    ptimer.stop();
+                if((value & CR_START) != 0) {
+                    this.regs[R_SR] |= SR_RUN;
                 }
                 break;
             case R_PERIOD:
-                this.regs[R_PERIOD] = value & bits.mask00_31;
-                ptimer.set_count(value);
+                this.regs[addr] = value;
+                this.regs[R_SNAPSHOT] = value;
                 break;
             case R_SNAPSHOT:
-                lm32.util.error_report("lm32_timer: write access to read only register 0x" + (addr << 2).toString(16));
+                console.log("lm32_timer: write access to read only register 0x" + (addr << 2).toString(16));
                 break;
             default:
-                lm32.util.error_report("lm32_timer: write access to unknown register 0x" + (addr << 2).toString(16));
+                console.log("lm32_timer: write access to unknown register 0x" + (addr << 2).toString(16));
                 break;
         }
+        //console.log('SR = ' + this.regs[R_SR]);
         this.update_irq();
     }
 
-    function hit() {
+    function on_tick(ticks) {
+        if((this.regs[R_SR] & SR_RUN)) {
+            this.regs[R_SNAPSHOT] -= ticks;
+            if(this.regs[R_SNAPSHOT] <= 0) {
+                this.hit(-this.regs[R_SNAPSHOT]);
+            }
+        }
+
+    }
+    this.on_tick = on_tick;
+
+    function hit(remainder) {
         this.regs[R_SR] = this.regs[R_SR] | SR_TO;
 
         if(this.regs[R_CR] & CR_CONT) {
-            ptimer.set_count(this.regs[R_PERIOD]);
-            ptimer.run(1);
+            this.regs[R_SNAPSHOT] = this.regs[R_PERIOD] - remainder;
+        } else {
+            this.regs[R_SR] &= ~SR_RUN;
         }
-
         this.update_irq();
     }
+    this.hit = hit;
 
     function reset() {
         for(var i = 0; i < R_MAX; i++) {
             this.regs[i] = 0;
         }
-        ptimer.stop();
     }
     this.reset = reset;
 
