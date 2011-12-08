@@ -20,19 +20,4 @@ lm32.util.overlaps = function(a, b, c, d) {
     return !(before || after);
 };
 
-lm32.util.error_report = function() {
-    var strs = [];
-    for(var i = 0; arguments[i]; i++) {
-        strs[i] = arguments[i].toString();
-    }
-    console.log("ERROR: " + strs.join(" "));
-};
-
-lm32.util.trace = function() {
-    var strs = []
-    for(var i = 0; arguments[i]; i++) {
-        strs[i] = arguments[i].toString();
-    }
-    console.log("TRACE:" + strs.join(" "));
-};
     

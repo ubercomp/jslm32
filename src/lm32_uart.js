@@ -110,10 +110,10 @@ lm32.UART = function(params) {
             case R_LCR:
             case R_MCR:
             case R_DIV:
-                lm32.util.error_report("lm32_uart: read access to write only register 0x" + (addr << 2).toString(16));
+                console.log("lm32_uart: read access to write only register 0x" + (addr << 2).toString(16));
                 break;
             default:
-                lm32.util.error_report("lm32_uart: read access to unknown register 0x"+ (addr << 2).toString(16));
+                console.log("lm32_uart: read access to unknown register 0x"+ (addr << 2).toString(16));
                 break;
         }
         return r;
@@ -136,10 +136,10 @@ lm32.UART = function(params) {
             case R_IIR:
             case R_LSR:
             case R_MSR:
-                lm32.util.error_report("lm32_uart: write access to read only register 0x" + (addr << 2).toString(16));
+                console.log("lm32_uart: write access to read only register 0x" + (addr << 2).toString(16));
                 break;
             default:
-                lm32.util.error_report("lm32_uart: write access to unknown register 0x" + (addr << 2).toString(16));
+                console.log("lm32_uart: write access to unknown register 0x" + (addr << 2).toString(16));
                 break;
         }
         this.update_irq();

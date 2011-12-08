@@ -43,7 +43,7 @@ lm32.MMU.prototype.get_handler_for = function(addr, name) {
     }
     if(handler === undefined) {
         handler = this.dummy_handler;
-        lm32.util.trace("MMU get_handler_for (called by " + name + "): no handler found for address 0x" + addr.toString(16));
+        //console.log("MMU get_handler_for (called by " + name + "): no handler found for address 0x" + addr.toString(16));
     }
     return handler;
 };
@@ -72,7 +72,7 @@ lm32.MMU.prototype.add_memory = function(base, size, funcs) {
     if(funcs.write_16) { h.write_16 = funcs.write_16; };
     if(funcs.write_32) { h.write_32 = funcs.write_32; };
     this.handlers.push(h);
-    // lm32.util.trace("Adding handlers at address 0x", base.toString(16), " with size", size, "->", h, "n = ", this.handlers.length);
+    // console.log("Adding handlers at address 0x", base.toString(16), " with size", size, "->", h, "n = ", this.handlers.length);
 
 };
 
@@ -86,7 +86,7 @@ lm32.MMU.prototype.read = function(addr, mask, name) {
         }
         return (val & mask);
     } else {
-        lm32.util.error_report("MMU: Cannot " + name + " at address: 0x" + lm32.bits.format(addr));
+        console.log("MMU ERROR: Cannot " + name + " at address: 0x" + lm32.bits.format(addr));
     }
 }
 
@@ -112,7 +112,7 @@ lm32.MMU.prototype.write = function(addr, val, mask, name) {
             (handler[name])(offset, sval);
         } catch(err) {
             ret = false;
-            lm32.util.error_report("MMU: Cannot " + name + " value " + lm32.bits.format(sval)  +  " at address: " + lm32.bits.format(addr));
+            console.log("MMU ERROR: Cannot " + name + " value " + lm32.bits.format(sval)  +  " at address: " + lm32.bits.format(addr));
         }
     } else {
         ret = false;
