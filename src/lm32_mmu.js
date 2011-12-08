@@ -183,3 +183,26 @@ lm32.MMU.prototype.load_binary = function (file, addr) {
     }
     return size;
 };
+
+lm32.MMU.prototype.read_str = function(addr, max_size) {
+    var str = '';
+    var ch;
+    for(var i = 0; i < max_size; i++) {
+        ch = this.read_8(addr + i);
+        if(ch == 0) {
+            break;
+        }
+        str += String.fromCharCode(ch);
+    }
+    return str;
+};
+
+lm32.MMU.prototype.write_str = function(str, addr) {
+    var i;
+    var len = str.length;
+    for(i = 0; i < len; i++) {
+        this.write_8(addr + i, str.charCodeAt(i));
+    }
+    this.write_8(addr + len, 0);
+    console.log('Wrote to ' + lm32.bits.format(addr) + ': ' + this.read_str(addr, 4096));
+};
