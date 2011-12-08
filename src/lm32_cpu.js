@@ -20,8 +20,6 @@
 lm32.Lm32Cpu = function (params) {
     // dependencies
     var bits = lm32.bits;
-    var trace = lm32.util.trace;
-    var disas = lm32.util.trace; // disassemble message
 
     // current instruction
     this.I_OPC   = 0;  // opcode
@@ -120,11 +118,11 @@ lm32.Lm32Cpu = function (params) {
         }
 
         if(id == 4) {
-            trace("IGNORING BUS_ERROR EXCEPTION");
+            console.log("IGNORING BUS_ERROR EXCEPTION");
             return;
         }
         if(trace_log) {
-            trace("Raising exception (id = " + id + ") at " + bits.format(this.pc));
+            console.log("Raising exception (id = " + id + ") at " + bits.format(this.pc));
         }
 
         switch(id) {
@@ -154,7 +152,7 @@ lm32.Lm32Cpu = function (params) {
                 break;
         }
         if(trace_log) {
-            trace("going to pc " + bits.format(this.next_pc));
+            console.log("going to pc " + bits.format(this.next_pc));
         }
     }
     this.raise_exception = raise_exception;
@@ -519,7 +517,7 @@ lm32.Lm32Cpu = function (params) {
         } else if(imm5 == 2) {
             this.raise_exception(EXCEPT_BREAKPOINT);
         } else {
-            trace ("Invalid opcode");
+            console.log("Invalid opcode");
             throw "Invalid opcode";
         }
         this.issue = 4;
@@ -582,7 +580,7 @@ lm32.Lm32Cpu = function (params) {
         }
 
         if(!ok) {
-            lm32.util.error_report("Error reading at address " + bits.format(uaddr) + " with width " + width);
+            console.log("Error reading at address " + bits.format(uaddr) + " with width " + width);
             this.raise_exception(EXCEPT_DATA_BUS_ERROR);
         }
 
@@ -626,7 +624,7 @@ lm32.Lm32Cpu = function (params) {
                 ok = this.mmu.write_32(uaddr, this.regs[this.I_R1]);
                 break;
             default:
-                lm32.util.error_report("Error writing to address " + bits.format(uaddr) + " with width " + width);
+                console.log("Error writing to address " + bits.format(uaddr) + " with width " + width);
                 break;
         }
         if(!ok) {
@@ -671,7 +669,7 @@ lm32.Lm32Cpu = function (params) {
             case CSR_WP2:
             case CSR_WP3:
                 read = false;
-                trace("Invalid read on csr 0x" + csr.toString(16));
+                console.log("Invalid read on csr 0x" + csr.toString(16));
                 break;
 
             case CSR_IE:
@@ -706,14 +704,14 @@ lm32.Lm32Cpu = function (params) {
 
             default:
                 read = false;
-                trace ("No such CSR")
+                console.log("No such CSR")
                 throw ("No such CSR register: " + csr);
                 break;
         }
         if(read) {
             this.regs[r2] = (val) | 0;
         } else {
-            lm32.util.error_report("Reading from invalid CSR: 0x" + csr.toString(16));
+            console.log("Reading from invalid CSR: 0x" + csr.toString(16));
         }
         this.issue = 1;
         this.result = 2;
@@ -727,7 +725,7 @@ lm32.Lm32Cpu = function (params) {
             // these cannot be written to:
             case CSR_CC:
             case CSR_CFG:
-                trace("Cannot write to csr number " + csr);
+                console.log("Cannot write to csr number " + csr);
                 break;
 
             case CSR_IP:
@@ -755,12 +753,12 @@ lm32.Lm32Cpu = function (params) {
                 break;
 
             case CSR_JTX:
-                //trace("Writing CSR_JTX at PC: 0x" + bits.unsigned32(this.pc).toString(16));
+                //console.log("Writing CSR_JTX at PC: 0x" + bits.unsigned32(this.pc).toString(16));
                 this.jtx = val;
                 break;
 
             case CSR_JRX:
-                //trace("Writing CSR_JRX at PC: 0x" + bits.unsigned32(this.pc).toString(16));
+                //console.log("Writing CSR_JRX at PC: 0x" + bits.unsigned32(this.pc).toString(16));
                 this.jrx = val;
                 break;
 
@@ -788,7 +786,7 @@ lm32.Lm32Cpu = function (params) {
 
     // reserved instruction
     function reserved() {
-        trace("Someone called the reserved instruction. Not cool!");
+        console.log("Someone called the reserved instruction. Not cool!");
         throw "This should never be  called";
     }
 
@@ -1095,15 +1093,15 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
 
         opcode = this.I_OPC;
         (this.optable[opcode])();
+        inc = this.issue + this.result;
+        ticks += inc;
+        this.cc = (this.cc + inc) | 0;
         if(this.interrupt && (this.ie.ie == 1) && ((this.pic.get_ip() & this.pic.get_im()) != 0)) {
             // here is the correct place to treat exceptions, otherwise pc will be overriden
             this.raise_exception(6, true);
         }
         this.pc = this.next_pc;
-        inc = this.issue + this.result;
-        ticks += inc;
         i++;
-        this.cc = (this.cc + inc) | 0;
     }
     return ticks;
 };
