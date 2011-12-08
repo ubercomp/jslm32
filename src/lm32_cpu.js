@@ -53,7 +53,7 @@ lm32.Lm32Cpu = function (params) {
     var EXCEPT_WATCHPOINT            = 3;
     var EXCEPT_DATA_BUS_ERROR        = 4;
     var EXCEPT_DIVIDE_BY_ZERO        = 5;
-    var EXEPT_INTERRUPT              = 6;
+    var EXCEPT_INTERRUPT             = 6;
     var EXCEPT_SYSTEM_CALL           = 7;
 
     // general purpose register indices
@@ -113,21 +113,8 @@ lm32.Lm32Cpu = function (params) {
         return (a != b);
     }
 
-    // debug exception
-    function raise_debug_exception(id) {
-        if((id < 0) || (id > 7)) {
-            throw ("Invalid exception ID: " + id);
-        }
-        trace("Raising debug exception (id = " + id +") at 0x" + bits.unsigned32(this.pc).toString(16));
-        this.regs[REG_BA] = this.pc | 0;
-        this.ie.bie = this.ie.ie;
-        this.ie.ie = 0;
-        this.next_pc = bits.unsigned32(this.deba + id * 32);
-    }
-    this.raise_debug_exception = raise_debug_exception;
-
     // non-debug exception
-    function raise_exception(id) {
+    function raise_exception(id, trace_log) {
         if((id < 0) || (id > 7)) {
             throw ("Invalid exception ID: " + id);
         }
@@ -136,14 +123,39 @@ lm32.Lm32Cpu = function (params) {
             trace("IGNORING BUS_ERROR EXCEPTION");
             return;
         }
+        if(trace_log) {
+            trace("Raising exception (id = " + id + ") at " + bits.format(this.pc));
+        }
 
-        trace("Raising exception (id = " + id + ") at " + bits.format(this.pc));
-        this.regs[REG_EA] = this.pc | 0;
-        this.ie.eie = this.ie.ie;
-        this.ie.ie = 0;
-        var base = this.dc.re ? this.deba : this.eba;
-        this.next_pc = bits.unsigned32(base + id * 32);
-        trace("going to pc " + bits.format(this.next_pc));
+        switch(id) {
+            case EXCEPT_DATA_BUS_ERROR:
+            case EXCEPT_DIVIDE_BY_ZERO:
+            case EXCEPT_INSTRUCTION_BUS_ERROR:
+            case EXCEPT_INTERRUPT:
+            case EXCEPT_SYSTEM_CALL:
+                // non-debug
+                this.regs[REG_EA] = this.pc | 0;
+                this.ie.eie = this.ie.ie;
+                this.ie.ie = 0;
+                var base = this.dc.re ? this.deba : this.eba;
+                this.next_pc = bits.unsigned32(base + id * 32);
+                break;
+
+            case EXCEPT_BREAKPOINT:
+            case EXCEPT_WATCHPOINT:
+                // debug
+                this.regs[REG_BA] = this.pc | 0;
+                this.ie.bie = this.ie.ie;
+                this.ie.ie = 0;
+                this.next_pc = bits.unsigned32(this.deba + id * 32);
+                break;
+            default:
+                throw ("Unhandled exception with id " + id);
+                break;
+        }
+        if(trace_log) {
+            trace("going to pc " + bits.format(this.next_pc));
+        }
     }
     this.raise_exception = raise_exception;
 
@@ -544,6 +556,9 @@ lm32.Lm32Cpu = function (params) {
     function load(width, func) {
         var addr = this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16);
         var uaddr = bits.unsigned32(addr);
+        if(uaddr >= 0xbffe000 & uaddr < 0xbfff000) {
+            console.log('Read from hwsetup');
+        }
         var ok = false;
         var val = undefined;
         switch(width) {
@@ -663,10 +678,10 @@ lm32.Lm32Cpu = function (params) {
                 val = this.ie_val();
                 break;
             case CSR_IM:
-                val = this.im;
+                val = this.pic.get_im();
                 break;
             case CSR_IP:
-                val = this.ip;
+                val = this.pic.get_ip();
                 break;
             case CSR_CC:
                 val = this.cc;
@@ -710,17 +725,20 @@ lm32.Lm32Cpu = function (params) {
         var val = this.regs[rx];
         switch(csr) {
             // these cannot be written to:
-            case CSR_IP:
             case CSR_CC:
             case CSR_CFG:
                 trace("Cannot write to csr number " + csr);
+                break;
+
+            case CSR_IP:
+                this.pic.set_ip(val);
                 break;
 
             case CSR_IE:
                 this.ie_wrt(val);
                 break;
             case CSR_IM:
-                this.im = val;
+                this.pic.set_im(val);
                 break;
             case CSR_ICC:
             case CSR_DCC:
@@ -918,6 +936,29 @@ lm32.Lm32Cpu = function (params) {
 
 };
 
+lm32.Lm32Cpu.prototype.irq_handler = function(level) {
+    //console.log('board cpu_irq_handler');
+    switch(level) {
+        case 0:
+            this.interrupt_reset();
+            break;
+        case 1:
+            this.interrupt_set();
+            break;
+        default:
+            throw ("Unknown level: " + level);
+            break;
+    }
+};
+
+lm32.Lm32Cpu.prototype.interrupt_set = function() {
+    this.interrupt = true;
+};
+
+lm32.Lm32Cpu.prototype.interrupt_reset = function() {
+    this.interrupt = false;
+};
+
 lm32.Lm32Cpu.prototype.reset = function(params) {
     this.mmu = params.mmu;
     // last instruction issue as defined in the architecture manual, page 51
@@ -934,6 +975,15 @@ lm32.Lm32Cpu.prototype.reset = function(params) {
     // program counter: unsigned, two lower bits should always be 0
     this.pc = params.bootstrap_pc;
     this.next_pc = this.pc + 4; // jumps write on next_pc
+
+    // interrupt controller
+    var raise_irq = function() {
+        this.irq_handler(1);
+    }
+    var lower_irq = function() {
+        this.irq_handler(0);
+    }
+    this.pic = new lm32.Lm32Pic(raise_irq.bind(this), lower_irq.bind(this));
 
     // interrupt enable
     this.ie = {
@@ -957,9 +1007,8 @@ lm32.Lm32Cpu.prototype.reset = function(params) {
     };
 
     // interrupt pending
-    this.ip = 0;
-
-    this.im = 0;        // interrupt mask
+    this.interrupt = false;
+    
     this.cc = 0;        // cycle counter
 
     // configuration:
@@ -1019,24 +1068,6 @@ lm32.Lm32Cpu.prototype.reset = function(params) {
     this.wp3 = 0;
 };
 
-
-lm32.Lm32Cpu.prototype.set_irq = function(irq_line, irq_value) {
-    if(irq_line > 32) {
-        lm32.util.error_report("Trying to set invalid irq: " + irq_line);
-        return;
-    }
-    if(irq_value) {
-        this.ip = this.ip | (1 << irq_value);
-        if((this.ie.ie == 1) && ((this.ip & this.im) != 0)) {
-            this.raise_exception(6);
-        } else {
-            console.log('set_irq called but did not go to interrupt');
-        }
-    } else {
-        this.ip = this.ip & (~(1 << irq_value));
-    }
-}
-
 /**
  * Runs the processor during a certain number of clock cycles.
  * @param clocks the number of clock cycles to run
@@ -1045,23 +1076,12 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
     var bits = lm32.bits;
     var i = 0;
     var inc;
-//    var valid;
     var op, pc, opcode;
-//    var stats = [];
-//    for(var s = 0; s < 64; s++) {
-//        stats[s] = 0;
-//    }
+    var ticks = 0;
     while(i < instructions) {
         pc = this.pc;
         this.next_pc = bits.unsigned32(pc + 4);
-
-//        valid = (pc & 0x3) === 0;
-//        if(!valid) {
-//            console.log("invalid pc " + lm32.bits.format(pc));
-//        }
-
         op = this.mmu.read_32(pc);
-
 
         // Instruction decoding:
         this.I_OPC   = bits.rmsr_u(op, bits.mask26_31, 26);
@@ -1074,28 +1094,23 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
         this.I_R2    = bits.rmsr_u(op, bits.mask11_15, 11);
 
         opcode = this.I_OPC;
-//        stats[opcode] = stats[opcode] + 1;
         (this.optable[opcode])();
+        if(this.interrupt && (this.ie.ie == 1) && ((this.pic.get_ip() & this.pic.get_im()) != 0)) {
+            // here is the correct place to treat exceptions, otherwise pc will be overriden
+            this.raise_exception(6, true);
+        }
         this.pc = this.next_pc;
-
         inc = this.issue + this.result;
+        ticks += inc;
         i++;
-
         this.cc = (this.cc + inc) | 0;
     }
+    return ticks;
+};
 
-    
-//    function print_stats(opnames, stats) {
-//        var len = stats.length;
-//        for(var i = 0; i < len; i++) {
-//            if(stats[i] != 0) {
-//                console.log(opnames[i] + " = " + stats[i]);
-//            }
-//        }
-//    }
-    
-    //print_stats(this.opnames, stats);
-    //this.dump();
+lm32.Lm32Cpu.prototype.dump_ie = function() {
+    var fmt = lm32.bits.format;
+    console.log('ie=' + fmt(this.ie_val()) + '(IE=' + this.ie.ie + ' EIE=' + this.ie.eie + ' BIE=' + this.ie.bie + ')');
 };
 
 lm32.Lm32Cpu.prototype.dump = function() {
@@ -1105,7 +1120,7 @@ lm32.Lm32Cpu.prototype.dump = function() {
     console.log('');
     console.log('IN: PC=' + fmt(this.pc));
     console.log('ie=' + fmt(this.ie_val()) + '(IE=' + this.ie.ie + ' EIE=' + this.ie.eie + ' BIE=' + this.ie.bie + ')');
-    console.log('im='+ fmt(this.im) + ' ip=' + fmt(this.ip));
+    console.log('im='+ fmt(this.pic.get_im()) + ' ip=' + fmt(this.pic.get_ip()));
     console.log('eba=' + fmt(this.eba) + ' deba=' + fmt(this.deba));
     
     for(i = 0; i < 32; i++) {
