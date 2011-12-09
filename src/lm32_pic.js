@@ -4,7 +4,7 @@
  * Created: 08/12/11 02:24
  */
 "use strict";
-lm32.Lm32Pic = function(raise_irq, lower_irq) {
+lm32.Lm32Pic = function(cpu_irq_handler) {
     var self = this;
     self.im = 0;
     self.ip = 0;
@@ -19,9 +19,9 @@ lm32.Lm32Pic = function(raise_irq, lower_irq) {
         self.ip |= self.irq_state;
 
         if (self.ip & self.im) {
-            raise_irq();
+            cpu_irq_handler(1);
         } else {
-            lower_irq();
+            cpu_irq_handler(0);
         }
     }
 
