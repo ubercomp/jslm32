@@ -66,23 +66,25 @@ lm32.Lm32Timer = function(params) {
         //console.log('timer' + id + ' write_32 reg=' + names[addr] + ' val=' + value);
         switch (addr) {
             case R_SR:
-                this.regs[R_SR] = value & (~SR_TO); // do not write timeout
-                if((this.regs[R_CR] & CR_CONT) != 0) {
-                    this.regs[R_SR] |= SR_RUN;
+                if(value & SR_TO) {
+                    this.regs[R_SR] |= SR_TO;
+                } else {
+                    this.regs[R_SR] &= ~SR_TO;
                 }
                 break;
             case R_CR:
                 this.regs[R_CR] = value;
-                if((value & CR_STOP) != 0) {
-                    this.regs[R_SR] &= ~SR_RUN;
-                }
                 if((value & CR_START) != 0) {
                     this.regs[R_SR] |= SR_RUN;
+                }
+                if((value & CR_STOP) != 0) {
+                    this.regs[R_SR] &= ~SR_RUN;
                 }
                 break;
             case R_PERIOD:
                 this.regs[addr] = value;
-                this.regs[R_SNAPSHOT] = value;
+                this.regs[R_SNAPSHOT] = value - this.remainder;
+                this.remainder = 0;
                 break;
             case R_SNAPSHOT:
                 console.log("lm32_timer: write access to read only register 0x" + (addr << 2).toString(16));
@@ -107,6 +109,7 @@ lm32.Lm32Timer = function(params) {
     this.on_tick = on_tick;
 
     function hit(remainder) {
+        this.remainder = remainder;
         this.regs[R_SR] = this.regs[R_SR] | SR_TO;
 
         if(this.regs[R_CR] & CR_CONT) {
@@ -122,6 +125,7 @@ lm32.Lm32Timer = function(params) {
         for(var i = 0; i < R_MAX; i++) {
             this.regs[i] = 0;
         }
+        this.remainder = 0;
     }
     this.reset = reset;
 
