@@ -113,10 +113,6 @@ lm32.Lm32Cpu = function (params) {
 
     // non-debug exception
     function raise_exception(id, trace_log) {
-        if((id < 0) || (id > 7)) {
-            throw ("Invalid exception ID: " + id);
-        }
-
         if(id == 4) {
             console.log("IGNORING BUS_ERROR EXCEPTION");
             return;
@@ -136,7 +132,8 @@ lm32.Lm32Cpu = function (params) {
                 this.ie.eie = this.ie.ie;
                 this.ie.ie = 0;
                 var base = this.dc.re ? this.deba : this.eba;
-                this.next_pc = bits.unsigned32(base + id * 32);
+                // exceptions write straight to pc (not next_pc)
+                this.pc = bits.unsigned32(base + id * 32);
                 break;
 
             case EXCEPT_BREAKPOINT:
@@ -145,14 +142,12 @@ lm32.Lm32Cpu = function (params) {
                 this.regs[REG_BA] = this.pc | 0;
                 this.ie.bie = this.ie.ie;
                 this.ie.ie = 0;
-                this.next_pc = bits.unsigned32(this.deba + id * 32);
+                // exceptions write straight to pc (not next_pc)
+                this.pc = bits.unsigned32(this.deba + id * 32);
                 break;
             default:
                 throw ("Unhandled exception with id " + id);
                 break;
-        }
-        if(trace_log) {
-            console.log("going to pc " + bits.format(this.next_pc));
         }
     }
     this.raise_exception = raise_exception;
@@ -272,6 +267,8 @@ lm32.Lm32Cpu = function (params) {
         } else {
             this.regs[this.I_R2] = (Math.floor(vr0/vr1)) | 0;
         }
+        this.issue = 34;
+        this.result = 34;
     }
 
     function divu() {
@@ -438,10 +435,12 @@ lm32.Lm32Cpu = function (params) {
     // branch and call implementations
     function b() {
         var r0 = this.I_R0;
+        this.issue = 4;
 
         if(r0 == REG_EA) {
             // eret -> restore eie
             this.ie.ie = this.ie.eie;
+            this.issue = 3;
         } else if(r0 == REG_BA) {
             // bret -> restore bie
             this.ie.ie = this.ie.bie;
@@ -449,7 +448,6 @@ lm32.Lm32Cpu = function (params) {
 
         this.next_pc = bits.unsigned32(this.regs[r0]);
         this.result = RESULT_BRANCH;
-        this.issue = 4;
     }
 
     function bi() {
@@ -495,7 +493,7 @@ lm32.Lm32Cpu = function (params) {
         this.branch_conditional(fcond_ne);
     }
 
-    function call() {
+    function call_() {
         this.regs[REG_RA] = (this.pc + 4) | 0;
         this.next_pc = bits.unsigned32(this.regs[this.I_R0]);
         this.issue = 4;
@@ -517,7 +515,6 @@ lm32.Lm32Cpu = function (params) {
         } else if(imm5 == 2) {
             this.raise_exception(EXCEPT_BREAKPOINT);
         } else {
-            console.log("Invalid opcode");
             throw "Invalid opcode";
         }
         this.issue = 4;
@@ -659,7 +656,6 @@ lm32.Lm32Cpu = function (params) {
             // These cannot be read from:
             case CSR_ICC:
             case CSR_DCC:
-            case CSR_DC:
             case CSR_BP0:
             case CSR_BP1:
             case CSR_BP2:
@@ -670,6 +666,10 @@ lm32.Lm32Cpu = function (params) {
             case CSR_WP3:
                 read = false;
                 console.log("Invalid read on csr 0x" + csr.toString(16));
+                break;
+
+            case CSR_DC:
+                val = this.dc_val();
                 break;
 
             case CSR_IE:
@@ -704,7 +704,6 @@ lm32.Lm32Cpu = function (params) {
 
             default:
                 read = false;
-                console.log("No such CSR")
                 throw ("No such CSR register: " + csr);
                 break;
         }
@@ -714,7 +713,7 @@ lm32.Lm32Cpu = function (params) {
             console.log("Reading from invalid CSR: 0x" + csr.toString(16));
         }
         this.issue = 1;
-        this.result = 2;
+        this.result = 1;
     }
 
     function wcsr() {
@@ -850,7 +849,7 @@ lm32.Lm32Cpu = function (params) {
         /* 0x33 */ reserved.bind(this),
         /* 0x34 */     wcsr.bind(this),
         /* 0x35 */      mod.bind(this),
-        /* 0x36 */     call.bind(this),
+        /* 0x36 */     call_.bind(this),
         /* 0x37 */    sexth.bind(this),
         /* 0x38 */       bi.bind(this),
         /* 0x39 */     cmpe.bind(this),
@@ -938,23 +937,15 @@ lm32.Lm32Cpu.prototype.irq_handler = function(level) {
     //console.log('board cpu_irq_handler');
     switch(level) {
         case 0:
-            this.interrupt_reset();
+            this.interrupt = false;
             break;
         case 1:
-            this.interrupt_set();
+            this.interrupt = true;
             break;
         default:
             throw ("Unknown level: " + level);
             break;
     }
-};
-
-lm32.Lm32Cpu.prototype.interrupt_set = function() {
-    this.interrupt = true;
-};
-
-lm32.Lm32Cpu.prototype.interrupt_reset = function() {
-    this.interrupt = false;
 };
 
 lm32.Lm32Cpu.prototype.reset = function(params) {
@@ -974,14 +965,7 @@ lm32.Lm32Cpu.prototype.reset = function(params) {
     this.pc = params.bootstrap_pc;
     this.next_pc = this.pc + 4; // jumps write on next_pc
 
-    // interrupt controller
-    var raise_irq = function() {
-        this.irq_handler(1);
-    }
-    var lower_irq = function() {
-        this.irq_handler(0);
-    }
-    this.pic = new lm32.Lm32Pic(raise_irq.bind(this), lower_irq.bind(this));
+    this.pic = new lm32.Lm32Pic(this.irq_handler.bind(this));
 
     // interrupt enable
     this.ie = {
@@ -1066,6 +1050,16 @@ lm32.Lm32Cpu.prototype.reset = function(params) {
     this.wp3 = 0;
 };
 
+lm32.Lm32Cpu.prototype.set_timers = function(timers) {
+    this.timers = timers;
+};
+
+lm32.Lm32Cpu.prototype.tick = function(ticks) {
+    for(var t in this.timers) {
+        (this.timers[t]).on_tick(ticks);
+    }
+};
+
 /**
  * Runs the processor during a certain number of clock cycles.
  * @param clocks the number of clock cycles to run
@@ -1077,6 +1071,12 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
     var op, pc, opcode;
     var ticks = 0;
     while(i < instructions) {
+        if(this.interrupt && (this.ie.ie == 1) && ((this.pic.get_ip() & this.pic.get_im()) != 0)) {
+            // here is the correct place to treat exceptions
+            // otherwise pc will be overriden
+            this.raise_exception(6);
+        }
+
         pc = this.pc;
         this.next_pc = bits.unsigned32(pc + 4);
         op = this.mmu.read_32(pc);
@@ -1094,12 +1094,9 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
         opcode = this.I_OPC;
         (this.optable[opcode])();
         inc = this.issue + this.result;
-        ticks += inc;
+        this.tick(inc);
+        ticks += inc; // TODO look at instructions and see if all are setting issue and result correctly
         this.cc = (this.cc + inc) | 0;
-        if(this.interrupt && (this.ie.ie == 1) && ((this.pic.get_ip() & this.pic.get_im()) != 0)) {
-            // here is the correct place to treat exceptions, otherwise pc will be overriden
-            this.raise_exception(6, true);
-        }
         this.pc = this.next_pc;
         i++;
     }
