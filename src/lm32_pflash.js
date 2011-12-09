@@ -23,7 +23,7 @@ lm32.PFlashCFI01 = function(load_imgs,
         fake_mmu.load_binary("../linux/u-boot.bin", 0);
         console.log("DONE Loading U-Boot to flash");
         console.log("Loading Kernel to FLASH");
-        fake_mmu.load_binary("../linux/vmlinux.img", 0x40000);
+        fake_mmu.load_binary("../linux/vmlinux.nogz.img", 0x40000);
         console.log("DONE Loading Kernel to FLASH");
     }
 
