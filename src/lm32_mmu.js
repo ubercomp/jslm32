@@ -14,15 +14,6 @@
 lm32.MMU = function() {
     this.handlers = [];
     this.last_handler = undefined;
-    var dummy = function() { return 0 };
-    this.dummy_handler = {
-            read_8: dummy,
-            read_16: dummy,
-            read_32: dummy,
-            write_8: dummy,
-            write_16: dummy,
-            write_32: dummy
-    };
 };
 
 lm32.MMU.prototype.get_handler_for = function(addr, name) {
@@ -42,8 +33,7 @@ lm32.MMU.prototype.get_handler_for = function(addr, name) {
         }
     }
     if(handler === undefined) {
-        handler = this.dummy_handler;
-        //console.log("MMU get_handler_for (called by " + name + "): no handler found for address 0x" + addr.toString(16));
+        console.log("MMU get_handler_for (called by " + name + "): no handler found for address 0x" + addr.toString(16));
     }
     return handler;
 };
