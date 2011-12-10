@@ -111,7 +111,7 @@ lm32.Lm32Timer = function(params) {
 
     function hit(remainder) {
         if(remainder > 1000) {
-           console.log('timer' + id + ' bad remainder ' + value);
+            console.log('timer' + id + ' bad remainder: ' + remainder);
         }
         
         // timeout
