@@ -131,7 +131,7 @@ lm32.UART = function(params) {
             case R_LCR:
             case R_MCR:
             case R_DIV:
-                this.regs[addr] = value & bits.mask00_31;
+                this.regs[addr] = value | 0;
                 break;
             case R_IIR:
             case R_LSR:
