@@ -113,10 +113,6 @@ lm32.Lm32Cpu = function (params) {
 
     // non-debug exception
     function raise_exception(id, trace_log) {
-        if(id != 6) {
-            console.log("Raising exception (id = " + id + ") at " + bits.format(this.pc));
-        }
-
         switch(id) {
             case EXCEPT_DATA_BUS_ERROR:
             case EXCEPT_DIVIDE_BY_ZERO:
@@ -128,8 +124,9 @@ lm32.Lm32Cpu = function (params) {
                 this.ie.eie = this.ie.ie;
                 this.ie.ie = 0;
                 var base = this.dc.re ? this.deba : this.eba;
-                // exceptions write straight to pc (not next_pc)
+                // exceptions write to both pc and next_pc
                 this.pc = bits.unsigned32(base + id * 32);
+                this.next_pc = this.pc
                 break;
 
             case EXCEPT_BREAKPOINT:
@@ -138,8 +135,9 @@ lm32.Lm32Cpu = function (params) {
                 this.regs[REG_BA] = this.pc | 0;
                 this.ie.bie = this.ie.ie;
                 this.ie.ie = 0;
-                // exceptions write straight to pc (not next_pc)
+                // exceptions write to both pc and next_pc
                 this.pc = bits.unsigned32(this.deba + id * 32);
+                this.next_pc = this.pc;
                 break;
             default:
                 throw ("Unhandled exception with id " + id);
@@ -1000,6 +998,7 @@ lm32.Lm32Cpu.prototype.reset = function(params) {
     //(0  0  0  0)(1  1  0  1)(0  0  0  1)(0  0  1  0)(0  0  0  0)(0  0  0  0)(1  1  1  1)(0  1  1  1)
     //     0           d           1           2            0          0            f          7
     this.cfg = 0x0d1200f7; // using qemu's
+    this.cfg = 0;
 
     this.eba = params.bootstrap_eba;       // exception base address
 
@@ -1047,12 +1046,18 @@ lm32.Lm32Cpu.prototype.reset = function(params) {
 };
 
 lm32.Lm32Cpu.prototype.set_timers = function(timers) {
-    this.timers = timers;
+    var len = timers.length
+    this.timers = new Array(len);
+    for(var i = 0; i < len; i++) {
+        var cur = timers[i];
+        (this.timers)[i] = cur.on_tick.bind(cur);
+    }
 };
 
 lm32.Lm32Cpu.prototype.tick = function(ticks) {
-    for(var t in this.timers) {
-        (this.timers[t]).on_tick(ticks);
+    var len = this.timers.length;
+    for(var i = 0; i < len; i++) {
+        (this.timers[i])(ticks);
     }
 };
 
@@ -1069,10 +1074,8 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
     while(i < instructions) {
         if(this.interrupt && (this.ie.ie == 1) && ((this.pic.get_ip() & this.pic.get_im()) != 0)) {
             // here is the correct place to treat exceptions
-            // otherwise pc will be overriden
             this.raise_exception(6);
         }
-
         pc = this.pc;
         this.next_pc = bits.unsigned32(pc + 4);
         op = this.mmu.read_32(pc);
