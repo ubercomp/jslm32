@@ -113,11 +113,7 @@ lm32.Lm32Cpu = function (params) {
 
     // non-debug exception
     function raise_exception(id, trace_log) {
-        if(id == 4) {
-            console.log("IGNORING BUS_ERROR EXCEPTION");
-            return;
-        }
-        if(trace_log) {
+        if(id != 6) {
             console.log("Raising exception (id = " + id + ") at " + bits.format(this.pc));
         }
 
@@ -1095,7 +1091,7 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
         (this.optable[opcode])();
         inc = this.issue + this.result;
         this.tick(inc);
-        ticks += inc; // TODO look at instructions and see if all are setting issue and result correctly
+        ticks += inc;
         this.cc = (this.cc + inc) | 0;
         this.pc = this.next_pc;
         i++;
