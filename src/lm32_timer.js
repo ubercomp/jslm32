@@ -35,6 +35,7 @@ lm32.Lm32Timer = function(params) {
     var CR_STOP  = (1 << 3); // stop?
 
     function update_irq() {
+        // this works only because ITO is the LSB
         var state = (this.regs[R_SR] & SR_TO) && (this.regs[R_CR] & CR_ITO);
         set_irq(irq_line, state);
         return state;
@@ -62,8 +63,6 @@ lm32.Lm32Timer = function(params) {
     function write_32(addr, value) {
         addr = addr >> 2;
         value = value | 0;
-        var names = ['STATUS', 'CONTROL', 'PERIOD', 'SNAPSHOT'];
-        //console.log('timer' + id + ' write_32 reg=' + names[addr] + ' val=' + value);
         switch (addr) {
             case R_SR:
                 if(value & SR_TO) {
@@ -82,9 +81,12 @@ lm32.Lm32Timer = function(params) {
                 }
                 break;
             case R_PERIOD:
-                this.regs[addr] = value;
-                this.regs[R_SNAPSHOT] = value - this.remainder;
-                this.remainder = 0;
+                if(value < 0) {
+                   throw ('timer' + id + 'bad period ' + value);
+                } else {
+                    this.regs[addr] = value;
+                    this.regs[R_SNAPSHOT] = value;
+                }
                 break;
             case R_SNAPSHOT:
                 console.log("lm32_timer: write access to read only register 0x" + (addr << 2).toString(16));
@@ -93,7 +95,6 @@ lm32.Lm32Timer = function(params) {
                 console.log("lm32_timer: write access to unknown register 0x" + (addr << 2).toString(16));
                 break;
         }
-        //console.log('SR = ' + this.regs[R_SR]);
         this.update_irq();
     }
 
@@ -109,12 +110,18 @@ lm32.Lm32Timer = function(params) {
     this.on_tick = on_tick;
 
     function hit(remainder) {
-        this.remainder = remainder;
+        if(remainder > 1000) {
+           console.log('timer' + id + ' bad remainder ' + value);
+        }
+        
+        // timeout
         this.regs[R_SR] = this.regs[R_SR] | SR_TO;
 
-        if(this.regs[R_CR] & CR_CONT) {
-            this.regs[R_SNAPSHOT] = this.regs[R_PERIOD] - remainder;
-        } else {
+        // when counter is zero, snapshot is updated, regardless of CR_CONT
+        this.regs[R_SNAPSHOT] = this.regs[R_PERIOD];
+
+        if((this.regs[R_CR] & CR_CONT) == 0) {
+            // not continuous, stop running
             this.regs[R_SR] &= ~SR_RUN;
         }
         this.update_irq();
@@ -125,7 +132,6 @@ lm32.Lm32Timer = function(params) {
         for(var i = 0; i < R_MAX; i++) {
             this.regs[i] = 0;
         }
-        this.remainder = 0;
     }
     this.reset = reset;
 
