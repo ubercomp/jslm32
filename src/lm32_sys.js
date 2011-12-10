@@ -26,6 +26,16 @@ lm32.start = function(load_linux) {
     var UART0_BASE        = 0x80000000;
     var UART0_IRQ         = 0;
 
+    // dummy devices:
+    var TRISPEEDMAC_BASE  = 0x80008000;
+    var TRISPEEDMAC_SIZE  = 8192;
+
+    var LEDS_BASE         = 0x80004000
+    var LEDS_SIZE         = 128;
+
+    var _7SEG_BASE        = 0x80006000;
+    var _7SEG_SIZE        = 128;
+
     var HWSETUP_BASE      = 0x0bffe000;
     var CMDLINE_BASE      = 0x0bfff000;
     var INITRD_BASE       = 0x08400000;
@@ -110,6 +120,32 @@ lm32.start = function(load_linux) {
     }
     start_terminal();
 
+    function make_dummy_device(name, base, log) {
+        function dummy(addr, value) {
+            if(value !== undefined) {
+                if(log) {
+                    console.log('dummy: ' + name + ' write addr=' + lm32.bits.format(addr + base) + ' value= ' + lm32.bits.format(value));
+                }
+            } else {
+                if (log) {
+                    console.log('dummy: ' + name + ' read addr=' + lm32.bits.format(addr + base));
+                }
+            }
+            return 0;
+        }
+       
+        var handlers = {
+            read_8:   dummy,
+            read_16:  dummy,
+            read_32:  dummy,
+            write_8:  dummy,
+            write_16: dummy,
+            write_32: dummy
+        
+        };
+       return handlers;
+    }
+
 
     // Gluing everything together
     mmu.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
@@ -118,11 +154,15 @@ lm32.start = function(load_linux) {
     mmu.add_memory(TIMER0_BASE, timer0.iomem_size, timer0.get_mmio_handlers());
     mmu.add_memory(TIMER1_BASE, timer1.iomem_size, timer1.get_mmio_handlers());
     mmu.add_memory(TIMER2_BASE, timer2.iomem_size, timer2.get_mmio_handlers());
+    mmu.add_memory(TRISPEEDMAC_BASE, TRISPEEDMAC_SIZE, make_dummy_device('trispeedmac', TRISPEEDMAC_BASE, true));
+    mmu.add_memory(LEDS_BASE, LEDS_SIZE, make_dummy_device('leds', LEDS_BASE, false));
+    mmu.add_memory(_7SEG_BASE, _7SEG_SIZE, make_dummy_device('7seg', _7SEG_BASE, true));
+
 
     if(load_linux) {
         // load initrd
-        console.log('Loading initrd to RAM at ' + lm32.bits.format(0x08400000));
-        mmu.load_binary('../linux/initrd.img', 0x08400000);
+        //console.log('Loading initrd to RAM at ' + lm32.bits.format(0x08400000));
+        //mmu.load_binary('../linux/initrd.img', 0x08400000);
     } else {
         // load u-boot
         console.log('Loading U-boot to RAM at ' + lm32.bits.format(RAM_BASE));
