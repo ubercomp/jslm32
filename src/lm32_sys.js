@@ -49,7 +49,7 @@ lm32.start = function(load_linux) {
 
     var ram = new lm32.RAM(RAM_SIZE, true);
 
-    var flash = new lm32.PFlashCFI01(load_linux,
+    var flash = new lm32.PFlashCFI01(false,
         FLASH_SECTOR_SIZE,
         FLASH_SIZE / FLASH_SECTOR_SIZE, 2,
         0x01, 0x7e, 0x43, 0x00, true);
@@ -163,6 +163,11 @@ lm32.start = function(load_linux) {
         // load initrd
         //console.log('Loading initrd to RAM at ' + lm32.bits.format(0x08400000));
         //mmu.load_binary('../linux/initrd.img', 0x08400000);
+        console.log('Loading linux and initrd');
+        mmu.load_binary('../linux/u-boot.bin', RAM_BASE);
+        mmu.load_binary('../linux/initrd.img', INITRD_BASE);
+        mmu.load_binary('../linux/vmlinux.nogz.img', 0xa000000);
+        cpu.pc = RAM_BASE;
     } else {
         // load u-boot
         console.log('Loading U-boot to RAM at ' + lm32.bits.format(RAM_BASE));
