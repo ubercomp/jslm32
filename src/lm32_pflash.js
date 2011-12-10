@@ -19,12 +19,15 @@ lm32.PFlashCFI01 = function(load_imgs,
             write_8: this.storage.write_8.bind(this.storage)
         };
         fake_mmu.add_memory(0, this.total_len, fake_handlers);
-        console.log("Loading U-Boot to FLASH");
-        fake_mmu.load_binary("../linux/u-boot.bin", 0);
-        console.log("DONE Loading U-Boot to flash");
-        console.log("Loading Kernel to FLASH");
-        fake_mmu.load_binary("../linux/vmlinux.nogz.img", 0x40000);
-        console.log("DONE Loading Kernel to FLASH");
+        //console.log("Loading U-Boot to FLASH");
+        //fake_mmu.load_binary("../linux/u-boot.bin", 0);
+        //console.log("DONE Loading U-Boot to flash");
+        //console.log("Loading Kernel to FLASH");
+        //fake_mmu.load_binary("../linux/vmlinux.nogz.img", 0x40000);
+        //console.log("DONE Loading Kernel to FLASH");
+        console.log('Loading Flash Image (takes a long time)');
+        fake_mmu.load_binary('../linux/flash.img', 0);
+        console.log('Done Loading. Booting now');
     }
 
     //cpu_register_physical_memory(base, total_len,
@@ -165,12 +168,12 @@ lm32.PFlashCFI01.prototype.read = function(offset, width, be) {
     }
 
     var fmt = lm32.bits.format;
-    this.DPRINTF("pflash_read: reading offset " + fmt(offset) +  " under cmd " + fmt(this.cmd) + " width " + this.width);
+    //this.DPRINTF("pflash_read: reading offset " + fmt(offset) +  " under cmd " + fmt(this.cmd) + " width " + this.width);
     switch (this.cmd) {
         case 0x00:
             /* Flash area read */
             p = this.storage;
-            this.DPRINTF("pflash_read: data offset " + fmt(offset) + " " + fmt(ret));
+            //this.DPRINTF("pflash_read: data offset " + fmt(offset) + " " + fmt(ret));
             switch (width) {
                 case 1:
                     ret = p.read_8(offset);
@@ -198,7 +201,7 @@ lm32.PFlashCFI01.prototype.read = function(offset, width, be) {
                     }
                     break;
                 default:
-                    this.DPRINTF("BUG in pflash_read");
+                    //this.DPRINTF("BUG in pflash_read");
             }
             break;
 
@@ -209,20 +212,20 @@ lm32.PFlashCFI01.prototype.read = function(offset, width, be) {
         case 0xe8: /* Write block */
             /* Status register read */
             ret = this.status;
-            this.DPRINTF("pflash_read: status " + fmt(ret));
+            //this.DPRINTF("pflash_read: status " + fmt(ret));
             break;
         case 0x90:
             switch (boff) {
                 case 0:
                     ret = this.ident[0] << 8 | this.ident[1];
-                    this.DPRINTF("pflash_read: Manufacturer Code " + fmt(ret));
+                    //this.DPRINTF("pflash_read: Manufacturer Code " + fmt(ret));
                     break;
                 case 1:
                     ret = this.ident[2] << 8 | this.ident[3];
-                    this.DPRINTF("pflash_read: Device ID Code " + fmt(ret));
+                    //this.DPRINTF("pflash_read: Device ID Code " + fmt(ret));
                     break;
                 default:
-                    this.DPRINTF("pflash_read: Read Device Information boff=" + fmt(boff));
+                    //this.DPRINTF("pflash_read: Read Device Information boff=" + fmt(boff));
                     ret = 0;
                     break;
             }
@@ -237,7 +240,7 @@ lm32.PFlashCFI01.prototype.read = function(offset, width, be) {
             break;
         default:
             /* This should never happen : reset state & treat it as a read */
-            this.DPRINTF("pflash_read: unknown command state: " + fmt(this.cmd));
+            //this.DPRINTF("pflash_read: unknown command state: " + fmt(this.cmd));
             this.wcycle = 0;
             this.cmd = 0;
     }
@@ -246,14 +249,14 @@ lm32.PFlashCFI01.prototype.read = function(offset, width, be) {
 
 /* update flash content on disk */
 lm32.PFlashCFI01.prototype.update = function(offset, size) {
-    this.DPRINTF("update: NOT IMPLEMENTED");
+    //this.DPRINTF("update: NOT IMPLEMENTED");
 };
 
 lm32.PFlashCFI01.prototype.data_write = function(offset, value, width, be) {
     var p = this.storage;
     var fmt = lm32.bits.format;
-    this.DPRINTF("pflash_data_write: block write offset " + fmt(offset) +
-        " value " + fmt(value) + " counter " + fmt(this.counter));
+    //this.DPRINTF("pflash_data_write: block write offset " + fmt(offset) +
+    //" value " + fmt(value) + " counter " + fmt(this.counter));
     switch (width) {
         case 1:
             p.write_8(offset, value);
@@ -285,14 +288,14 @@ lm32.PFlashCFI01.prototype.data_write = function(offset, value, width, be) {
 
 lm32.PFlashCFI01.prototype.error_flash_return_after_calling = function(offset, value) {
     var fmt = lm32.bits.format;
-    this.DPRINTF("pflash_write: Unimplemented flash cmd sequence " +
-    "(offset " + fmt(offset) + ", wcycle " + fmt(this.wcycle) + " cmd " + fmt(this.cmd) + " value " + fmt(value));
+    //this.DPRINTF("pflash_write: Unimplemented flash cmd sequence " +
+    //"(offset " + fmt(offset) + ", wcycle " + fmt(this.wcycle) + " cmd " + fmt(this.cmd) + " value " + fmt(value));
 
     this.reset_flash_return_after_calling();
 };
 
 lm32.PFlashCFI01.prototype.reset_flash_return_after_calling = function() {
-    this.DPRINTF("cpu_register_physical_memory(pfl->base, pfl->total_len, pfl->off | IO_MEM_ROMD | pfl->fl_mem)");
+    //this.DPRINTF("cpu_register_physical_memory(pfl->base, pfl->total_len, pfl->off | IO_MEM_ROMD | pfl->fl_mem)");
     this.bypass = 0;
     this.wcycle = 0;
     this.cmd = 0;
@@ -302,10 +305,10 @@ lm32.PFlashCFI01.prototype.write = function(offset, value, width, be) {
     var p;
     var cmd = value;
     var fmt = lm32.bits.format;
-    this.DPRINTF("pflash_write: writing offset " + fmt(offset) + " value " + fmt(value) + " width " + width + " wcycle " + this.wcycle);
+    //this.DPRINTF("pflash_write: writing offset " + fmt(offset) + " value " + fmt(value) + " width " + width + " wcycle " + this.wcycle);
     if (!this.wcycle) {
         /* Set the device in I/O access mode */
-        this.DPRINTF("cpu_register_physical_memory(pfl->base, pfl->total_len, pfl->fl_mem)");
+        //this.DPRINTF("cpu_register_physical_memory(pfl->base, pfl->total_len, pfl->fl_mem)");
     }
 
     switch (this.wcycle) {
@@ -313,17 +316,17 @@ lm32.PFlashCFI01.prototype.write = function(offset, value, width, be) {
             /* read mode */
             switch (cmd) {
                 case 0x00: /* ??? */
-                    this.DPRINTF("goto reset_flash");
+                    //this.DPRINTF("goto reset_flash");
                     this.reset_flash_return_after_calling(); return;
                 case 0x10: /* Single Byte Program */
                 case 0x40: /* Single Byte Program */
-                    this.DPRINTF("pflash_write: Single Byte Program");
+                    //this.DPRINTF("pflash_write: Single Byte Program");
                     break;
                 case 0x20: /* Block erase */
                     p = this.storage;
                     offset &= ~(this.sector_len - 1);
 
-                    this.DPRINTF("pflash_write: block erase at " + fmt(offset) + " bytes " + fmt(this.sector_len));
+                    //this.DPRINTF("pflash_write: block erase at " + fmt(offset) + " bytes " + fmt(this.sector_len));
                     for(var k = 0 ; k < this.sector_len; k++) {
                         p.write_8(offset + k, 0xff);
                     }
@@ -332,34 +335,34 @@ lm32.PFlashCFI01.prototype.write = function(offset, value, width, be) {
                     this.status |= 0x80; /* Ready! */
                     break;
                 case 0x50: /* Clear status bits */
-                    this.DPRINTF("pflash_write: Clear status bits");
+                    //this.DPRINTF("pflash_write: Clear status bits");
                     this.status = 0x0;
-                    this.DPRINTF("goto reset_flash");
+                    //this.DPRINTF("goto reset_flash");
                     this.reset_flash_return_after_calling(); return;
                 case 0x60: /* Block (un)lock */
-                    this.DPRINTF("pflash_write: Block unlock");
+                    //this.DPRINTF("pflash_write: Block unlock");
                     break;
                 case 0x70: /* Status Register */
-                    this.DPRINTF("pflash_write: Read status register");
+                    //this.DPRINTF("pflash_write: Read status register");
                     this.cmd = cmd;
                     return;
                 case 0x90: /* Read Device ID */
-                    this.DPRINTF("pflash_write: Read Device information");
+                    //this.DPRINTF("pflash_write: Read Device information");
                     this.cmd = cmd;
                     return;
                 case 0x98: /* CFI query */
-                    this.DPRINTF("pflash_write: CFI query");
+                    //this.DPRINTF("pflash_write: CFI query");
                     break;
                 case 0xe8: /* Write to buffer */
-                    this.DPRINTF("pflash_write: Write to buffer");
+                    //this.DPRINTF("pflash_write: Write to buffer");
                     this.status |= 0x80; /* Ready! */
                     break;
                 case 0xff: /* Read array mode */
-                    this.DPRINTF("pfash_write: Read array mode");
-                    this.DPRINTF("goto reset_flash");
+                    //this.DPRINTF("pfash_write: Read array mode");
+                    //this.DPRINTF("goto reset_flash");
                     this.reset_flash_return_after_calling(); return;
                 default:
-                    this.DPRINTF("goto error flash");
+                    //this.DPRINTF("goto error flash");
                     this.error_flash_return_after_calling(offset, value); return;
             }
             this.wcycle++;
@@ -369,7 +372,7 @@ lm32.PFlashCFI01.prototype.write = function(offset, value, width, be) {
             switch (this.cmd) {
                 case 0x10: /* Single Byte Program */
                 case 0x40: /* Single Byte Program */
-                    this.DPRINTF("pflash_write: Single Byte Program");
+                    //this.DPRINTF("pflash_write: Single Byte Program");
                     this.data_write(offset, value, width, be);
                     this.update(offset, width);
                     this.status |= 0x80; /* Ready! */
@@ -381,15 +384,15 @@ lm32.PFlashCFI01.prototype.write = function(offset, value, width, be) {
                         this.wcycle = 0;
                         this.status |= 0x80;
                     } else if (cmd == 0xff) { /* read array mode */
-                        this.DPRINTF("goto reset_flash");
+                        //this.DPRINTF("goto reset_flash");
                         this.reset_flash_return_after_calling(); return;
                     } else {
-                        this.DPRINTF("goto error_flash")
+                        //this.DPRINTF("goto error_flash")
                         this.error_flash_return_after_calling(offset, value); return;
                     }
                     break;
                 case 0xe8:
-                    this.DPRINTF("pflash_write: block write of " + fmt(value)+ " bytes");
+                    //this.DPRINTF("pflash_write: block write of " + fmt(value)+ " bytes");
                     this.counter = value;
                     this.wcycle++;
                     break;
@@ -401,24 +404,24 @@ lm32.PFlashCFI01.prototype.write = function(offset, value, width, be) {
                         this.wcycle = 0;
                         this.status |= 0x80;
                     } else if (cmd == 0xff) {
-                        this.DPRINTF("goto reset_flash");
+                        //this.DPRINTF("goto reset_flash");
                         this.reset_flash_return_after_calling(); return;
                     } else {
-                        this.DPRINTF("pflash_write: Unknown (un)locking command");
-                        this.DPRINTF("goto reset_flash");
+                        //this.DPRINTF("pflash_write: Unknown (un)locking command");
+                        //this.DPRINTF("goto reset_flash");
                         this.reset_flash_return_after_calling(); return;
                     }
                     break;
                 case 0x98:
                     if (cmd == 0xff) {
-                        this.DPRINTF("goto reset_flash");
+                        //this.DPRINTF("goto reset_flash");
                         this.reset_flash_return_after_calling(); return;
                     } else {
-                        this.DPRINTF("pflash_write: leaving query mode");
+                        //this.DPRINTF("pflash_write: leaving query mode");
                     }
                     break;
                 default:
-                    this.DPRINTF("goto error_flash")
+                    //this.DPRINTF("goto error_flash")
                     this.error_flash_return_after_calling(offset, value); return;
             }
             return;
@@ -433,7 +436,7 @@ lm32.PFlashCFI01.prototype.write = function(offset, value, width, be) {
                         var mask = this.writeblock_size - 1;
                         mask = ~mask;
 
-                        this.DPRINTF("pflash_write: block write finished");
+                        //this.DPRINTF("pflash_write: block write finished");
                         this.wcycle++;
                         /* Flush the entire write buffer onto backing storage.  */
                         this.update(offset & mask, this.writeblock_size);
@@ -442,7 +445,7 @@ lm32.PFlashCFI01.prototype.write = function(offset, value, width, be) {
                     this.counter--;
                     break;
                 default:
-                    this.DPRINTF("goto error_flash");
+                    //this.DPRINTF("goto error_flash");
                     this.error_flash_return_after_calling(offset, value) ; return;
             }
             return;
@@ -453,21 +456,21 @@ lm32.PFlashCFI01.prototype.write = function(offset, value, width, be) {
                         this.wcycle = 0;
                         this.status |= 0x80;
                     } else {
-                        this.DPRINTF('pflash_write: unknown command for "write block"');
-                        this.DPRINTF("Write block confirm");
-                        this.DPRINTF("goto reset_flash");
+                        //this.DPRINTF('pflash_write: unknown command for "write block"');
+                        //this.DPRINTF("Write block confirm");
+                        //this.DPRINTF("goto reset_flash");
                         this.reset_flash_return_after_calling(); return;
                     }
                     break;
                 default:
-                    this.DPRINTF("goto error_flash");
+                    //this.DPRINTF("goto error_flash");
                     this.error_flash_return_after_calling(offset, value); return;
             }
             return;
         default:
             /* Should never happen */
-            this.DPRINTF("pflash_write: invalid write state");
-            this.DPRINTF("goto reset_flash");
+            //this.DPRINTF("pflash_write: invalid write state");
+            //this.DPRINTF("goto reset_flash");
             this.reset_flash_return_after_calling(); return;
     }
     return;
