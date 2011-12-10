@@ -96,7 +96,7 @@ lm32.run_tests = function(wait_time, first_test, last_test) {
 
 lm32.start_sys = function(terminal_div) {
     var RAM_BASE = 0x08000000;
-    var RAM_SIZE = 64*1024*1024;
+    var RAM_SIZE = 1*1024*1024;
     var EBA_BASE = RAM_BASE;
     var DEBA_BASE = RAM_BASE;
 
@@ -137,12 +137,17 @@ lm32.start_sys = function(terminal_div) {
         terminal: terminal
     };
     var testdev = new lm32.TestDev(testdev_params);
+    var DummyTimer = function() {
+        this.on_tick = function() {};
+    };
+    var timer = new DummyTimer();
     
     mmu.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
     mmu.add_memory(TESTDEV_BASE, testdev.iomem_size, testdev.get_mmio_handlers());
 
     function run_test(test_name, idx, shutdown) {
         var cpu = new lm32.Lm32Cpu(cpu_params);
+        cpu.set_timers([timer]);
         // testdev.reset();
         var str = "\nRunning Test " + test_name + " (" + idx + ")\n";
         terminal.write(str);
