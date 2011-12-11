@@ -98,12 +98,7 @@ lm32.MMU.prototype.write = function(addr, val, mask, name) {
     if(handler && (name in handler)) {
         var offset = addr - handler.base_addr;
         var sval = val & mask; //safe
-        try {
-            (handler[name])(offset, sval);
-        } catch(err) {
-            ret = false;
-            console.log("MMU ERROR: Cannot " + name + " value " + lm32.bits.format(sval)  +  " at address: " + lm32.bits.format(addr));
-        }
+        (handler[name])(offset, sval);
     } else {
         ret = false;
     }
