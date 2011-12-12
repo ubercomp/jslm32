@@ -42,7 +42,7 @@ lm32.start = function(load_linux) {
 
     var EBA_BASE = FLASH_BASE;
     var DEBA_BASE = FLASH_BASE;
-    var BOOT_PC = load_linux ? FLASH_BASE : RAM_BASE;
+    var BOOT_PC = RAM_BASE;
     var KERNEL_BASE = RAM_BASE;
 
     var mmu = new lm32.MMU();
@@ -56,6 +56,9 @@ lm32.start = function(load_linux) {
 
     var cpu_params = {
         mmu: mmu,
+        ram: ram,
+        ram_base: RAM_BASE,
+        ram_size: RAM_SIZE,
         bootstrap_pc: BOOT_PC,
         bootstrap_eba: EBA_BASE,
         bootstrap_deba: DEBA_BASE
@@ -166,8 +169,7 @@ lm32.start = function(load_linux) {
         console.log('Loading linux and initrd');
         mmu.load_binary('../linux/u-boot.bin', RAM_BASE);
         mmu.load_binary('../linux/initrd.img', INITRD_BASE);
-        mmu.load_binary('../linux/vmlinux.nogz.img', 0xa000000);
-        cpu.pc = RAM_BASE;
+        mmu.load_binary('../linux/vmlinux.nogz.img', 0x0a000000);
     } else {
         // load u-boot
         console.log('Loading U-boot to RAM at ' + lm32.bits.format(RAM_BASE));
@@ -186,8 +188,7 @@ lm32.start = function(load_linux) {
     cpu.set_timers([timer0, timer1, timer2]);
     var step = cpu.step.bind(cpu);
     var f = function() {
-        
-        var ticks = step(50000);
+        step(50000);
         //on_tick(ticks);
         setTimeout(f, 0);
     }
