@@ -542,12 +542,7 @@ lm32.Lm32Cpu = function (params) {
      * @param width the width to read (8, 16 or 32)
      * @param func the function to apply before assigning the result to a register
      */
-    function load(width, func) {
-        var addr = this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16);
-        var uaddr = bits.unsigned32(addr);
-        if(uaddr >= 0xbffe000 & uaddr < 0xbfff000) {
-            console.log('Read from hwsetup');
-        }
+    function load(uaddr, width, func) {
         var ok = false;
         var val = undefined;
         switch(width) {
@@ -581,28 +576,51 @@ lm32.Lm32Cpu = function (params) {
     this.load = load;
 
     function lb() {
-        this.load(8, sign_extend_8);
+        var uaddr = bits.unsigned32(this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16));
+        if((uaddr >= this.ram_base) && (uaddr < this.ram_max)) {
+            this.regs[this.I_R1] = lm32.bits.sign_extend(this.ram.read_8(uaddr - this.ram_base), 8);
+        } else {
+            this.load(uaddr, 8, sign_extend_8);
+        }
     }
 
     function lbu() {
-        this.load(8, zero_extend_8);
+        var uaddr = bits.unsigned32(this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16));
+        if((uaddr >= this.ram_base) && (uaddr < this.ram_max)) {
+            this.regs[this.I_R1] = lm32.bits.zero_extend(this.ram.read_8(uaddr - this.ram_base), 8);
+        } else {
+            this.load(uaddr, 8, zero_extend_8);
+        }
     }
 
     function lh() {
-        this.load(16, sign_extend_16);
+        var uaddr = bits.unsigned32(this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16));
+        if((uaddr >= this.ram_base) && (uaddr < this.ram_max)) {
+            this.regs[this.I_R1] = lm32.bits.sign_extend(this.ram.read_16(uaddr - this.ram_base), 16);
+        } else {
+            this.load(uaddr, 16, sign_extend_16);
+        }
     }
 
     function lhu() {
-        this.load(16, zero_extend_16);
+        var uaddr = bits.unsigned32(this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16));
+        if((uaddr >= this.ram_base) && (uaddr < this.ram_max)) {
+            this.regs[this.I_R1] = lm32.bits.zero_extend(this.ram.read_16(uaddr - this.ram_base), 16);
+        } else {
+            this.load(uaddr, 16, zero_extend_16);
+        }
     }
 
     function lw() {
-        this.load(32, to_32_bits);
+        var uaddr = bits.unsigned32(this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16));
+        if((uaddr >= this.ram_base) && (uaddr < this.ram_max)) {
+            this.regs[this.I_R1] = this.ram.read_32(uaddr - this.ram_base);
+        } else {
+            this.load(uaddr, 32, to_32_bits);
+        }
     }
 
-    function store(width) {
-        var addr = this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16);
-        var uaddr = bits.unsigned32(addr);
+    function store(uaddr, width) {
         var ok;
         switch(width) {
             case 8:
@@ -628,15 +646,30 @@ lm32.Lm32Cpu = function (params) {
     this.store = store;
 
     function sb() {
-        this.store(8);
+        var uaddr = bits.unsigned32(this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16));
+        if((uaddr >= this.ram_base) && (uaddr < this.ram_max)) {
+            this.ram.write_8(uaddr - this.ram_base, this.regs[this.I_R1] & 0xff);
+        } else {
+            this.store(uaddr, 8);
+        }
     }
 
     function sh() {
-        this.store(16);
+        var uaddr = bits.unsigned32(this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16));
+        if((uaddr >= this.ram_base) && (uaddr < this.ram_max)) {
+            this.ram.write_16(uaddr - this.ram_base, this.regs[this.I_R1] & 0xffff);
+        } else {
+            this.store(uaddr, 16);
+        }
     }
 
     function sw() {
-        this.store(32);
+        var uaddr = bits.unsigned32(this.regs[this.I_R0] + bits.sign_extend(this.I_IMM16, 16));
+        if((uaddr >= this.ram_base) && (uaddr < this.ram_max)) {
+            this.ram.write_32(uaddr - this.ram_base, this.regs[this.I_R1] | 0);
+        } else {
+            this.store(uaddr, 32);
+        }
     }
 
 
@@ -937,13 +970,18 @@ lm32.Lm32Cpu.prototype.irq_handler = function(level) {
             this.interrupt = true;
             break;
         default:
-            throw ("Unknown level: " + level);
+            throw ("Unknown interruption level: " + level);
             break;
     }
 };
 
 lm32.Lm32Cpu.prototype.reset = function(params) {
+    this.ram = params.ram;
+    this.ram_base = params.ram_base;
+    this.ram_size = params.ram_size;
+    this.ram_max  = this.ram_base + this.ram_size;
     this.mmu = params.mmu;
+
     // last instruction issue as defined in the architecture manual, page 51
     this.result = 0;
     this.issue = 0;
@@ -995,10 +1033,11 @@ lm32.Lm32Cpu.prototype.reset = function(params) {
     // REV                  WP       BP          INT               J  R  H  G  IC DC CC  X  U  S  D  M
     // 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00
     // 0  0  0  0  1  1  0  1  0  0  0  1  0  0  1  0  0  0  0  0  0  0  0  0  1  1  1  1  1  1  1  1
-    //(0  0  0  0)(1  1  0  1)(0  0  0  1)(0  0  1  0)(0  0  0  0)(0  0  0  0)(1  1  1  1)(0  1  1  1)
-    //     0           d           1           2            0          0            f          7
-    this.cfg = 0x0d1200f7; // using qemu's
-    this.cfg = 0;
+    //(0  0  0  0)(1  1  0  1)(0  0  0  1)(0  0  1  0)(0  0  0  0)(0  0  0  0)(0  0  1  1)(0  1  1  1)
+    //     0           d           1           2            0          0            3          7
+    this.cfg = 0x0d120037;
+    //this.cfg = 0x0d1200f7; // Using QEMU's
+    
 
     this.eba = params.bootstrap_eba;       // exception base address
 
@@ -1048,6 +1087,7 @@ lm32.Lm32Cpu.prototype.reset = function(params) {
 lm32.Lm32Cpu.prototype.set_timers = function(timers) {
     var len = timers.length
     this.timers = new Array(len);
+    this.orig_timers = timers;
     for(var i = 0; i < len; i++) {
         var cur = timers[i];
         (this.timers)[i] = cur.on_tick.bind(cur);
@@ -1071,35 +1111,51 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
     var inc;
     var op, pc, opcode;
     var ticks = 0;
+    var timer0 = this.orig_timers[0];
+    var ram_base = this.ram_base;
+    var read32 = this.ram.read_32.bind(this.ram);
+
     while(i < instructions) {
         if(this.interrupt && (this.ie.ie == 1) && ((this.pic.get_ip() & this.pic.get_im()) != 0)) {
             // here is the correct place to treat exceptions
+            this.interrupt = false;
             this.raise_exception(6);
         }
         pc = this.pc;
         this.next_pc = bits.unsigned32(pc + 4);
-        op = this.mmu.read_32(pc);
+
+
+        op = read32(pc - ram_base);
+        // To support code outside ram, do instead:
+        // op = this.mmu.read_32(pc);
 
         // Instruction decoding:
-        this.I_OPC   = bits.rmsr_u(op, bits.mask26_31, 26);
+        this.I_OPC   = (op & 0xfc000000) >>> 26;
         this.I_IMM5  = op & 0x1f;
         this.I_IMM16 = op & 0xffff;
         this.I_IMM26 = op & 0x3ffffff;
-        this.I_CSR   = bits.rmsr_u(op, bits.mask21_25, 21);
+        this.I_CSR   = (op & 0x03e00000) >> 21;
         this.I_R0    = this.I_CSR;
-        this.I_R1    = bits.rmsr_u(op, bits.mask16_20, 16);
-        this.I_R2    = bits.rmsr_u(op, bits.mask11_15, 11);
+        this.I_R1    = (op & 0x001f0000) >> 16;
+        this.I_R2    = (op & 0x0000f800) >> 11;
 
         opcode = this.I_OPC;
         (this.optable[opcode])();
-        inc = this.issue + this.result;
-        this.tick(inc);
+        inc = this.issue;
         ticks += inc;
+        if(ticks >= 1000) {
+            timer0.on_tick(ticks);
+            // to support multiple timers, do instead:
+            this.tick(ticks);
+            ticks -= 1000;
+        }
         this.cc = (this.cc + inc) | 0;
         this.pc = this.next_pc;
         i++;
     }
-    return ticks;
+    timer0.on_tick(ticks);
+    // to support multiple timers, do instead:
+    // this.tick(ticks)
 };
 
 lm32.Lm32Cpu.prototype.dump_ie = function() {
