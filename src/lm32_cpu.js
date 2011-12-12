@@ -1146,7 +1146,7 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
         if(ticks >= 1000) {
             timer0.on_tick(ticks);
             // to support multiple timers, do instead:
-            this.tick(ticks);
+            // this.tick(ticks);
             ticks -= 1000;
         }
         this.cc = (this.cc + inc) | 0;
