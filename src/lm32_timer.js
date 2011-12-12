@@ -110,10 +110,10 @@ lm32.Lm32Timer = function(params) {
     this.on_tick = on_tick;
 
     function hit(remainder) {
-        if(remainder > 1000) {
-            console.log('timer' + id + ' bad remainder: ' + remainder);
+        if(remainder >= this.regs[R_PERIOD]) {
+            console.log('bad remainder. missed an entire period. run less instructions per cpu.step() call');
         }
-        
+
         // timeout
         this.regs[R_SR] = this.regs[R_SR] | SR_TO;
 
