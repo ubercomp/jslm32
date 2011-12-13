@@ -5,6 +5,8 @@
  */
 "use strict";
 lm32.start = function(load_linux) {
+    var U_BOOT_BASE = 0x0bfdc000;
+    
     var FLASH_BASE = 0x04000000;
     var FLASH_SECTOR_SIZE = 256 * 1024;
     var FLASH_SIZE = 32 * 1024 * 1024;
@@ -86,10 +88,19 @@ lm32.start = function(load_linux) {
 
     // UART and Terminal
 
-    var terminal;
+    var terminal = window.vt100; // TODO pass terminal as parameter
     var putchar = function(c) {
-        // TODO treat special keys (up, down, left, right), and cursor
-        window.vt100.interpret(String.fromCharCode(c));
+        // TODO figure out if there are other special keys and treat them
+        if(c == 8) {
+            // backspace
+            var col = terminal.getCursorColumn();
+            if(col > 0) {
+                terminal.setCursorColumn(col - 1);
+                terminal.eraseToRight(1);
+            }
+            return;
+        }
+        terminal.interpret(String.fromCharCode(c));
     };
 
     var uart0 = new lm32.UART({
@@ -141,13 +152,12 @@ lm32.start = function(load_linux) {
 
 
     if (load_linux) {
-        // load initrd
-        //console.log('Loading initrd to RAM at ' + lm32.bits.format(0x08400000));
-        //mmu.load_binary('../linux/initrd.img', 0x08400000);
+        // with u-boot
         console.log('Loading linux and initrd');
-        mmu.load_binary('../linux/u-boot.bin', RAM_BASE);
+        mmu.load_binary('../linux/u-boot.bin', U_BOOT_BASE);
         mmu.load_binary('../linux/initrd.img', INITRD_BASE);
         mmu.load_binary('../linux/vmlinux.nogz.img', 0x0a000000);
+        cpu.pc=U_BOOT_BASE;
     } else {
         // load u-boot
         console.log('Loading U-boot to RAM at ' + lm32.bits.format(RAM_BASE));
