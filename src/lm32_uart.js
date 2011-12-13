@@ -164,6 +164,8 @@ lm32.UART = function(params) {
             this.regs[i] = 0;
         }
         this.regs[R_LSR] = LSR_THRE | LSR_TEMT;
+        this.str_processing = '';
+        this.is_processing = false;
     }
     this.reset = reset;
 
@@ -187,11 +189,28 @@ lm32.UART.prototype.get_mmio_handlers = function() {
     return handlers;
 };
 
-lm32.UART.prototype.send_char = function(charCode) {
-    var ch = String.fromCharCode(charCode)
-    if(this.can_rx()) {
-        this.do_rx(charCode);
-    } else {
-        console.log('Dropping unreceived char: ' + ch);
+lm32.UART.prototype.send_str = function(str) {
+    this.str_processing += str;
+    if(!this.is_processing) {
+        this.is_processing = true;
+        this.process_str();
     }
+};
+
+lm32.UART.prototype.process_str = function() {
+    var f = function() {
+        var charCode;
+        if(this.str_processing.length == 0) {
+            this.is_processing = false;
+        } else {
+            // take one char
+            charCode = this.str_processing.charCodeAt(0);
+            if(this.can_rx()) {
+                this.do_rx(charCode);
+                this.str_processing = this.str_processing.substr(1, this.str_processing.length - 1);
+            }
+            setTimeout(f.bind(this), 0);
+        }
+    };
+    (f.bind(this))();
 };
