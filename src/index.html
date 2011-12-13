@@ -2,8 +2,15 @@
 <html>
 <head>
     <!-- third party -->
-    <script src="../third_party/termlib/termlib.js"></script>
-    <link rel="stylesheet" type="text/css" href="../third_party/termlib/term_styles.css" />
+    <!-- hterm -->
+    <script src='../third_party/hterm/js/hterm.js'></script>
+    <script src='../third_party/hterm/js/scrollport.js'></script>
+    <script src='../third_party/hterm/js/terminal.js'></script>
+    <script src='../third_party/hterm/js/options.js'></script>
+    <script src='../third_party/hterm/js/screen.js'></script>
+    <script src='../third_party/hterm/js/vt100.js'></script>
+    <script src='../third_party/hterm/js/pubsub.js'></script>
+    
     <!-- lm32 -->
     <script src="lm32_base.js"></script>
     <script src="lm32_bits.js"></script>
@@ -15,6 +22,7 @@
     <script src="lm32_timer.js"></script>
     <script src="lm32_pflash.js"></script>
     <script src="lm32_uart.js"></script>
+    <script src="lm32_termhandler.js"></script>
 
     <script>
         var lm32_boot_linux = true;
@@ -29,6 +37,28 @@
         function pick_linux() {
             lm32_boot_linux = true;
         }
+
+        function start_terminal() {
+            var termConf = {
+                visibleColumnCount: 80,
+                visibleRowCount: 24,
+                fontSize: 15,
+                lineHeight: 17,
+                charWidth: 9,
+                scrollbarWidth: 16
+            };
+            var div = document.getElementById("vt100Div");
+            div.style.position = 'absolute';
+            div.style.height = termConf.lineHeight * termConf.visibleRowCount + 'px';
+            div.style.width = termConf.charWidth * termConf.visibleColumnCount +
+                    termConf.scrollbarWidth + 'px';
+            document.body.appendChild(div);
+
+            var terminal = new hterm.Terminal(termConf.fontSize, termConf.lineHeight);
+            terminal.decorate(div);
+            terminal.setCursorBlink(true);
+            window.vt100 = terminal;
+        }
     </script>
 
 </head>
@@ -38,6 +68,9 @@
     <input type="radio" name="boot_linux" value="false" onclick="pick_uboot()" /> Load U-Boot Only
 </form>
 <button onclick="lm32_start()">Start!</button>
-<div id="termDiv"> </div>
+<div id="vt100Div"></div>
+<script type="text/javascript">
+    start_terminal();
+</script>
 </body>
 </html>
