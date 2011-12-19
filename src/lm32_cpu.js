@@ -1110,10 +1110,11 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
     var i = 0;
     var inc;
     var op, pc, opcode;
+    var rpc; // ram-based pc
     var ticks = 0;
     var timer0 = this.orig_timers[0];
     var ram_base = this.ram_base;
-    var read32 = this.ram.read_32.bind(this.ram);
+    // var read32 = this.ram.read_32.bind(this.ram);
 
     while(i < instructions) {
         if(this.interrupt && (this.ie.ie == 1) && ((this.pic.get_ip() & this.pic.get_im()) != 0)) {
@@ -1122,10 +1123,18 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
             this.raise_exception(6);
         }
         pc = this.pc;
-        this.next_pc = bits.unsigned32(pc + 4);
+        this.next_pc = pc + 4; //bits.unsigned32(pc + 4);
 
 
-        op = read32(pc - ram_base);
+        // inlining read32
+        // op = read32(pc - ram_base);
+        rpc = pc - ram_base;       
+        op = this.ram.v8[rpc] << 24;
+        op |= this.ram.v8[rpc + 1] << 16;
+        op |= this.ram.v8[rpc + 2] << 8;
+        op |= this.ram.v8[rpc + 3];
+        
+        
         // To support code outside ram, do instead:
         // op = this.mmu.read_32(pc);
 
@@ -1144,9 +1153,9 @@ lm32.Lm32Cpu.prototype.step = function(instructions) {
         inc = this.issue;
         ticks += inc;
         if(ticks >= 1000) {
-            timer0.on_tick(ticks);
+            timer0.on_tick(1000);
             // to support multiple timers, do instead:
-            // this.tick(ticks);
+            // this.tick(1000);
             ticks -= 1000;
         }
         this.cc = (this.cc + inc) | 0;
