@@ -106,13 +106,17 @@ lm32.start_sys = function(terminal_div) {
 
     var mmu = new lm32.MMU();
 
+    var ram = new lm32.RAM(RAM_SIZE, true);
+
     var cpu_params = {
         mmu: mmu,
+        ram: ram,
+        ram_base: RAM_BASE,
+        ram_size: RAM_SIZE,
         bootstrap_pc: BOOT_PC,
         bootstrap_eba: EBA_BASE,
         bootstrap_deba: DEBA_BASE
     };
-    var ram = new lm32.RAM(RAM_SIZE, true);
 
     var term = document.getElementById(terminal_div);
     var terminal = (function() {
