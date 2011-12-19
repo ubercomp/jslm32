@@ -110,7 +110,7 @@ lm32.start = function(load_linux) {
     });
 
     var send_str = uart0.send_str.bind(uart0);
-    var termHandler = new lm32.KeyHandler(send_str);
+    var term_handler = new lm32.KeyHandler(send_str);
 
     function make_dummy_device(name, base, log) {
         function dummy(addr, value) {
@@ -155,7 +155,7 @@ lm32.start = function(load_linux) {
         // with u-boot
         console.log('Loading linux and initrd');
         mmu.load_binary('../linux/u-boot.bin', U_BOOT_BASE);
-        mmu.load_binary('../linux/initrd.img', INITRD_BASE);
+        mmu.load_binary('../linux/initrd.small.img', INITRD_BASE);
         mmu.load_binary('../linux/vmlinux.nogz.img', 0x0a000000);
         cpu.pc=U_BOOT_BASE;
     } else {
@@ -164,9 +164,8 @@ lm32.start = function(load_linux) {
         mmu.load_binary('../linux/u-boot.bin', RAM_BASE);
     }
 
-    window.flash = flash;
-    window.mmu = mmu;
     window.cpu = cpu;
+    window.term_handler = term_handler;
 
     cpu.set_timers([timer0]);//, timer1, timer2]);
     var step = cpu.step.bind(cpu);
