@@ -26,6 +26,12 @@
 
     <script>
         var lm32_boot_linux = true;
+        function lm32_boot() {
+            var term = window.term_handler; // created by lm32_sys.java
+            term.send_("setenv verify 'n'\n");
+            term.send_("setenv bootargs 'root=/dev/ram0 console=ttyS0,115200 ramdisk_size=4096\n");
+            term.send_("bootm 0a000000 08400000\n");
+        }
         function lm32_start() {
             lm32.start(lm32_boot_linux);
         }
@@ -67,7 +73,8 @@
     <input type="radio" name="boot_linux" value="true" onclick="pick_linux()" checked="checked"/> Load Linux (Boots Very Slowly) <br />
     <input type="radio" name="boot_linux" value="false" onclick="pick_uboot()" /> Load U-Boot Only
 </form>
-<button onclick="lm32_start()">Start!</button>
+<button onclick="lm32_start()">Start!</button> &nbsp; <button onclick="lm32_boot()">Boot! (Wait for U-Boot Prompt)</button>
+<p>Login: root ; Password: lattice</p>
 <div id="vt100Div"></div>
 <script type="text/javascript">
     start_terminal();
