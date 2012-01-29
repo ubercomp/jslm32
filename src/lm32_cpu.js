@@ -305,7 +305,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     /**
-     * @param reg_p is this an register to register compare?
+     * @param reg_p is it a register to register compare?
      * @param fcond function to compare two values;
      */
     function compare(cs, reg_p, fcond) {
