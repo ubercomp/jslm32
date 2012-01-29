@@ -4,7 +4,7 @@
  * Created: 11/09/11 20:22
  */
 "use strict";
-lm32.start = function(load_linux) {
+lm32.start = function(load_linux, terminal, key_handler) {
     var U_BOOT_BASE = 0x0bfdc000;
     
     var FLASH_BASE = 0x04000000;
@@ -88,7 +88,6 @@ lm32.start = function(load_linux) {
 
     // UART and Terminal
 
-    var terminal = window.vt100; // TODO pass terminal as parameter
     var putchar = function(c) {
         // TODO figure out if there are other special keys and treat them
         if(c == 8) {
@@ -110,7 +109,7 @@ lm32.start = function(load_linux) {
     });
 
     var send_str = uart0.send_str.bind(uart0);
-    var term_handler = new lm32.KeyHandler(send_str);
+    key_handler.set_send_fn(send_str);
 
     function make_dummy_device(name, base, log) {
         function dummy(addr, value) {
@@ -165,8 +164,6 @@ lm32.start = function(load_linux) {
     }
     
     window.cpu = cpu;
-    window.term_handler = term_handler;
-
     cpu.set_timers([timer0]);//, timer1, timer2]);
     setTimeout(cpu.step_forever, 0);
 };

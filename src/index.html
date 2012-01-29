@@ -22,18 +22,19 @@
     <script src="lm32_timer.js"></script>
     <script src="lm32_pflash.js"></script>
     <script src="lm32_uart.js"></script>
-    <script src="lm32_termhandler.js"></script>
+    <script src="lm32_keyhandler.js"></script>
 
     <script>
         var lm32_boot_linux = true;
+        var key_handler = lm32.keyHandler();
+        var terminal;
         function lm32_boot() {
-            var term = window.term_handler; // created by lm32_sys.java
-            term.send_("setenv verify 'n'\n");
-            term.send_("setenv bootargs 'root=/dev/ram0 console=ttyS0,115200 ramdisk_size=4096\n");
-            term.send_("bootm 0a000000 08400000\n");
+            key_handler.send_str("setenv verify 'n'\n");
+            key_handler.send_str("setenv bootargs 'root=/dev/ram0 console=ttyS0,115200 ramdisk_size=4096\n");
+            key_handler.send_str("bootm 0a000000 08400000\n");
         }
         function lm32_start() {
-            lm32.start(lm32_boot_linux);
+            lm32.start(lm32_boot_linux, terminal, key_handler);
         }
 
         function pick_uboot() {
@@ -47,7 +48,7 @@
         function start_terminal() {
             var termConf = {
                 visibleColumnCount: 80,
-                visibleRowCount: 24,
+                visibleRowCount: 25,
                 fontSize: 15,
                 lineHeight: 17,
                 charWidth: 9,
@@ -60,10 +61,9 @@
                     termConf.scrollbarWidth + 'px';
             document.body.appendChild(div);
 
-            var terminal = new hterm.Terminal(termConf.fontSize, termConf.lineHeight);
+            terminal = new hterm.Terminal(termConf.fontSize, termConf.lineHeight);
             terminal.decorate(div);
             terminal.setCursorBlink(true);
-            window.vt100 = terminal;
         }
     </script>
 
