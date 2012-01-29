@@ -102,7 +102,7 @@ lm32.start = function(load_linux, terminal, key_handler) {
         terminal.interpret(String.fromCharCode(c));
     };
 
-    var uart0 = new lm32.UART({
+    var uart0 = lm32.lm32UART({
         putchar: putchar,
         irq_line: UART0_IRQ,
         set_irq: set_irq

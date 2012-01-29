@@ -12,7 +12,7 @@
  */
 "use strict";
 
-lm32.UART = function(params) {
+lm32.lm32UART = function(params) {
     var bits       = lm32.bits;
     
     // parameters
@@ -68,26 +68,31 @@ lm32.UART = function(params) {
     var MSR_RI   = (1<<6);
     var MSR_DCD  = (1<<7);
 
+    // state
+    var regs = new Array(R_MAX);
+    var str_processing = '';
+    var is_processing = false;
+
     // function implementations
     function update_irq() {
         var irq;
 
-        if ((this.regs[R_LSR] & (LSR_OE | LSR_PE | LSR_FE | LSR_BI))
-            && (this.regs[R_IER] & IER_RLSI)) {
+        if ((regs[R_LSR] & (LSR_OE | LSR_PE | LSR_FE | LSR_BI))
+            && (regs[R_IER] & IER_RLSI)) {
             irq = 1;
-            this.regs[R_IIR] = IIR_ID1 | IIR_ID0;
-        } else if ((this.regs[R_LSR] & LSR_DR) && (this.regs[R_IER] & IER_RBRI)) {
+            regs[R_IIR] = IIR_ID1 | IIR_ID0;
+        } else if ((regs[R_LSR] & LSR_DR) && (regs[R_IER] & IER_RBRI)) {
             irq = 1;
-            this.regs[R_IIR] = IIR_ID1;
-        } else if ((this.regs[R_LSR] & LSR_THRE) && (this.regs[R_IER] & IER_THRI)) {
+            regs[R_IIR] = IIR_ID1;
+        } else if ((regs[R_LSR] & LSR_THRE) && (regs[R_IER] & IER_THRI)) {
             irq = 1;
-            this.regs[R_IIR] = IIR_ID0;
-        } else if ((this.regs[R_MSR] & 0x0f) && (this.regs[R_IER] & IER_MSI)) {
+            regs[R_IIR] = IIR_ID0;
+        } else if ((regs[R_MSR] & 0x0f) && (regs[R_IER] & IER_MSI)) {
             irq = 1;
-            this.regs[R_IIR] = 0;
+            regs[R_IIR] = 0;
         } else {
             irq = 0;
-            this.regs[R_IIR] = IIR_STAT;
+            regs[R_IIR] = IIR_STAT;
         }
         set_irq(irq_line, irq);
     }
@@ -97,14 +102,14 @@ lm32.UART = function(params) {
         addr = addr >> 2;
         switch (addr) {
             case R_RXTX:
-                r = this.regs[R_RXTX];
-                this.regs[R_LSR] &= ~LSR_DR;
-                this.update_irq();
+                r = regs[R_RXTX];
+                regs[R_LSR] &= ~LSR_DR;
+                update_irq();
                 break;
             case R_IIR:
             case R_LSR:
             case R_MSR:
-                r = this.regs[addr];
+                r = regs[addr];
                 break;
             case R_IER:
             case R_LCR:
@@ -131,7 +136,7 @@ lm32.UART = function(params) {
             case R_LCR:
             case R_MCR:
             case R_DIV:
-                this.regs[addr] = value | 0;
+                regs[addr] = value | 0;
                 break;
             case R_IIR:
             case R_LSR:
@@ -142,75 +147,79 @@ lm32.UART = function(params) {
                 //console.log("lm32_uart: write access to unknown register 0x" + (addr << 2).toString(16));
                 break;
         }
-        this.update_irq();
+        update_irq();
     }
 
     function can_rx() {
-        return !(this.regs[R_LSR] & LSR_DR);
+        return !(regs[R_LSR] & LSR_DR);
     }
 
     function do_rx(value) {
-        if(this.regs[R_LSR] & LSR_DR) {
-            this.regs[R_LSR] = this.regs[R_LSR] | LSR_OE;
+        if(regs[R_LSR] & LSR_DR) {
+            regs[R_LSR] = regs[R_LSR] | LSR_OE;
         }
 
-        this.regs[R_LSR]  = this.regs[R_LSR] | LSR_DR;
-        this.regs[R_RXTX] = value & 0xff;
-        this.update_irq();
+        regs[R_LSR]  = regs[R_LSR] | LSR_DR;
+        regs[R_RXTX] = value & 0xff;
+        update_irq();
     }
 
     function reset() {
         for(var i = 0; i < R_MAX; i++) {
-            this.regs[i] = 0;
+            regs[i] = 0;
         }
-        this.regs[R_LSR] = LSR_THRE | LSR_TEMT;
-        this.str_processing = '';
-        this.is_processing = false;
+        regs[R_LSR] = LSR_THRE | LSR_TEMT;
+        str_processing = '';
+        is_processing = false;
     }
-    this.reset = reset;
+
+    function get_mmio_handlers() {
+        var handlers = {
+            read_32 : read_32,
+            write_32: write_32
+        };
+        return handlers;
+
+    }
+
+    function process_str() {
+        var f = function() {
+            var charCode;
+            if(str_processing.length == 0) {
+                is_processing = false;
+            } else {
+                // take one char
+                charCode = str_processing.charCodeAt(0);
+                if(can_rx()) {
+                    do_rx(charCode);
+                    str_processing = str_processing.substr(1, str_processing.length - 1);
+                }
+                setTimeout(f, 0);
+            }
+        };
+        f();
+    }
+
+    function send_str(str) {
+        str_processing += str;
+        if(!is_processing) {
+            is_processing = true;
+            process_str();
+        }
+    }
+
+    // initialization:
+    reset();
 
     // publication:
-    this.regs = new Array(R_MAX);
-    this.reset();
-    this.iomem_size = (4 * R_MAX);
-    this.update_irq = update_irq;
-    this.read_32    = read_32;
-    this.write_32   = write_32;
-    this.can_rx     = can_rx;
-    this.do_rx      = do_rx;
-    this.reset      = reset;
-};
-
-lm32.UART.prototype.get_mmio_handlers = function() {
-    var handlers = {
-        read_32 : this.read_32.bind(this),
-        write_32: this.write_32.bind(this)
+    return {
+        iomem_size: 4 * R_MAX,
+        can_rx: can_rx,
+        do_rx: do_rx,
+        get_mmio_handlers: get_mmio_handlers,
+        process_str: process_str,
+        send_str: send_str,
+        reset: reset,
+        update_irq: update_irq
     };
-    return handlers;
-};
-
-lm32.UART.prototype.send_str = function(str) {
-    this.str_processing += str;
-    if(!this.is_processing) {
-        this.is_processing = true;
-        this.process_str();
-    }
-};
-
-lm32.UART.prototype.process_str = function() {
-    var f = function() {
-        var charCode;
-        if(this.str_processing.length == 0) {
-            this.is_processing = false;
-        } else {
-            // take one char
-            charCode = this.str_processing.charCodeAt(0);
-            if(this.can_rx()) {
-                this.do_rx(charCode);
-                this.str_processing = this.str_processing.substr(1, this.str_processing.length - 1);
-            }
-            setTimeout(f.bind(this), 0);
-        }
-    };
-    (f.bind(this))();
 };
