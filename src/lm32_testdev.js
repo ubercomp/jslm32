@@ -5,7 +5,7 @@
  */
 "use strict";
 
-lm32.TestDev = function(params) {
+lm32.testDev = function(params) {
     // dependencies:
     var mmu = params.mmu;
     var shutdown = params.shutdown;
@@ -19,25 +19,28 @@ lm32.TestDev = function(params) {
 
     var MAX_TESTNAME_LEN = 16;
 
+    // state:
+    var regs;
+    var testname;
+
     
     function copy_testname() {
-        var addr = this.regs[R_TESTNAME];
+        var addr = regs[R_TESTNAME];
         for(var i = 0; i < MAX_TESTNAME_LEN; i++) {
             var val = mmu.read_8(addr + i);
-            this.testname[i] = val;
+            testname[i] = val;
             if(val == 0) {
                 break;
             }
         }
-        this.testname[MAX_TESTNAME_LEN - 1] = '\0';
+        testname[MAX_TESTNAME_LEN - 1] = '\0';
     }
-    this.copy_testname = copy_testname;
 
     function testname_charr_to_str() {
         var  s = '';
         var i;
         for(i = 0; i < MAX_TESTNAME_LEN; i ++) {
-            var val = this.testname[i];
+            var val = testname[i];
             if(val == 0) {
                 break;
             }
@@ -49,22 +52,20 @@ lm32.TestDev = function(params) {
         }
         return s;
     }
-    this.testname_charr_to_str = testname_charr_to_str;
-    
+
     function reset() {
         // registers
-        this.regs = new Array(R_MAX);
+        regs = new Array(R_MAX);
         for(var i = 0; i < R_MAX; i++) {
-            this.regs[i] = 0;
+            regs[i] = 0;
         }
 
         // array of characters forming testname
-        this.testname = new Array(MAX_TESTNAME_LEN);
+        testname = new Array(MAX_TESTNAME_LEN);
         for(var i = 0; i < MAX_TESTNAME_LEN; i++) {
-            this.testname[i] = 0;
+            testname[i] = 0;
         }
     }
-    this.reset = reset;
 
     function write_32(addr, value) {
         addr >>= 2;
@@ -74,15 +75,15 @@ lm32.TestDev = function(params) {
                 break;
 
             case R_PASSFAIL:
-                this.regs[addr] = value;
-                var testname = this.testname_charr_to_str();
+                regs[addr] = value;
+                var testname = testname_charr_to_str();
                 var result = (value != 0) ? "FAILED" : "OK";
                 terminal.write("TC    " +  testname + " RESULT: " + result + "\n");
                 break;
 
             case R_TESTNAME:
-                this.regs[addr] = value;
-                this.copy_testname();
+                regs[addr] = value;
+                copy_testname();
                 break;
 
             default:
@@ -91,15 +92,17 @@ lm32.TestDev = function(params) {
         }
     }
 
-    // Initialization and publication
-    this.reset();
-    this.write_32 = write_32;
-    this.iomem_size = (4 * R_MAX);
-};
+    function get_mmio_handlers() {
+        var handlers= {
+            write_32: write_32
+        }
+        return handlers;
+    }
 
-lm32.TestDev.prototype.get_mmio_handlers = function() {
-    var handlers = {
-        write_32: this.write_32.bind(this)
-    };
-    return handlers;
+    // Initialization and publication
+    reset();
+    return {
+        get_mmio_handlers: get_mmio_handlers,
+        iomem_size: (4 * R_MAX)
+    }
 };

@@ -140,7 +140,7 @@ lm32.start_sys = function(terminal_div) {
         shutdown: shutdown_f,
         terminal: terminal
     };
-    var testdev = new lm32.TestDev(testdev_params);
+    var testdev = lm32.testDev(testdev_params);
     var DummyTimer = function() {
         this.on_tick = function() {};
     };
