@@ -54,7 +54,7 @@ lm32.Lm32Timer = function(params) {
                 break;
             default:
                 r = 0;
-                console.log("lm32_timer: read access to unknown register 0x" + (addr << 2).toString(16));
+                //console.log("lm32_timer: read access to unknown register 0x" + (addr << 2).toString(16));
                 break;
         }
         return r;
@@ -89,10 +89,10 @@ lm32.Lm32Timer = function(params) {
                 }
                 break;
             case R_SNAPSHOT:
-                console.log("lm32_timer: write access to read only register 0x" + (addr << 2).toString(16));
+                //console.log("lm32_timer: write access to read only register 0x" + (addr << 2).toString(16));
                 break;
             default:
-                console.log("lm32_timer: write access to unknown register 0x" + (addr << 2).toString(16));
+                //console.log("lm32_timer: write access to unknown register 0x" + (addr << 2).toString(16));
                 break;
         }
         this.update_irq();
@@ -111,7 +111,7 @@ lm32.Lm32Timer = function(params) {
 
     function hit(remainder) {
         if(remainder >= this.regs[R_PERIOD]) {
-            console.log('bad remainder. missed an entire period. run less instructions per cpu.step() call');
+            //console.log('bad remainder. missed an entire period. run less instructions per cpu.step() call');
         }
 
         // timeout

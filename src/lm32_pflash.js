@@ -11,10 +11,10 @@ lm32.PFlashCFI01 = function(load_imgs,
     this.log = false;
     this.total_len = sector_len * nb_blocs;
 
-    console.log("Creating ram with size: " + lm32.bits.format(this.total_len));
-    this.storage = new lm32.RAM(this.total_len, be);
+    //console.log("Creating ram with size: " + lm32.bits.format(this.total_len));
+    this.storage = lm32.ram(this.total_len, be);
     if(load_imgs) {
-        var fake_mmu = new lm32.MMU();
+        var fake_mmu = lm32.mmu();
         var fake_handlers = {
             write_8: this.storage.write_8.bind(this.storage)
         };
@@ -25,9 +25,9 @@ lm32.PFlashCFI01 = function(load_imgs,
         //console.log("Loading Kernel to FLASH");
         //fake_mmu.load_binary("../linux/vmlinux.nogz.img", 0x40000);
         //console.log("DONE Loading Kernel to FLASH");
-        console.log('Loading Flash Image (takes a long time)');
+        //console.log('Loading Flash Image (takes a long time)');
         fake_mmu.load_binary('../linux/flash.img', 0);
-        console.log('Done Loading. Booting now');
+        //console.log('Done Loading. Booting now');
     }
 
     //cpu_register_physical_memory(base, total_len,
@@ -150,8 +150,8 @@ lm32.PFlashCFI01 = function(load_imgs,
 
 lm32.PFlashCFI01.prototype.DPRINTF = function(str) {
   if(this.hasOwnProperty('log') && this.log) {
-      console.log("PFLASH: " + str);
-      console.log("CMD: " + lm32.bits.format(this.cmd));
+      //console.log("PFLASH: " + str);
+      //console.log("CMD: " + lm32.bits.format(this.cmd));
   }
 };
 

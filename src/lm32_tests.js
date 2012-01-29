@@ -104,9 +104,9 @@ lm32.start_sys = function(terminal_div) {
     var MAX_STEPS = 1000;
     var BOOT_PC = RAM_BASE;
 
-    var mmu = new lm32.MMU();
+    var mmu = lm32.mmu();
 
-    var ram = new lm32.RAM(RAM_SIZE, true);
+    var ram = lm32.ram(RAM_SIZE, true);
 
     var cpu_params = {
         mmu: mmu,
@@ -150,7 +150,7 @@ lm32.start_sys = function(terminal_div) {
     mmu.add_memory(TESTDEV_BASE, testdev.iomem_size, testdev.get_mmio_handlers());
 
     function run_test(test_name, idx, shutdown) {
-        var cpu = new lm32.Lm32Cpu(cpu_params);
+        var cpu = lm32.lm32Cpu(cpu_params);
         cpu.set_timers([timer]);
         // testdev.reset();
         var str = "\nRunning Test " + test_name + " (" + idx + ")\n";

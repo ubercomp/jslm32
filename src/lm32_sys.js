@@ -45,9 +45,9 @@ lm32.start = function(load_linux) {
     var BOOT_PC = RAM_BASE;
     var KERNEL_BASE = RAM_BASE;
 
-    var mmu = new lm32.MMU();
+    var mmu = lm32.mmu();
 
-    var ram = new lm32.RAM(RAM_SIZE, true);
+    var ram = lm32.ram(RAM_SIZE, true);
 
     var flash = new lm32.PFlashCFI01(false,
         FLASH_SECTOR_SIZE,
@@ -64,8 +64,8 @@ lm32.start = function(load_linux) {
         bootstrap_deba: DEBA_BASE
     };
 
-    var cpu = new lm32.Lm32Cpu(cpu_params);
-    var set_irq = cpu.pic.irq_handler;
+    var cpu = lm32.lm32Cpu(cpu_params);
+    var set_irq = cpu.cs.pic.irq_handler;
 
 
     var timer0 = new lm32.Lm32Timer({
@@ -157,22 +157,16 @@ lm32.start = function(load_linux) {
         mmu.load_binary('../linux/u-boot.bin', U_BOOT_BASE);
         mmu.load_binary('../linux/initrd.small.img', INITRD_BASE);
         mmu.load_binary('../linux/vmlinux.nogz.img', 0x0a000000);
-        cpu.pc=U_BOOT_BASE;
+        cpu.cs.pc=U_BOOT_BASE;
     } else {
         // load u-boot
         console.log('Loading U-boot to RAM at ' + lm32.bits.format(RAM_BASE));
         mmu.load_binary('../linux/u-boot.bin', RAM_BASE);
     }
-
+    
     window.cpu = cpu;
     window.term_handler = term_handler;
 
     cpu.set_timers([timer0]);//, timer1, timer2]);
-    var step = cpu.step.bind(cpu);
-    var f = function() {
-        step(50000);
-        setTimeout(f, 0);
-    }
-    f();
+    setTimeout(cpu.step_forever, 0);
 };
-

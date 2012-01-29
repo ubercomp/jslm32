@@ -12,71 +12,82 @@
  * @param size the memory size in bytes
  * @param be is it big endian?
  */
-lm32.RAM = function(size, be) {
+lm32.ram = function(size, be) {
     // TODO implement non-ArrayBuffer fallback version
-    this.buff = new ArrayBuffer(size);
-    this.v8 = new Uint8Array(this.buff);
+    var buff = new ArrayBuffer(size);
+    var v8 = new Uint8Array(buff);
     var i;
     // TODO remove:  not strictly necessary
     for(i = 0; i < size; i++) {
-        this.v8[i] = 0xff;
+        v8[i] = 0xff;
     }
     if(!be) {
         // TODO implement little endian
         throw ("Little Endian is not supported for now");
     }
-};
 
-lm32.RAM.prototype.read_8 = function(offset) {
-    return this.v8[offset];
-};
-
-lm32.RAM.prototype.read_16 = function(offset) {
-    var hi = this.v8[offset];
-    var lo = this.v8[offset + 1];
-    return (hi<<8)|lo
-};
-
-lm32.RAM.prototype.read_32 = function(offset) {
-    var h0 = this.v8[offset];
-    var h1 = this.v8[offset + 1];
-    var l0 = this.v8[offset + 2];
-    var l1 = this.v8[offset + 3];
-    return (h0<<24)|(h1<<16)|(l0<<8)|(l1);
-};
-
-lm32.RAM.prototype.write_8 = function(offset, value) {
-    this.v8[offset] = value;
-};
-
-lm32.RAM.prototype.write_16 = function(offset, value) {
-    var hi = (value & 0xff00) >> 8;
-    var lo = (value & 0xff);
-    this.v8[offset] = hi;
-    this.v8[offset + 1] = lo;
-};
-
-lm32.RAM.prototype.write_32 = function(offset, value) {
-    var h0 = (value & 0xff000000) >>> 24;
-    var h1 = (value & 0x00ff0000) >> 16;
-    var l0 = (value & 0x0000ff00) >> 8;
-    var l1 = (value & 0x000000ff);
-    this.v8[offset] = h0;
-    this.v8[offset + 1] = h1;
-    this.v8[offset + 2] = l0;
-    this.v8[offset + 3] = l1;
-};
-
-lm32.RAM.prototype.get_mmio_handlers = function() {
-    // TODO little endian version
-    var handlers = {
-        read_8  : this.read_8.bind(this),
-        read_16 : this.read_16.bind(this),
-        read_32 : this.read_32.bind(this),
-        write_8 : this.write_8.bind(this),
-        write_16: this.write_16.bind(this),
-        write_32: this.write_32.bind(this)
+    var read_8 = function(offset) {
+        return v8[offset];
     };
-    return handlers;
-};
 
+    var read_16 = function(offset) {
+        var hi = v8[offset];
+        var lo = v8[offset + 1];
+        return (hi<<8)|lo
+    };
+
+    var read_32 = function(offset) {
+        var h0 = v8[offset];
+        var h1 = v8[offset + 1];
+        var l0 = v8[offset + 2];
+        var l1 = v8[offset + 3];
+        return (h0<<24)|(h1<<16)|(l0<<8)|(l1);
+    };
+
+    var write_8 = function(offset, value) {
+    v8[offset] = value;
+    };
+
+    var write_16 = function(offset, value) {
+        var hi = (value & 0xff00) >> 8;
+        var lo = (value & 0xff);
+        v8[offset] = hi;
+        v8[offset + 1] = lo;
+    };
+
+    var write_32 = function(offset, value) {
+        var h0 = (value & 0xff000000) >>> 24;
+        var h1 = (value & 0x00ff0000) >> 16;
+        var l0 = (value & 0x0000ff00) >> 8;
+        var l1 = (value & 0x000000ff);
+        v8[offset] = h0;
+        v8[offset + 1] = h1;
+        v8[offset + 2] = l0;
+        v8[offset + 3] = l1;
+    };
+
+    var get_mmio_handlers = function() {
+        // TODO little endian version
+        var handlers = {
+            read_8  : read_8,
+            read_16 : read_16,
+            read_32 : read_32,
+            write_8 : write_8,
+            write_16: write_16,
+            write_32: write_32
+        };
+        return handlers;
+    };
+
+    return {
+        buff: buff,
+        v8: v8,
+        read_8: read_8,
+        read_16: read_16,
+        read_32: read_32,
+        write_8: write_8,
+        write_16: write_16,
+        write_32: write_32,
+        get_mmio_handlers: get_mmio_handlers
+    }
+};
