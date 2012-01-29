@@ -69,7 +69,7 @@ lm32.lm32Cpu = function (params) {
         cs.pc = params.bootstrap_pc;
         cs.next_pc = cs.pc + 4; // jumps write on next_pc
 
-        cs.pic = new lm32.Lm32Pic(irq_handler);
+        cs.pic = lm32.lm32Pic(irq_handler);
 
         // interrupt enable
         cs.ie = {

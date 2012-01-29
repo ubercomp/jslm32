@@ -4,34 +4,28 @@
  * Created: 08/12/11 02:24
  */
 "use strict";
-lm32.Lm32Pic = function(cpu_irq_handler) {
-    var self = this;
-    self.im = 0;
-    self.ip = 0;
-    self.irq_state = 0;
+lm32.lm32Pic = function(cpu_irq_handler) {
+    var im = 0;
+    var ip = 0;
+    var irq_state = 0;
     
     function dump() {
-        return ("im=" + self.im + " ip=" + self.ip + ' irq_state=' + self.irq_state);
+        return ("im=" + im + " ip=" + ip + ' irq_state=' + irq_state);
     }
-    self.dump = dump;
 
     function update_irq() {
-        self.ip |= self.irq_state;
-
-        if (self.ip & self.im) {
-            cpu_irq_handler(1);
-        } else {
-            cpu_irq_handler(0);
-        }
+        ip |= irq_state;
+        var val = ip & im ? 1: 0;
+        cpu_irq_handler(val);
     }
 
     function irq_handler (irq, level) {
         switch(level) {
             case 0:
-                self.irq_state &= ~(1 << irq);
+                irq_state &= ~(1 << irq);
                 break;
             case 1:
-                self.irq_state |= (1 << irq);
+                irq_state |= (1 << irq);
                 break;
             default:
                 throw 'Invalid IRQ';
@@ -39,28 +33,33 @@ lm32.Lm32Pic = function(cpu_irq_handler) {
         }
         update_irq();
     }
-    self.irq_handler = irq_handler;
 
-    function set_im(im) {
-        self.im = im;
+    function set_im(new_im) {
+        im = new_im;
         update_irq();
     }
-    self.set_im = set_im;
 
-    function set_ip(ip) {
+    function set_ip(new_ip) {
         /* ack interrupt */
-        self.ip &= ~ip;
+        ip &= ~new_ip;
         update_irq();
     }
-    self.set_ip = set_ip;
+
 
     function get_im() {
-        return self.im;
+        return im;
     }
-    self.get_im = get_im;
-
+    
     function get_ip() {
-        return self.ip;
+        return ip;
     }
-    self.get_ip = get_ip;
+
+    return {
+        dump: dump,
+        get_im: get_im,
+        set_im: set_im,
+        get_ip: get_ip,
+        set_ip: set_ip,
+        irq_handler: irq_handler
+    };
 };
