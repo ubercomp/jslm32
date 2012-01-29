@@ -141,10 +141,12 @@ lm32.start_sys = function(terminal_div) {
         terminal: terminal
     };
     var testdev = lm32.testDev(testdev_params);
-    var DummyTimer = function() {
-        this.on_tick = function() {};
+    var dummyTimer = function() {
+        return {
+            on_tick: function() {}
+        }
     };
-    var timer = new DummyTimer();
+    var timer = dummyTimer();
     
     mmu.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
     mmu.add_memory(TESTDEV_BASE, testdev.iomem_size, testdev.get_mmio_handlers());

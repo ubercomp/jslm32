@@ -68,19 +68,19 @@ lm32.start = function(load_linux, terminal, key_handler) {
     var set_irq = cpu.cs.pic.irq_handler;
 
 
-    var timer0 = new lm32.Lm32Timer({
+    var timer0 = lm32.lm32Timer({
         id: 0,
         irq_line: TIMER0_IRQ,
         set_irq: set_irq
     });
 
-    //var timer1 = new lm32.Lm32Timer({
+    //var timer1 = lm32.lm32Timer({
     //    id: 1,
     //    irq_line: TIMER1_IRQ,
     //    set_irq: set_irq
     //});
 
-    //var timer2 = new lm32.Lm32Timer({
+    //var timer2 = lm32.lm32Timer({
     //    id: 2,
     //    irq_line: TIMER2_IRQ,
     //    set_irq: set_irq
