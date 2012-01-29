@@ -1103,7 +1103,13 @@ lm32.lm32Cpu = function (params) {
         var op, pc, opcode;
         var rpc; // ram-based pc
         var ticks = 0;
-        var timer0 = ics.orig_timers[0];
+        var tick_f;
+        if(ics.orig_timers.length == 1) {
+            // optimize when there's only one timer
+            tick_f = ics.orig_timers[0].on_tick;
+        } else {
+            tick_f = tick;
+        }
         var ram_base = ics.ram_base;
         var v8 = ics.ram.v8;
 
@@ -1118,10 +1124,12 @@ lm32.lm32Cpu = function (params) {
             ics.next_pc = pc + 4; //bits.unsigned32(pc + 4);
 
             // Instruction fetching:
-            // To support code outside ram, do instead:
-            // op = ics.mmu.read_32(pc);
+            // supports only code from ram (faster)
             rpc = pc - ram_base;
             op = (v8[rpc] << 24) | (v8[rpc + 1] << 16) | (v8[rpc + 2] << 8) | (v8[rpc + 3]);
+
+            // supports code outside ram
+            //op = ics.mmu.read_32(pc);
 
             // Instruction decoding:
             decode_instr(ics, op);
@@ -1133,18 +1141,14 @@ lm32.lm32Cpu = function (params) {
             inc = ics.issue;
             ticks += inc;
             if(ticks >= 1000) {
-                timer0.on_tick(1000);
-                // to support multiple timers, do instead:
-                // tick(1000);
+                tick_f(1000)
                 ticks -= 1000;
             }
             ics.cc = (ics.cc + inc) | 0;
             ics.pc = ics.next_pc;
         } while(++i < instructions);
-        timer0.on_tick(ticks);
-        // to support multiple timers, do instead:
-        // tick(ticks)
-    }
+        tick_f(ticks);
+    };
 
     var step_forever = function() {
         step(50000);
@@ -1157,7 +1161,7 @@ lm32.lm32Cpu = function (params) {
         cs.orig_timers = timers;
         for(var i = 0; i < len; i++) {
             var cur = timers[i];
-            (cs.timers)[i] = cur.on_tick.bind(cur);
+            (cs.timers)[i] = cur.on_tick;
         }
     };
 

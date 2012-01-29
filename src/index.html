@@ -34,7 +34,7 @@
             key_handler.send_str("bootm 0a000000 08400000\n");
         }
         function lm32_start() {
-            lm32.start(lm32_boot_linux, terminal, key_handler);
+            lm32.start_uclinux(lm32_boot_linux, terminal, key_handler);
         }
 
         function pick_uboot() {

@@ -3,7 +3,7 @@
  * Created: 22/11/11 01:47
  * */
 "use strict";
-lm32.PFlashCFI01 = function(load_imgs,
+lm32.PFlashCFI01 = function(img_file_name,
                             sector_len,
                             nb_blocs, width,
                             id0, id1, id2, id3,
@@ -13,21 +13,13 @@ lm32.PFlashCFI01 = function(load_imgs,
 
     //console.log("Creating ram with size: " + lm32.bits.format(this.total_len));
     this.storage = lm32.ram(this.total_len, be);
-    if(load_imgs) {
+    if(img_file_name) {
         var fake_mmu = lm32.mmu();
         var fake_handlers = {
             write_8: this.storage.write_8.bind(this.storage)
         };
         fake_mmu.add_memory(0, this.total_len, fake_handlers);
-        //console.log("Loading U-Boot to FLASH");
-        //fake_mmu.load_binary("../linux/u-boot.bin", 0);
-        //console.log("DONE Loading U-Boot to flash");
-        //console.log("Loading Kernel to FLASH");
-        //fake_mmu.load_binary("../linux/vmlinux.nogz.img", 0x40000);
-        //console.log("DONE Loading Kernel to FLASH");
-        //console.log('Loading Flash Image (takes a long time)');
-        fake_mmu.load_binary('../linux/flash.img', 0);
-        //console.log('Done Loading. Booting now');
+        fake_mmu.load_binary(img_file_name, 0);
     }
 
     //cpu_register_physical_memory(base, total_len,
