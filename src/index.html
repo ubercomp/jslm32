@@ -18,6 +18,7 @@
     <script src="lm32_cpu.js"></script>
     <script src="lm32_mmu.js"></script>
     <script src="lm32_ram.js"></script>
+    <script src="lm32_hwsetup.js"></script>
     <script src="lm32_sys.js"></script>
     <script src="lm32_timer.js"></script>
     <script src="lm32_pflash.js"></script>
@@ -34,15 +35,7 @@
             key_handler.send_str("bootm 0a000000 08400000\n");
         }
         function lm32_start() {
-            lm32.start_uclinux(lm32_boot_linux, terminal, key_handler);
-        }
-
-        function pick_uboot() {
-            lm32_boot_linux = false;
-        }
-
-        function pick_linux() {
-            lm32_boot_linux = true;
+            lm32.start_uclinux(terminal, key_handler);
         }
 
         function start_terminal() {
@@ -69,11 +62,7 @@
 
 </head>
 <body>
-<form id="option">
-    <input type="radio" name="boot_linux" value="true" onclick="pick_linux()" checked="checked"/> Load Linux (Boots Very Slowly) <br />
-    <input type="radio" name="boot_linux" value="false" onclick="pick_uboot()" /> Load U-Boot Only
-</form>
-<button onclick="lm32_start()">Start!</button> &nbsp; <button onclick="lm32_boot()">Boot! (Wait for U-Boot Prompt)</button>
+<button onclick="lm32_start()">Start!</button> &nbsp;
 <p>Login: root ; Password: lattice</p>
 <div id="vt100Div"></div>
 <script type="text/javascript">

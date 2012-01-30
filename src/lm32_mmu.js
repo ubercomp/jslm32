@@ -185,7 +185,7 @@ lm32.mmu = function() {
         return str;
     };
 
-    var write_str = function(str, addr) {
+    var write_str = function(addr, str) {
         var i;
         var len = str.length;
         for(i = 0; i < len; i++) {
@@ -193,6 +193,13 @@ lm32.mmu = function() {
         }
         write_8(addr + len, 0);
         //console.log('Wrote to ' + lm32.bits.format(addr) + ': ' + read_str(addr, 4096));
+    };
+
+    var write_array_data = function(addr, data, len) {
+        var i;
+        for(i = 0; i < len; i++) {
+            write_8(addr + i, data[i]);
+        }
     };
 
     var set_typed_arrays = function(val) {
@@ -205,6 +212,7 @@ lm32.mmu = function() {
         load_binary: load_binary,
         read_str: read_str,
         write_str: write_str,
+        write_array_data: write_array_data,
         set_typed_arrays: set_typed_arrays,
         read_8: read_8,
         read_16: read_16,
