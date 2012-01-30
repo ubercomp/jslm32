@@ -20,6 +20,9 @@ lm32.start_uclinux = function(terminal, key_handler) {
     var UART0_BASE = 0x80000000;
     var UART0_IRQ = 0;
 
+    var UART1_BASE = 0x81000000;
+    var UART1_IRQ = 2;
+
     var HWSETUP_BASE = 0x0bffe000;
     var CMDLINE_BASE = 0x0bfff000;
     var INITRD_BASE = 0x08400000;
@@ -85,6 +88,12 @@ lm32.start_uclinux = function(terminal, key_handler) {
         set_irq: set_irq
     });
 
+    var uart1 = lm32.lm32UART({
+        putchar: function(c) { console.log('uart1 putchar: ' + String.fromCharCode(c)); },
+        irq_line: UART1_IRQ,
+        set_irq: set_irq
+    })
+
     var send_str = uart0.send_str;
     key_handler.set_send_fn(send_str);
 
@@ -93,6 +102,7 @@ lm32.start_uclinux = function(terminal, key_handler) {
     // Gluing everything together
     mmu.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
     mmu.add_memory(UART0_BASE, uart0.iomem_size, uart0.get_mmio_handlers());
+    mmu.add_memory(UART1_BASE, uart1.iomem_size, uart1.get_mmio_handlers());
     mmu.add_memory(TIMER0_BASE, timer0.iomem_size, timer0.get_mmio_handlers());
     //mmu.add_memory(TIMER1_BASE, timer1.iomem_size, timer1.get_mmio_handlers());
     //mmu.add_memory(TIMER2_BASE, timer2.iomem_size, timer2.get_mmio_handlers());
@@ -103,13 +113,14 @@ lm32.start_uclinux = function(terminal, key_handler) {
     hw.add_timer("timer0", TIMER0_BASE, TIMER0_IRQ);
     // hw.add_timer("timer1_dev_only", TIMER1_BASE, TIMER1_IRQ);
     // hw.add_timer("timer2_dev_only", TIMER2_BASE, TIMER2_IRQ);
-    hw.add_uart("uart", UART0_BASE, UART0_IRQ);
+    hw.add_uart("uart0", UART0_BASE, UART0_IRQ);
+    hw.add_uart("uart1", UART1_BASE, UART1_IRQ);
     hw.add_trailer();
 
     mmu.load_binary('../linux/vmlinux.bin', KERNEL_BASE);
     var initrd_size = mmu.load_binary('../linux/romfs.ext2', INITRD_BASE);
 
-    mmu.write_str(CMDLINE_BASE, "root=/dev/ram0 console=ttyS0,115200 ramdisk_size=" + (initrd_size/1024).toString());
+    mmu.write_str(CMDLINE_BASE, "root=/dev/ram0 console=ttyS0,115200 ramdisk_size=16384");
 
     var hwsetup_data = hw.get_data();
     mmu.write_array_data(HWSETUP_BASE, hwsetup_data, hwsetup_data.length);
