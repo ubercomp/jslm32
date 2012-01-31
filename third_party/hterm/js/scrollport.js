@@ -216,7 +216,7 @@ hterm.ScrollPort.prototype.decorate = function(div) {
       'overflow: hidden;' +
       'white-space: pre;');
 
-  this.bottomSelectBag_ = this.topSelectBag_.cloneNode();
+  this.bottomSelectBag_ = this.topSelectBag_.cloneNode(false);
 
   // Nodes above the top fold and below the bottom fold are hidden.  They are
   // only used to hold rows that are part of the selection but are currently
@@ -225,7 +225,7 @@ hterm.ScrollPort.prototype.decorate = function(div) {
   this.topFold_.style.cssText = 'display: block;';
   this.rowNodes_.appendChild(this.topFold_);
 
-  this.bottomFold_ = this.topFold_.cloneNode();
+  this.bottomFold_ = this.topFold_.cloneNode(false);
   this.rowNodes_.appendChild(this.bottomFold_);
 
   // This hidden div accounts for the vertical space that would be consumed by
