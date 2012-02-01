@@ -59,10 +59,6 @@ lm32.lm32Cpu = function (params) {
         cs.ram_max  = cs.ram_base + cs.ram_size;
         cs.mmu = params.mmu;
 
-        // last instruction issue as defined in the architecture manual, page 51
-        cs.result = 0;
-        cs.issue = 0;
-
         // general purpose registers
         cs.regs = new Array(32);
         for (var i = 0; i < 32; i++) {
@@ -163,16 +159,6 @@ lm32.lm32Cpu = function (params) {
 
     // initialization
     reset(params);
-
-    // constants
-
-    // results values
-    var RESULT_BRANCH = 0;
-    var RESULT_BREAK  = 0;
-    var RESULT_BRET   = 0;
-    var RESULT_ERET   = 0;
-    var RESULT_SCALL  = 0;
-    var RESULT_STORE  = 0;
 
     // exception ids
     var EXCEPT_RESET                 = 0;
@@ -280,33 +266,23 @@ lm32.lm32Cpu = function (params) {
     // arithmetic and comparison instructions
     function add(cs) {
         cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] + cs.regs[cs.I_R1]) | 0;
-        cs.result = 1;
-        cs.issue = 1;
     }
 
     function addi(cs) {
         cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] + bits.sign_extend(cs.I_IMM16, 16)) | 0;
-        cs.result = 1;
-        cs.issue = 1;
     }
 
     function and(cs) {
         // logical ops don't need to and with mask00_31
         cs.regs[cs.I_R2] = cs.regs[cs.I_R0] & cs.regs[cs.I_R1];
-        cs.result = 1;
-        cs.issue = 1;
     }
 
     function andhi(cs) {
         cs.regs[cs.I_R1] = cs.regs[cs.I_R0] & (cs.I_IMM16 << 16);
-        cs.result = 1;
-        cs.issue = 1;
     }
 
     function andi(cs) {
         cs.regs[cs.I_R1] = cs.regs[cs.I_R0] & bits.zero_extend(cs.I_IMM16, 16);
-        cs.result = 1;
-        cs.issue = 1;
     }
 
     /**
@@ -326,9 +302,6 @@ lm32.lm32Cpu = function (params) {
         } else {
             cs.regs[rx] = 0;
         }
-
-        cs.issue = 1;
-        cs.result = 2;
     }
 
     function cmpe(cs) {
@@ -387,8 +360,6 @@ lm32.lm32Cpu = function (params) {
         } else {
             cs.regs[cs.I_R2] = (Math.floor(vr0/vr1)) | 0;
         }
-        cs.issue = 34;
-        cs.result = 34;
     }
 
     function divu(cs) {
@@ -401,8 +372,6 @@ lm32.lm32Cpu = function (params) {
         } else {
             cs.regs[cs.I_R2] = (Math.floor(u(vr0) / u(vr1))) | 0;
         }
-        cs.issue = 34;
-        cs.result = 34;
     }
 
     function mod(cs) {
@@ -413,8 +382,6 @@ lm32.lm32Cpu = function (params) {
         } else {
             cs.regs[cs.I_R2] = (vr0 % vr1) | 0;
         }
-        cs.issue = 34;
-        cs.result = 34;
     }
 
     function modu(cs) {
@@ -426,166 +393,116 @@ lm32.lm32Cpu = function (params) {
         } else {
             cs.regs[cs.I_R2] = (u(vr0) % u(vr1)) | 0;
         }
-        cs.issue = 34;
-        cs.result = 34;
     }
 
     function mul(cs) {
         cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] * cs.regs[cs.I_R1]) | 0;
-        cs.result = 3;
-        cs.issue = 1;
     }
 
     function muli(cs) {
         cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] * bits.sign_extend(cs.I_IMM16, 16)) | 0;
-        cs.result = 3;
-        cs.issue = 1;
     }
 
     function nor(cs) {
         cs.regs[cs.I_R2] = ~(cs.regs[cs.I_R0] | cs.regs[cs.I_R1]);
-        cs.result = 1;
-        cs.issue = 1;
     }
 
     function nori(cs) {
         cs.regs[cs.I_R1] = ~(cs.regs[cs.I_R0] | bits.zero_extend(cs.I_IMM16, 16));
-        cs.issue = 1;
-        cs.result = 1;
     }
 
     function or(cs) {
         cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] | cs.regs[cs.I_R1]);
-        cs.result = 1;
-        cs.issue = 1;
     }
 
     function ori(cs) {
         cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] | bits.zero_extend(cs.I_IMM16, 16));
-        cs.issue = 1;
-        cs.result = 1;
     }
 
     function orhi(cs) {
         cs.regs[cs.I_R1] = cs.regs[cs.I_R0] | (cs.I_IMM16 << 16);
-        cs.issue = 1;
-        cs.result = 1;
     }
 
     function sextb(cs) {
         // sign extend byte to word
         cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] << 24) >> 24;
-        cs.issue = 1;
-        cs.result = 1;
     }
 
     function sexth(cs) {
         // sign extend half-word to word
         cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] << 16) >> 16;
-        cs.issue = 1;
-        cs.result = 1;
     }
 
     function sl(cs) {
         cs.regs[cs.I_R2] = cs.regs[cs.I_R0] << (cs.regs[cs.I_R1] & 0x1f);
-        cs.issue = 1;
-        cs.result = 2;
     }
 
     function sli(cs) {
         cs.regs[cs.I_R1] = cs.regs[cs.I_R0] << cs.I_IMM5;
-        cs.issue = 1;
-        cs.result = 2;
     }
 
     function sr(cs) {
         cs.regs[cs.I_R2] = cs.regs[cs.I_R0] >> (cs.regs[cs.I_R1] & 0x1f);
-        cs.issue = 1;
-        cs.result = 2;
     }
 
     function sri(cs) {
         cs.regs[cs.I_R1] = cs.regs[cs.I_R0] >> cs.I_IMM5;
-        cs.issue = 1;
-        cs.result = 2;
     }
 
     function sru(cs) {
         cs.regs[cs.I_R2] = cs.regs[cs.I_R0] >>> (cs.regs[cs.I_R1] & 0x1f);
-        cs.issue = 1;
-        cs.result = 2;
     }
 
     function srui(cs) {
         cs.regs[cs.I_R1] = cs.regs[cs.I_R0] >>> cs.I_IMM5;
-        cs.issue = 1;
-        cs.result = 2;
     }
 
     function sub(cs) {
         cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] - cs.regs[cs.I_R1]) | 0;
-        cs.issue = 1;
-        cs.result = 1;
     }
 
     function xnor(cs) {
         cs.regs[cs.I_R2] = ~(cs.regs[cs.I_R0] ^ cs.regs[cs.I_R1]);
-        cs.issue = 1;
-        cs.result = 1;
     }
 
     function xnori(cs) {
         cs.regs[cs.I_R1] = ~(cs.regs[cs.I_R0] ^ bits.zero_extend(cs.I_IMM16, 16));
-        cs.issue = 1;
-        cs.result = 1;
     }
 
     function xor(cs) {
         cs.regs[cs.I_R2] = cs.regs[cs.I_R0] ^ cs.regs[cs.I_R1];
-        cs.issue = 1;
-        cs.result = 1;
     }
 
     function xori(cs) {
         cs.regs[cs.I_R1] = cs.regs[cs.I_R0] ^ bits.zero_extend(cs.I_IMM16, 16);
-        cs.issue = 1;
-        cs.result = 1;
     }
 
     // branch and call implementations
     function b(cs) {
         var r0 = cs.I_R0;
-        cs.issue = 4;
 
         if(r0 == REG_EA) {
             // eret -> restore eie
             cs.ie.ie = cs.ie.eie;
-            cs.issue = 3;
         } else if(r0 == REG_BA) {
             // bret -> restore bie
             cs.ie.ie = cs.ie.bie;
         }
 
         cs.next_pc = bits.unsigned32(cs.regs[r0]);
-        cs.result = RESULT_BRANCH;
     }
 
     function bi(cs) {
         var imm26 = cs.I_IMM26;
         cs.next_pc = bits.unsigned32(cs.pc + bits.sign_extend(imm26 << 2, 28));
-        cs.issue = 4;
-        cs.result = RESULT_BRANCH;
     }
 
     function branch_conditional(cs, fcond) {
-        cs.issue = 1; // issue when not taken
         var a = cs.regs[cs.I_R0];
         var b = cs.regs[cs.I_R1];
         if(fcond(a, b)) {
             cs.next_pc = bits.unsigned32(cs.pc + bits.sign_extend(cs.I_IMM16 << 2, 18));
-            cs.issue = 4; // issue when taken
         }
-        cs.result = RESULT_BRANCH;
     }
 
     function be(cs) {
@@ -615,16 +532,12 @@ lm32.lm32Cpu = function (params) {
     function call_(cs) {
         cs.regs[REG_RA] = (cs.pc + 4) | 0;
         cs.next_pc = bits.unsigned32(cs.regs[cs.I_R0]);
-        cs.issue = 4;
-        cs.result = 1;
     }
 
     function calli(cs) {
         var imm26 = cs.I_IMM26;
         cs.regs[REG_RA] = (cs.pc + 4) | 0;
         cs.next_pc = bits.unsigned32(cs.pc + bits.sign_extend(imm26 << 2, 28));
-        cs.issue = 4;
-        cs.result = 1;
     }
 
     function scall(cs) {
@@ -636,8 +549,6 @@ lm32.lm32Cpu = function (params) {
         } else {
             throw "Invalid opcode";
         }
-        cs.issue = 4;
-        cs.result = RESULT_SCALL;
     }
 
     // load and store instructions
@@ -694,9 +605,6 @@ lm32.lm32Cpu = function (params) {
             //console.log("Error reading at address " + bits.format(uaddr) + " with width " + width);
             raise_exception(cs, EXCEPT_DATA_BUS_ERROR);
         }
-
-        cs.issue = 1;
-        cs.result = 3;
     }
 
     function lb(cs) {
@@ -763,9 +671,6 @@ lm32.lm32Cpu = function (params) {
         if(!ok) {
             raise_exception(cs, EXCEPT_DATA_BUS_ERROR);
         }
-
-        cs.issue = 1;
-        cs.result = RESULT_STORE;
     }
 
     function sb(cs) {
@@ -863,8 +768,6 @@ lm32.lm32Cpu = function (params) {
         } else {
             //console.log("Reading from invalid CSR: 0x" + csr.toString(16));
         }
-        cs.issue = 1;
-        cs.result = 1;
     }
 
     function wcsr(cs) {
@@ -930,8 +833,6 @@ lm32.lm32Cpu = function (params) {
             case CSR_WP3:
                 cs.wp3 = val; break;
         }
-        cs.issue = 1;
-        cs.result = 1;
     }
 
     // reserved instruction
@@ -1107,8 +1008,9 @@ lm32.lm32Cpu = function (params) {
         var inc;
         var op, pc, opcode;
         var rpc; // ram-based pc
-        var ticks = 0;
-        var tick_f;
+        var max_ticks = 1000; // max_ticks without informing timer
+        var ticks = 0; // ticks to inform
+        var tick_f; // function to be called for ticks
         if(ics.orig_timers.length == 1) {
             // optimize when there's only one timer
             tick_f = ics.orig_timers[0].on_tick;
@@ -1117,6 +1019,7 @@ lm32.lm32Cpu = function (params) {
         }
         var ram_base = ics.ram_base;
         var v8 = ics.ram.v8;
+        var immu = ics.mmu;
 
         do {
             if(ics.interrupt && (ics.ie.ie == 1) && ((ics.pic.get_ip() & ics.pic.get_im()) != 0)) {
@@ -1134,7 +1037,7 @@ lm32.lm32Cpu = function (params) {
             op = (v8[rpc] << 24) | (v8[rpc + 1] << 16) | (v8[rpc + 2] << 8) | (v8[rpc + 3]);
 
             // supports code outside ram
-            //op = ics.mmu.read_32(pc);
+            // op = immu.read_32(pc);
 
             // Instruction decoding:
             decode_instr(ics, op);
@@ -1143,11 +1046,11 @@ lm32.lm32Cpu = function (params) {
             opcode = ics.I_OPC;
             (optable[opcode])(ics);
 
-            inc = ics.issue;
+            inc = 1;
             ticks += inc;
-            if(ticks >= 1000) {
-                tick_f(1000)
-                ticks -= 1000;
+            if(ticks >= max_ticks) {
+                tick_f(max_ticks)
+                ticks -= max_ticks;
             }
             ics.cc = (ics.cc + inc) | 0;
             ics.pc = ics.next_pc;
