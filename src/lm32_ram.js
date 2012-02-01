@@ -13,14 +13,13 @@
  * @param be is it big endian?
  */
 lm32.ram = function(size, be) {
-    // TODO implement non-ArrayBuffer fallback version
-    var buff = new ArrayBuffer(size);
-    var v8 = new Uint8Array(buff);
-    var i;
-    // TODO remove:  not strictly necessary
-    for(i = 0; i < size; i++) {
-        v8[i] = 0xff;
+    var v8;
+    try {
+        v8 = new Uint8Array(size);
+    } catch(e) {
+        v8 = new Array(size);
     }
+    var i;
     if(!be) {
         // TODO implement little endian
         throw ("Little Endian is not supported for now");
@@ -80,7 +79,6 @@ lm32.ram = function(size, be) {
     };
 
     return {
-        buff: buff,
         v8: v8,
         read_8: read_8,
         read_16: read_16,
