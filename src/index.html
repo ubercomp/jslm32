@@ -32,6 +32,11 @@
         var worker;
         var worker_pending_str = false;
 
+        function inform_mips(mips) {
+            var mspan = document.getElementById('mips');
+            mspan.textContent = mips.toFixed(2).toString();
+        }
+
         function terminal_putchar(c) {
             if(lm32_debug_mode) {
                 var ta = document.getElementById('text_mode');
@@ -65,6 +70,7 @@
         function lm32_start_regular() {
             var sys = lm32.start_uclinux(terminal_putchar);
             window.cpu = sys.cpu;
+            sys.cpu.cs.mips_log_function = inform_mips;
             key_handler.set_send_fn(sys.console_send_str);
             setTimeout(sys.step_forever, 0);
         }
@@ -88,6 +94,10 @@
 
                 case 'terminal_putchar':
                     terminal_putchar(msg.payload);
+                    break;
+
+                case 'inform_mips':
+                    inform_mips(msg.payload);
                     break;
 
                 default:
@@ -147,6 +157,7 @@
 <button onclick="lm32_start_regular()">Start!</button> 
 <button onclick="lm32_start_worker()">Start with web workers!</button>
 <p>Login: root ; Password: lattice</p>
+<div>Processor real time speed: <span id="mips">0.00</span> MIPS</div>
 <div id="vt100Div"></div>
 <script type="text/javascript">
     start_terminal();

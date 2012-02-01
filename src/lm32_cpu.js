@@ -22,6 +22,11 @@ lm32.lm32Cpu = function (params) {
     var bits = lm32.bits;
     var cs = {}; // cpu state
 
+    // performance counting:
+    cs.mips_log_function = function(mips) {};
+    cs.instr_count_start = (new Date()).getTime();
+    cs.instr_count = 0;
+
     // current instruction
     cs.I_OPC   = 0;  // opcode
     cs.I_IMM5  = 0;  // immediate (5 bits)
@@ -1147,6 +1152,14 @@ lm32.lm32Cpu = function (params) {
             ics.cc = (ics.cc + inc) | 0;
             ics.pc = ics.next_pc;
         } while(++i < instructions);
+        ics.instr_count += i;
+        if(ics.instr_count >= 1000000) {
+            var time = (new Date()).getTime();
+            var delta = time - ics.instr_count_start;
+            ics.instr_count_start = time;
+            ics.instr_count = 0;
+            ics.mips_log_function(1000.0/delta);
+        }
         tick_f(ticks);
     };
 
