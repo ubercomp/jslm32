@@ -5,6 +5,8 @@
  */
 "use strict";
 lm32.start_uclinux = function(console_putchar_fn) {
+    var CPU_FREQ = 20000000; // TODO make it a parameter?
+
     var RAM_BASE = 0x08000000;
     var RAM_SIZE = 64 * 1024 * 1024;
 
@@ -51,19 +53,22 @@ lm32.start_uclinux = function(console_putchar_fn) {
     var timer0 = lm32.lm32Timer({
         id: 0,
         irq_line: TIMER0_IRQ,
-        set_irq: set_irq
+        set_irq: set_irq,
+        frequency: CPU_FREQ
     });
 
     //var timer1 = lm32.lm32Timer({
     //    id: 1,
     //    irq_line: TIMER1_IRQ,
-    //    set_irq: set_irq
+    //    set_irq: set_irq,
+    //    frequency: CPU_FREQ
     //});
 
     //var timer2 = lm32.lm32Timer({
     //    id: 2,
     //    irq_line: TIMER2_IRQ,
-    //    set_irq: set_irq
+    //    set_irq: set_irq,
+    //    frequency: CPU_FREQ
     //});
 
     // UART and Terminal
@@ -93,7 +98,7 @@ lm32.start_uclinux = function(console_putchar_fn) {
     //mmu.add_memory(TIMER2_BASE, timer2.iomem_size, timer2.get_mmio_handlers());
 
     var hw = lm32.lm32_hwsetup();
-    hw.add_cpu("LM32", 75000000);
+    hw.add_cpu("LM32", CPU_FREQ);
     hw.add_ddr_sdram("ddr_sdram", RAM_BASE, RAM_SIZE);
     hw.add_timer("timer0", TIMER0_BASE, TIMER0_IRQ);
     // hw.add_timer("timer1_dev_only", TIMER1_BASE, TIMER1_IRQ);
@@ -126,6 +131,7 @@ lm32.start_uclinux = function(console_putchar_fn) {
 };
 
 lm32.start_evr = function(console_putchar_fn, kernel_file_name) {
+    var CPU_FREQ = 75000000;
     var RAM_BASE = 0x08000000;
     var RAM_SIZE = 64 * 1024 * 1024;
 
@@ -170,19 +176,22 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name) {
     var timer0 = lm32.lm32Timer({
         id: 0,
         irq_line: TIMER0_IRQ,
-        set_irq: set_irq
+        set_irq: set_irq,
+        frequency: CPU_FREQ
     });
 
     var timer1 = lm32.lm32Timer({
         id: 1,
         irq_line: TIMER1_IRQ,
-        set_irq: set_irq
+        set_irq: set_irq,
+        frequency: CPU_FREQ
     });
 
     var uart0 = lm32.lm32UART({
         putchar: console_putchar_fn,
         irq_line: UART0_IRQ,
-        set_irq: set_irq
+        set_irq: set_irq,
+        frequency: CPU_FREQ
     });
     var send_str = uart0.send_str;
 
