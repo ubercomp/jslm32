@@ -26,19 +26,101 @@
     <script src="lm32_keyhandler.js"></script>
 
     <script>
-        var lm32_boot_linux = true;
+        var lm32_debug_mode = navigator.userAgent.indexOf('Firefox') !== -1;
         var key_handler = lm32.keyHandler();
         var terminal;
+        var worker;
+        var worker_pending_str = false;
+
+        function terminal_putchar(c) {
+            if(lm32_debug_mode) {
+                var ta = document.getElementById('text_mode');
+                if(c == 8) {
+                    ta.textContent = ta.textContent.substring(0, ta.textContent.length - 1);
+                } else {
+                    ta.textContent += String.fromCharCode(c);
+                }
+                ta.scrollTop = ta.scrollHeight;
+                return;
+            }
+
+            // TODO figure out if there are other special keys and treat them
+            if(c == 8) {
+                // backspace
+                var col = terminal.getCursorColumn();
+                if(col > 0) {
+                    terminal.setCursorColumn(col - 1);
+                    terminal.eraseToRight(1);
+                }
+                return;
+            }
+            terminal.interpret(String.fromCharCode(c));
+        }
+
         function lm32_boot() {
             key_handler.send_str("setenv verify 'n'\n");
             key_handler.send_str("setenv bootargs 'root=/dev/ram0 console=ttyS0,115200 ramdisk_size=4096\n");
             key_handler.send_str("bootm 0a000000 08400000\n");
         }
-        function lm32_start() {
-            lm32.start_uclinux(terminal, key_handler);
+        function lm32_start_regular() {
+            var sys = lm32.start_uclinux(terminal_putchar);
+            window.cpu = sys.cpu;
+            key_handler.set_send_fn(sys.console_send_str);
+            setTimeout(sys.step_forever, 0);
+        }
+
+        function lm32_receive_worker_message(e) {
+            var msg = e.data;
+            var type = msg.type;
+            switch(type) {
+                case 'worker_started':
+                    worker.postMessage({type: 'work'});
+                    break;
+
+                case 'work_done':
+                    if(worker_pending_str !== false) {
+                        var payload = worker_pending_str;
+                        worker_pending_str = false;
+                        worker.postMessage({type: 'terminal_send_str', payload: payload});
+                    }
+                    worker.postMessage({type: 'work'});
+                    break;
+
+                case 'terminal_putchar':
+                    terminal_putchar(msg.payload);
+                    break;
+
+                default:
+                    throw({error: 'Unknown message', msg: msg});
+                    break;
+            }
+        }
+        function lm32_start_worker() {
+            worker = new Worker('lm32_worker.js');
+            worker.onmessage = lm32_receive_worker_message;
+
+            function terminal_send_str(str) {
+                if(worker_pending_str === false) {
+                    worker_pending_str = '';
+                }
+                worker_pending_str += str;
+            }
+
+            key_handler.set_send_fn(terminal_send_str);
+            worker.postMessage('lm32_start');
         }
 
         function start_terminal() {
+            if(lm32_debug_mode) {
+                var ta = document.createElement('textarea');
+                ta.id ='text_mode';
+                ta.rows=25;
+                ta.cols=80;
+                document.body.appendChild(ta);
+                return;
+            }
+            // hterm terminal for non-debug mode
+
             var termConf = {
                 visibleColumnCount: 80,
                 visibleRowCount: 25,
@@ -52,7 +134,7 @@
             div.style.height = termConf.lineHeight * termConf.visibleRowCount + 'px';
             div.style.width = termConf.charWidth * termConf.visibleColumnCount +
                     termConf.scrollbarWidth + 'px';
-            document.body.appendChild(div);
+            //document.body.appendChild(div);
 
             terminal = new hterm.Terminal(termConf.fontSize, termConf.lineHeight);
             terminal.decorate(div);
@@ -62,7 +144,8 @@
 
 </head>
 <body>
-<button onclick="lm32_start()">Start!</button> &nbsp;
+<button onclick="lm32_start_regular()">Start!</button> 
+<button onclick="lm32_start_worker()">Start with web workers!</button>
 <p>Login: root ; Password: lattice</p>
 <div id="vt100Div"></div>
 <script type="text/javascript">

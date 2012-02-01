@@ -4,7 +4,7 @@
  * Created: 11/09/11 20:22
  */
 "use strict";
-lm32.start_uclinux = function(terminal, key_handler) {
+lm32.start_uclinux = function(console_putchar_fn) {
     var RAM_BASE = 0x08000000;
     var RAM_SIZE = 64 * 1024 * 1024;
 
@@ -68,34 +68,19 @@ lm32.start_uclinux = function(terminal, key_handler) {
 
     // UART and Terminal
 
-    var putchar = function(c) {
-        // TODO figure out if there are other special keys and treat them
-        if(c == 8) {
-            // backspace
-            var col = terminal.getCursorColumn();
-            if(col > 0) {
-                terminal.setCursorColumn(col - 1);
-                terminal.eraseToRight(1);
-            }
-            return;
-        }
-        terminal.interpret(String.fromCharCode(c));
-    };
-
     var uart0 = lm32.lm32UART({
-        putchar: putchar,
+        putchar: console_putchar_fn,
         irq_line: UART0_IRQ,
         set_irq: set_irq
     });
 
     var uart1 = lm32.lm32UART({
-        putchar: function(c) { console.log('uart1 putchar: ' + String.fromCharCode(c)); },
+        putchar: function(c) { /*console.log('uart1 putchar: ' + String.fromCharCode(c));*/ },
         irq_line: UART1_IRQ,
         set_irq: set_irq
     })
 
     var send_str = uart0.send_str;
-    key_handler.set_send_fn(send_str);
 
     hw = null;
     
@@ -131,12 +116,16 @@ lm32.start_uclinux = function(terminal, key_handler) {
     cpu.cs.regs[3] = INITRD_BASE;
     cpu.cs.regs[4] = INITRD_BASE + initrd_size;
 
-    window.cpu = cpu;
     cpu.set_timers([timer0]);//, timer1, timer2]);
-    setTimeout(cpu.step_forever, 0);
+    return {
+        cpu: cpu,
+        step: cpu.step,
+        step_forever: cpu.step_forever,
+        console_send_str: send_str
+    };
 };
 
-lm32.start_evr = function(terminal, key_handler, kernel_file_name) {
+lm32.start_evr = function(console_putchar_fn, kernel_file_name) {
     var RAM_BASE = 0x08000000;
     var RAM_SIZE = 64 * 1024 * 1024;
 
@@ -190,27 +179,13 @@ lm32.start_evr = function(terminal, key_handler, kernel_file_name) {
         set_irq: set_irq
     });
 
-    var putchar = function(c) {
-        // TODO figure out if there are other special keys and treat them
-        if(c == 8) {
-            // backspace
-            var col = terminal.getCursorColumn();
-            if(col > 0) {
-                terminal.setCursorColumn(col - 1);
-                terminal.eraseToRight(1);
-            }
-            return;
-        }
-        terminal.interpret(String.fromCharCode(c));
-    };
-
     var uart0 = lm32.lm32UART({
-        putchar: putchar,
+        putchar: console_putchar_fn,
         irq_line: UART0_IRQ,
         set_irq: set_irq
     });
     var send_str = uart0.send_str;
-    key_handler.set_send_fn(send_str);
+
 
     mmu.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
     mmu.add_memory(FLASH_BASE, FLASH_SIZE, flash.get_mmio_handlers());
@@ -220,7 +195,11 @@ lm32.start_evr = function(terminal, key_handler, kernel_file_name) {
 
     cpu.cs.pc = KERNEL_BASE;
     cpu.set_timers([timer0, timer1]);
-    window.cpu = cpu;
-    
-    setTimeout(cpu.step_forever, 0);
+
+    return {
+        cpu: cpu,
+        step: cpu.step,
+        step_forever: cpu.step_forever,
+        console_send_str: send_str
+    };
 };
