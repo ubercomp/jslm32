@@ -15,8 +15,11 @@ lm32.mmu = function() {
     var handlers = [];
     var last_handler = undefined;
     var has_typed_arrays;
-    try { 
-        has_typed_arrays = ('ArrayBuffer' in window && 'Uint8Array' in window);
+    try {
+        var buf = new ArrayBuffer(4);
+        var uint = new Uint8Array(buf);
+        uint[0] = 1;
+        has_typed_arrays = true;
     } catch(e) {
         has_typed_arrays = false;
     }

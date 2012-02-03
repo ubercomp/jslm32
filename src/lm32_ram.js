@@ -20,6 +20,9 @@ lm32.ram = function(size, be) {
         v8 = new Array(size);
     }
     var i;
+    for(i = 0; i < size; i++) {
+        v8[i] = 0;
+    }
     if(!be) {
         // TODO implement little endian
         throw ("Little Endian is not supported for now");

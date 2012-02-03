@@ -602,7 +602,7 @@ lm32.lm32Cpu = function (params) {
         }
 
         if(!ok) {
-            //console.log("Error reading at address " + bits.format(uaddr) + " with width " + width);
+            console.log("Error reading at address " + bits.format(uaddr) + " with width " + width);
             raise_exception(cs, EXCEPT_DATA_BUS_ERROR);
         }
     }
@@ -669,6 +669,7 @@ lm32.lm32Cpu = function (params) {
                 break;
         }
         if(!ok) {
+            console.log('Error writing to address ' + lm32.bits.format(uaddr));
             raise_exception(cs, EXCEPT_DATA_BUS_ERROR);
         }
     }
@@ -913,84 +914,14 @@ lm32.lm32Cpu = function (params) {
         /* 0x3f */    cmpne
     ];
 
-    var opnames = [
-        "srui",
-        "nori",
-        "muli",
-        "sh",
-        "lb",
-        "sri",
-        "xori",
-        "lh",
-        "andi",
-        "xnori",
-        "lw",
-        "lhu",
-        "sb",
-        "addi",
-        "ori",
-        "sli",
-
-        "lbu",
-        "be",
-        "bg",
-        "bge",
-        "bgeu",
-        "bgu",
-        "sw",
-        "bne",
-        "andhi",
-        "cmpei",
-        "cmpgi",
-        "cmpgei",
-        "cmpgeui",
-        "cmpgui",
-        "orhi",
-        "cmpnei",
-
-        "sru",
-        "nor",
-        "mul",
-        "divu",
-        "rcsr",
-        "sr",
-        "xor",
-        "div",
-        "and",
-        "xnor",
-        "reserved",
-        "raise",
-        "sextb",
-        "add",
-        "or",
-        "sl",
-
-        "branch",
-        "modu",
-        "sub",
-        "reserved",
-        "wcsr",
-        "mod",
-        "call",
-        "sexth",
-        "bi",
-        "cmpe",
-        "cmpg",
-        "cmpge",
-        "cmpgeu",
-        "cmpgu",
-        "calli",
-        "cmpne"
-    ];
-
-    var tick = function(ticks) {
+    function tick(ticks) {
         var len = cs.timers.length;
         for(var i = 0; i < len; i++) {
             (cs.timers[i])(ticks);
         }
-    };
+    }
 
-    var decode_instr = function (ics, op) {
+    function  decode_instr(ics, op) {
             ics.I_OPC   = (op & 0xfc000000) >>> 26;
             ics.I_IMM5  = op & 0x1f;
             ics.I_IMM16 = op & 0xffff;
@@ -1002,7 +933,7 @@ lm32.lm32Cpu = function (params) {
     
     };
 
-    var step = function(instructions) {
+    function step(instructions) {
         var i = 0;
         var ics = cs; // internal cs -> speeds things up
         var inc;
@@ -1011,6 +942,7 @@ lm32.lm32Cpu = function (params) {
         var max_ticks = 1000; // max_ticks without informing timer
         var ticks = 0; // ticks to inform
         var tick_f; // function to be called for ticks
+        var ioptable = optable;
         if(ics.orig_timers.length == 1) {
             // optimize when there's only one timer
             tick_f = ics.orig_timers[0].on_tick;
@@ -1019,7 +951,6 @@ lm32.lm32Cpu = function (params) {
         }
         var ram_base = ics.ram_base;
         var v8 = ics.ram.v8;
-        var immu = ics.mmu;
 
         do {
             if(ics.interrupt && (ics.ie.ie == 1) && ((ics.pic.get_ip() & ics.pic.get_im()) != 0)) {
@@ -1044,7 +975,7 @@ lm32.lm32Cpu = function (params) {
 
             // Instruction execution:
             opcode = ics.I_OPC;
-            (optable[opcode])(ics);
+            (ioptable[opcode])(ics);
 
             inc = 1;
             ticks += inc;
@@ -1056,22 +987,22 @@ lm32.lm32Cpu = function (params) {
             ics.pc = ics.next_pc;
         } while(++i < instructions);
         ics.instr_count += i;
-        if(ics.instr_count >= 1000000) {
+        if(ics.instr_count >= 10000000) {
             var time = (new Date()).getTime();
             var delta = time - ics.instr_count_start;
             ics.instr_count_start = time;
             ics.instr_count = 0;
-            ics.mips_log_function(1000.0/delta);
+            ics.mips_log_function(10000.0/delta);
         }
         tick_f(ticks);
-    };
+    }
 
-    var step_forever = function() {
+    function step_forever() {
         step(50000);
         setTimeout(step_forever, 0);
-    };
+    }
 
-    var set_timers = function(timers) {
+    function set_timers(timers) {
         var len = timers.length
         cs.timers = new Array(len);
         cs.orig_timers = timers;
@@ -1079,14 +1010,14 @@ lm32.lm32Cpu = function (params) {
             var cur = timers[i];
             (cs.timers)[i] = cur.on_tick;
         }
-    };
+    }
 
-    var dump_ie = function() {
+    function dump_ie() {
         var fmt = lm32.bits.format;
         console.log('ie=' + fmt(cs.ie_val()) + '(IE=' + cs.ie.ie + ' EIE=' + cs.ie.eie + ' BIE=' + cs.ie.bie + ')');
-    };
+    }
 
-    var dump = function() {
+    function dump() {
         var i;
         var fmt = lm32.bits.format;
         console.log("DUMP:");
@@ -1100,8 +1031,8 @@ lm32.lm32Cpu = function (params) {
             if(cs.regs[i] != 0) {
                 console.log("r" + i + " = " + lm32.bits.format(cs.regs[i]));
             }
-        };
-    };
+        }
+    }
 
     return {
         cs: cs,
