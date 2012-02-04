@@ -51,10 +51,14 @@ lm32.memops_dev = function(mmu, ram_array, ram_base, ram_size) {
 
     function do_copy() {
         // JAVASCRIPT memcpy implementation
-        if(regs[R_TO] == RESET_VALUE ||
-            regs[R_FROM] == RESET_VALUE ||
-            regs[R_SIZE] == RESET_VALUE) {
+        if(regs[R_TO] === RESET_VALUE ||
+            regs[R_FROM] === RESET_VALUE ||
+            regs[R_SIZE] === RESET_VALUE) {
             throw "memcpy_dev: Not ready to copy!!"
+        }
+
+        if(regs[R_SIZE] === 0) {
+            return;
         }
 
         //console.log('memcpy from = ' + lm32.bits.format(regs[R_FROM]) +
