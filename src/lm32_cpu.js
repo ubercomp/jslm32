@@ -942,7 +942,7 @@ lm32.lm32Cpu = function (params) {
         var v8 = ics.ram.v8;
 
         do {
-            if(ics.interrupt && (ics.ie.ie == 1) && ((ps.ip & ps.im) !== 0)) {
+            if((ps.ip & ps.im) && ics.interrupt && ics.ie.ie == 1) {
                 // here is the correct place to treat exceptions
                 ics.interrupt = false;
                 raise_exception(ics, 6);
