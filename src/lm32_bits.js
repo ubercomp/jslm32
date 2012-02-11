@@ -15,10 +15,6 @@ lm32.bits.mask00_31 = 0xffffffff;
 lm32.bits.mask00_25 = 0x03ffffff;
 lm32.bits.mask00_15 = 0x0000ffff;
 
-lm32.bits.zero_extend = function(val, width) {
-    return val & ((1 << width) - 1);
-};
-
 lm32.bits.sign_extend = function(val, width) {
     var sval;
     /* LSL.  */
@@ -47,19 +43,6 @@ lm32.bits.format = function(n) {
     var pad = (new Array(8 - u32s.length + 1)).join('0');
     return "0x" + pad + u32s;
 }
-
-lm32.bits.rmsr = function(dword, mask, bits) {
-    // read masked and shift right
-    return (dword & mask) >> bits;
-};
-
-// read masked and shift (unsigned) right
-lm32.bits.rmsr_u = function(dword, mask, bits) {
-    // params: dword (a 32 bit value)
-    // mask: a 32 bit mask
-    // the number of bits to shift right
-    return (dword & mask) >>> bits;
-};
 
 // Count trailing zeroes of a 32 bits quantity
 lm32.bits.ctz32 = function(n) {

@@ -282,7 +282,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function andi(cs) {
-        cs.regs[cs.I_R1] = cs.regs[cs.I_R0] & bits.zero_extend(cs.I_IMM16, 16);
+        cs.regs[cs.I_R1] = cs.regs[cs.I_R0] & cs.I_IMM16;
     }
 
     /**
@@ -408,7 +408,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function nori(cs) {
-        cs.regs[cs.I_R1] = ~(cs.regs[cs.I_R0] | bits.zero_extend(cs.I_IMM16, 16));
+        cs.regs[cs.I_R1] = ~(cs.regs[cs.I_R0] | cs.I_IMM16);
     }
 
     function or(cs) {
@@ -416,7 +416,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function ori(cs) {
-        cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] | bits.zero_extend(cs.I_IMM16, 16));
+        cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] | cs.I_IMM16);
     }
 
     function orhi(cs) {
@@ -466,7 +466,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function xnori(cs) {
-        cs.regs[cs.I_R1] = ~(cs.regs[cs.I_R0] ^ bits.zero_extend(cs.I_IMM16, 16));
+        cs.regs[cs.I_R1] = ~(cs.regs[cs.I_R0] ^ cs.I_IMM16);
     }
 
     function xor(cs) {
@@ -474,7 +474,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function xori(cs) {
-        cs.regs[cs.I_R1] = cs.regs[cs.I_R0] ^ bits.zero_extend(cs.I_IMM16, 16);
+        cs.regs[cs.I_R1] = cs.regs[cs.I_R0] ^ cs.I_IMM16;
     }
 
     // branch and call implementations
@@ -561,24 +561,12 @@ lm32.lm32Cpu = function (params) {
         return bits.sign_extend(val, 16);
     }
 
-    function zero_extend_8(val) {
-        return bits.zero_extend(val, 8);
-    }
-
-    function zero_extend_16(val) {
-        return bits.zero_extend(val, 16);
-    }
-
-    function to_32_bits(val) {
-        return val | 0;
-    }
-
     /**
      *
      * @param width the width to read (8, 16 or 32)
      * @param func the function to apply before assigning the result to a register
      */
-    function load(cs, uaddr, width, func) {
+    function load(cs, uaddr, width, mask_and) {
         var ok = false;
         var val = undefined;
         switch(width) {
@@ -598,7 +586,7 @@ lm32.lm32Cpu = function (params) {
 
         if(val !== undefined) {
             ok = true;
-            cs.regs[cs.I_R1] = func(val);
+            cs.regs[cs.I_R1] = val & mask_and;
         }
 
         if(!ok) {
@@ -619,9 +607,9 @@ lm32.lm32Cpu = function (params) {
     function lbu(cs) {
         var uaddr = bits.unsigned32(cs.regs[cs.I_R0] + bits.sign_extend(cs.I_IMM16, 16));
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
-            cs.regs[cs.I_R1] = lm32.bits.zero_extend(cs.ram.read_8(uaddr - cs.ram_base), 8);
+            cs.regs[cs.I_R1] = cs.ram.read_8(uaddr - cs.ram_base);
         } else {
-            load(cs, uaddr, 8, zero_extend_8);
+            load(cs, uaddr, 8, 0xff);
         }
     }
 
@@ -637,9 +625,9 @@ lm32.lm32Cpu = function (params) {
     function lhu(cs) {
         var uaddr = bits.unsigned32(cs.regs[cs.I_R0] + bits.sign_extend(cs.I_IMM16, 16));
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
-            cs.regs[cs.I_R1] = lm32.bits.zero_extend(cs.ram.read_16(uaddr - cs.ram_base), 16);
+            cs.regs[cs.I_R1] = cs.ram.read_16(uaddr - cs.ram_base);
         } else {
-            load(cs, uaddr, 16, zero_extend_16);
+            load(cs, uaddr, 16, 0xffff);
         }
     }
 
@@ -648,7 +636,7 @@ lm32.lm32Cpu = function (params) {
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.regs[cs.I_R1] = cs.ram.read_32(uaddr - cs.ram_base);
         } else {
-            load(cs, uaddr, 32, to_32_bits);
+            load(cs, uaddr, 32, 0xffffffff);
         }
     }
 
@@ -936,6 +924,7 @@ lm32.lm32Cpu = function (params) {
     function step(instructions) {
         var i = 0;
         var ics = cs; // internal cs -> speeds things up
+        var ps = ics.pic.state; // pic state
         var inc;
         var op, pc, opcode;
         var rpc; // ram-based pc
@@ -953,7 +942,7 @@ lm32.lm32Cpu = function (params) {
         var v8 = ics.ram.v8;
 
         do {
-            if(ics.interrupt && (ics.ie.ie == 1) && ((ics.pic.get_ip() & ics.pic.get_im()) != 0)) {
+            if(ics.interrupt && (ics.ie.ie == 1) && ((ps.ip & ps.im) !== 0)) {
                 // here is the correct place to treat exceptions
                 ics.interrupt = false;
                 raise_exception(ics, 6);
