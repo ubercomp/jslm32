@@ -19,7 +19,7 @@
     <script src="lm32_cpu.js"></script>
     <script src="lm32_mmu.js"></script>
     <script src="lm32_ram.js"></script>
-    <script src="lm32_memops_dev.js"></script>
+    <script src="lm32_libc_dev.js"></script>
     <script src="lm32_hwsetup.js"></script>
     <script src="lm32_sys.js"></script>
     <script src="lm32_timer.js"></script>
@@ -69,6 +69,16 @@
             key_handler.send_str("setenv bootargs 'root=/dev/ram0 console=ttyS0,115200 ramdisk_size=4096\n");
             key_handler.send_str("bootm 0a000000 08400000\n");
         }
+
+        function lm32_start_evr(kernel_filename) {
+            var sys = lm32.start_evr(terminal_putchar, kernel_filename);
+            window.cpu = sys.cpu;
+            sys.cpu.cs.mips_log_function = inform_mips;
+            key_handler.set_send_fn(sys.console_send_str);
+            setTimeout(sys.step_forever, 0);
+        }
+
+
         function lm32_start_regular() {
             var sys = lm32.start_uclinux(terminal_putchar);
             window.cpu = sys.cpu;
