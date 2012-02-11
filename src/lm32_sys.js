@@ -25,7 +25,7 @@ lm32.start_uclinux = function(console_putchar_fn) {
     var UART1_BASE = 0x81000000;
     var UART1_IRQ = 2;
 
-    var MEMCPY_DEV_BASE = 0x82000000;
+    var JSLIBC_DEV_BASE = 0x82000000;
 
     var HWSETUP_BASE = 0x0bffe000;
     var CMDLINE_BASE = 0x0bfff000;
@@ -87,7 +87,7 @@ lm32.start_uclinux = function(console_putchar_fn) {
         set_irq: set_irq
     });
 
-    var memops = lm32.memops_dev(mmu, ram.v8, RAM_BASE, RAM_SIZE);
+    var libc_dev = lm32.libc_dev(mmu, ram.v8, RAM_BASE, RAM_SIZE);
 
     var send_str = uart0.send_str;
 
@@ -95,7 +95,7 @@ lm32.start_uclinux = function(console_putchar_fn) {
     
     // Gluing everything together
     mmu.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
-    mmu.add_memory(MEMCPY_DEV_BASE, memops.iomem_size, memops.get_mmio_handlers());
+    mmu.add_memory(JSLIBC_DEV_BASE, libc_dev.iomem_size, libc_dev.get_mmio_handlers());
     mmu.add_memory(UART0_BASE, uart0.iomem_size, uart0.get_mmio_handlers());
     mmu.add_memory(UART1_BASE, uart1.iomem_size, uart1.get_mmio_handlers());
     mmu.add_memory(TIMER0_BASE, timer0.iomem_size, timer0.get_mmio_handlers());
@@ -140,10 +140,6 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name) {
     var RAM_BASE = 0x08000000;
     var RAM_SIZE = 64 * 1024 * 1024;
 
-    var FLASH_BASE = 0x04000000;
-    var FLASH_SECTOR_SIZE = 256 * 1024;
-    var FLASH_SIZE = 32 * 1024 * 1024;
-
     var UART0_BASE  = 0x80006000;
     var UART0_IRQ   = 0;
 
@@ -155,15 +151,10 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name) {
 
     var EBA_BASE, DEBA_BASE, BOOT_PC, KERNEL_BASE;
     EBA_BASE = DEBA_BASE = BOOT_PC = RAM_BASE;
-    KERNEL_BASE = FLASH_BASE;
+    KERNEL_BASE = RAM_BASE;
 
     var mmu = lm32.mmu();
     var ram = lm32.ram(RAM_SIZE, true);
-
-    var flash = new lm32.PFlashCFI01(kernel_file_name,
-        FLASH_SECTOR_SIZE,
-        FLASH_SIZE / FLASH_SECTOR_SIZE, 2,
-        0x01, 0x7e, 0x43, 0x00, true);
 
     var cpu_params = {
         mmu: mmu,
@@ -202,10 +193,11 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name) {
 
 
     mmu.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
-    mmu.add_memory(FLASH_BASE, FLASH_SIZE, flash.get_mmio_handlers());
     mmu.add_memory(UART0_BASE, uart0.iomem_size, uart0.get_mmio_handlers());
     mmu.add_memory(TIMER0_BASE, timer0.iomem_size, timer0.get_mmio_handlers());
     mmu.add_memory(TIMER1_BASE, timer1.iomem_size, timer1.get_mmio_handlers());
+
+    mmu.load_binary(kernel_file_name, KERNEL_BASE);
 
     cpu.cs.pc = KERNEL_BASE;
     cpu.set_timers([timer0, timer1]);
