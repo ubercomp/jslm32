@@ -64,12 +64,6 @@
             terminal.interpret(String.fromCharCode(c));
         }
 
-        function lm32_boot() {
-            key_handler.send_str("setenv verify 'n'\n");
-            key_handler.send_str("setenv bootargs 'root=/dev/ram0 console=ttyS0,115200 ramdisk_size=4096\n");
-            key_handler.send_str("bootm 0a000000 08400000\n");
-        }
-
         function lm32_start_evr(kernel_filename) {
             var sys = lm32.start_evr(terminal_putchar, kernel_filename);
             window.cpu = sys.cpu;
