@@ -15,6 +15,7 @@
     <!-- lm32 -->
     <script src="lm32_base.js"></script>
     <script src="lm32_bits.js"></script>
+    <script src="lm32_fb.js"></script>
     <script src="lm32_pic.js"></script>
     <script src="lm32_cpu.js"></script>
     <script src="lm32_mmu.js"></script>
@@ -172,6 +173,7 @@
 <button onclick="lm32_start_worker()">Start with web workers!</button>
 <p>Login: root ; Password: lattice</p>
 <div>Processor real time speed: <span id="mips">0.00</span> MIPS</div>
+<div id="frameBuffer"></div>
 <div id="vt100Div"></div>
 <script type="text/javascript">
     start_terminal();

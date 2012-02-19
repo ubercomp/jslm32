@@ -97,11 +97,11 @@ lm32.run_tests = function(wait_time, first_test, last_test) {
 lm32.start_sys = function(terminal_div) {
     var RAM_BASE = 0x08000000;
     var RAM_SIZE = 1*1024*1024;
-    var EBA_BASE = RAM_BASE;
-    var DEBA_BASE = RAM_BASE;
+    var EBA_BASE = 0;
+    var DEBA_BASE = 0;
 
     var TESTDEV_BASE = 0xffff0000;
-    var MAX_STEPS = 1000;
+    var MAX_STEPS = 200;
     var BOOT_PC = RAM_BASE;
 
     var mmu = lm32.mmu();

@@ -19,7 +19,6 @@
 
 lm32.lm32Cpu = function (params) {
     // dependencies
-    var bits = lm32.bits;
     var cs = {}; // cpu state
 
     // performance counting:
@@ -216,11 +215,11 @@ lm32.lm32Cpu = function (params) {
     }
 
     function fcond_geu(a, b) {
-        return (bits.unsigned32(a) >= bits.unsigned32(b));
+        return (lm32.bits.unsigned32(a) >= lm32.bits.unsigned32(b));
     }
 
     function fcond_gu(a, b) {
-        return (bits.unsigned32(a) > bits.unsigned32(b));
+        return (lm32.bits.unsigned32(a) > lm32.bits.unsigned32(b));
     }
 
     function fcond_ne(a, b) {
@@ -241,8 +240,8 @@ lm32.lm32Cpu = function (params) {
                 cs.ie.ie = 0;
                 var base = cs.dc.re ? cs.deba : cs.eba;
                 // exceptions write to both pc and next_pc
-                cs.pc = bits.unsigned32(base + id * 32);
-                cs.next_pc = cs.pc
+                cs.pc = lm32.bits.unsigned32(base + id * 32);
+                cs.next_pc = cs.pc;
                 break;
 
             case EXCEPT_BREAKPOINT:
@@ -252,7 +251,7 @@ lm32.lm32Cpu = function (params) {
                 cs.ie.bie = cs.ie.ie;
                 cs.ie.ie = 0;
                 // exceptions write to both pc and next_pc
-                cs.pc = bits.unsigned32(cs.deba + id * 32);
+                cs.pc = lm32.bits.unsigned32(cs.deba + id * 32);
                 cs.next_pc = cs.pc;
                 break;
             default:
@@ -268,21 +267,42 @@ lm32.lm32Cpu = function (params) {
         cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] + cs.regs[cs.I_R1]) | 0;
     }
 
-    function addi(cs) {
-        cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] + bits.sign_extend(cs.I_IMM16, 16)) | 0;
+    function add_e(es) {
+        return "cs.regs[" + es.I_R2 + "] = (cs.regs[" + es.I_R0 + "] + cs.regs[" + es.I_R1 + "]) | 0;\n";
     }
+
+    function addi(cs) {
+        cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16)) | 0;
+    }
+
+    function addi_e(es) {
+        return "cs.regs[" + es.I_R1 + "] = (cs.regs[" + es.I_R0 + "] + lm32.bits.sign_extend(" + es.I_IMM16 + ", 16)) | 0;\n";
+    }
+
 
     function and(cs) {
         // logical ops don't need to and with mask00_31
         cs.regs[cs.I_R2] = cs.regs[cs.I_R0] & cs.regs[cs.I_R1];
     }
 
+    function and_e(es) {
+        return "cs.regs[" + es.I_R2 + "] = cs.regs[" + es.I_R0 + "] & cs.regs[" + es.I_R1 + "];\n";
+    }
+
     function andhi(cs) {
         cs.regs[cs.I_R1] = cs.regs[cs.I_R0] & (cs.I_IMM16 << 16);
     }
 
+    function andhi_e(es) {
+        return "cs.regs[" + es.I_R1 + "] = cs.regs[" + es.I_R0 + "] & (" + es.I_IMM16 + " << 16);\n";
+    }
+
     function andi(cs) {
         cs.regs[cs.I_R1] = cs.regs[cs.I_R0] & cs.I_IMM16;
+    }
+
+    function andi_e(es) {
+        return "cs.regs[" + es.I_R1+ "] = cs.regs[" + es.I_R0 + "] & " + es.I_IMM16 + ";\n";
     }
 
     /**
@@ -295,7 +315,7 @@ lm32.lm32Cpu = function (params) {
         var rz = reg_p ? cs.I_R1 : -1;
 
         var a = cs.regs[ry];
-        var b = reg_p ? cs.regs[rz] : bits.sign_extend(cs.I_IMM16, 16);
+        var b = reg_p ? cs.regs[rz] : lm32.bits.sign_extend(cs.I_IMM16, 16);
 
         if(fcond(a, b)) {
             cs.regs[rx] = 1;
@@ -304,52 +324,119 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
+    function compare_rr_e(es, cond, wrap) {
+        return "" +
+            "if(" + wrap + "(cs.regs[" + es.I_R0 + "]) " + cond + wrap +" (cs.regs[" + es.I_R1 + "])) {\n" +
+            "    cs.regs[" + es.I_R2 + "] = 1;\n" +
+            "} else { \n" +
+            "    cs.regs[" + es.I_R2 + "] = 0;\n" +
+            "}\n";
+    }
+
+    function compare_ri_e(es, cond, wrap) {
+        return "" +
+            "if(" + wrap + "(cs.regs[" + es.I_R0 + "]) " + cond + wrap + "(lm32.bits.sign_extend(" + es.I_IMM16 + ", 16))) {\n" +
+            "    cs.regs[" + es.I_R1 + "] = 1;\n" +
+            "} else { \n" +
+            "    cs.regs[" + es.I_R1 + "] = 0;\n" +
+            "}\n";
+    }
+
     function cmpe(cs) {
         compare(cs, true, fcond_eq);
+    }
+
+    function cmpe_e(es) {
+        return compare_rr_e(es, "===", "");
     }
 
     function cmpei(cs) {
         compare(cs, false, fcond_eq);
     }
 
+    function cmpei_e(es) {
+        return compare_ri_e(es, "===", "");
+    }
+
     function cmpg(cs) {
         compare(cs, true, fcond_g);
     }
 
+    function cmpg_e(es) {
+        return compare_rr_e(es, ">", "");
+    }
+
+
     function cmpgi(cs) {
         compare(cs, false, fcond_g);
+    }
+
+    function cmpgi_e(es) {
+        return compare_ri_e(es, ">", "");
     }
 
     function cmpge(cs) {
         compare(cs, true, fcond_ge);
     }
 
+    function cmpge_e(es) {
+        return compare_rr_e(es, ">=", "");
+    }
+
     function cmpgei(cs) {
         compare(cs, false, fcond_ge);
+    }
+
+    function cmpgei_e(es) {
+        return compare_ri_e(es, ">=", "");
     }
 
     function cmpgeu(cs) {
         compare(cs, true, fcond_geu);
     }
 
+    function cmpgeu_e(es) {
+        return compare_rr_e(es, ">=", "lm32.bits.unsigned32");
+    }
+
     function cmpgeui(cs) {
         compare(cs, false, fcond_geu)
+    }
+
+    function cmpgeui_e(es) {
+        return compare_ri_e(es, ">=", "lm32.bits.unsigned32");
     }
 
     function cmpgu(cs) {
         compare(cs, true, fcond_gu);
     }
 
+    function cmpgu_e(es) {
+        return compare_rr_e(es, ">", "lm32.bits.unsigned32");
+    }
+
     function cmpgui(cs) {
         compare(cs, false, fcond_gu);
+    }
+
+    function cmpgui_e(es) {
+        return compare_ri_e(es, ">", "lm32.bits.unsigned32");
     }
 
     function cmpne(cs) {
         compare(cs, true, fcond_ne);
     }
 
+    function cmpne_e(es) {
+        return compare_rr_e(es, "!==", "");
+    }
+
     function cmpnei(cs) {
         compare(cs, false, fcond_ne);
+    }
+
+    function cmpnei_e(es) {
+        return compare_ri_e(es, "!==", "");
     }
 
     function div(cs) {
@@ -362,16 +449,34 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
+    function div_e(es) {
+        return "" +
+            "if(cs.regs[" + es.I_R1 + "] === 0) {\n" +
+            "    raise_exception(cs, 5);\n" +
+            "} else {\n" +
+            "    cs.regs[" + es.I_R2 + "] = (Math.floor(cs.regs[" + es.I_R0 + "]/cs.regs[" + es.I_R1 + "])) | 0;\n" +
+            "}\n";
+    }
+
     function divu(cs) {
         var vr0 = cs.regs[cs.I_R0];
         var vr1 = cs.regs[cs.I_R1];
-        var u = bits.unsigned32;
+        var u = lm32.bits.unsigned32;
 
         if (vr1 === 0) {
             raise_exception(cs, EXCEPT_DIVIDE_BY_ZERO);
         } else {
             cs.regs[cs.I_R2] = (Math.floor(u(vr0) / u(vr1))) | 0;
         }
+    }
+
+    function divu_e(es) {
+        return "" +
+            "if(cs.regs[" + es.I_R1 + "] === 0) {\n" +
+            "    raise_exception(cs, 5);\n" +
+            "} else {\n" +
+            "    cs.regs[" + es.I_R2 + "] = (Math.floor(lm32.bits.unsigned32(cs.regs[" + es.I_R0 + "])/lm32.bits.unsigned32(cs.regs[" + es.I_R1 + "]))) | 0;\n" +
+            "}\n";
     }
 
     function mod(cs) {
@@ -384,10 +489,19 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
+    function mod_e(es) {
+        return "" +
+            "if(cs.regs[" + es.I_R1 + "] === 0) {\n" +
+            "    raise_exception(cs, 5);\n" +
+            "} else {\n" +
+            "    cs.regs[" + es.I_R2 + "] = (cs.regs[" + es.I_R0 + "] % cs.regs[" + es.I_R1 + "]) | 0;\n" +
+            "}\n";
+    }
+
     function modu(cs) {
         var vr0 = cs.regs[cs.I_R0];
         var vr1 = cs.regs[cs.I_R1];
-        var u = bits.unsigned32;
+        var u = lm32.bits.unsigned32;
         if (vr1 === 0) {
             raise_exception(cs, EXCEPT_DIVIDE_BY_ZERO);
         } else {
@@ -395,32 +509,69 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
+    function modu_e(es) {
+        return "" +
+            "if(cs.regs[" + es.I_R1 + "] === 0) {\n" +
+            "    raise_exception(cs, 5);\n" +
+            "} else {\n" +
+            "    cs.regs[" + es.I_R2 + "] = (lm32.bits.unsigned32(cs.regs[" + es.I_R0 + "]) % lm32.bits.unsigned32(cs.regs[" + es.I_R1 + "])) | 0;\n" +
+            "}\n";
+    }
+
     function mul(cs) {
         cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] * cs.regs[cs.I_R1]) | 0;
     }
 
+    function mul_e(es) {
+        return "cs.regs[" + es.I_R2 + "] = (cs.regs[" + es.I_R0 + "] * cs.regs[" + es.I_R1 + "]) | 0;\n";
+    }
+
     function muli(cs) {
-        cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] * bits.sign_extend(cs.I_IMM16, 16)) | 0;
+        cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] * lm32.bits.sign_extend(cs.I_IMM16, 16)) | 0;
+    }
+
+    function muli_e(es) {
+        return "cs.regs[" + es.I_R1 + "] = (cs.regs[" + es.I_R0 + "] * lm32.bits.sign_extend(" + es.I_IMM16 + ", 16)) | 0;\n";
     }
 
     function nor(cs) {
         cs.regs[cs.I_R2] = ~(cs.regs[cs.I_R0] | cs.regs[cs.I_R1]);
     }
 
+    function nor_e(es) {
+        return "cs.regs[" + es.I_R2 + "] = ~(cs.regs[" + es.I_R0 + "] | cs.regs[" + es.I_R1+ "]);\n";
+    }
+
     function nori(cs) {
         cs.regs[cs.I_R1] = ~(cs.regs[cs.I_R0] | cs.I_IMM16);
+    }
+
+    function nori_e(es) {
+        return "cs.regs[" + es.I_R1 + "] = ~(cs.regs[" + es.I_R0 + "] | " + es.I_IMM16 + ");\n";
     }
 
     function or(cs) {
         cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] | cs.regs[cs.I_R1]);
     }
 
+    function or_e(es) {
+        return "cs.regs[" + es.I_R2 + "] = (cs.regs[" + es.I_R0 + "] | cs.regs[" + es.I_R1 + "]);\n";
+    }
+
     function ori(cs) {
         cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] | cs.I_IMM16);
     }
 
+    function ori_e(es) {
+        return "cs.regs[" + es.I_R1 + "] = (cs.regs[" + es.I_R0 + "] | " + es.I_IMM16 + ");\n";
+    }
+
     function orhi(cs) {
         cs.regs[cs.I_R1] = cs.regs[cs.I_R0] | (cs.I_IMM16 << 16);
+    }
+
+    function orhi_e(es) {
+        return "cs.regs[" + es.I_R1 + "] = cs.regs[" + es.I_R0 + "] | (" + es.I_IMM16 + " << 16);\n";
     }
 
     function sextb(cs) {
@@ -428,59 +579,110 @@ lm32.lm32Cpu = function (params) {
         cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] << 24) >> 24;
     }
 
+    function sextb_e(es) {
+        return "cs.regs[" + es.I_R2 + "] = (cs.regs[" + es.I_R0 + "] << 24) >> 24;\n";
+    }
+
     function sexth(cs) {
         // sign extend half-word to word
         cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] << 16) >> 16;
+    }
+
+    function sexth_e(es) {
+       return "cs.regs[" + es.I_R2 + "] = (cs.regs[" + es.I_R0 + "] << 16) >> 16;\n";
     }
 
     function sl(cs) {
         cs.regs[cs.I_R2] = cs.regs[cs.I_R0] << (cs.regs[cs.I_R1] & 0x1f);
     }
 
+    function sl_e(es) {
+        return "cs.regs[" + es.I_R2 + "] = cs.regs[" + es.I_R0 + "] << (cs.regs[" + es.I_R1 + "] & 0x1f);\n";
+    }
+
     function sli(cs) {
         cs.regs[cs.I_R1] = cs.regs[cs.I_R0] << cs.I_IMM5;
+    }
+
+    function sli_e(es) {
+        return "cs.regs[" + es.I_R1 + "] = cs.regs[" + es.I_R0 + "] << " + es.I_IMM5 + ";\n";
     }
 
     function sr(cs) {
         cs.regs[cs.I_R2] = cs.regs[cs.I_R0] >> (cs.regs[cs.I_R1] & 0x1f);
     }
 
+    function sr_e(es) {
+        return "cs.regs[" + es.I_R2 + "] = cs.regs[" + es.I_R0 + "] >> (cs.regs[" + es.I_R1 + "] & 0x1f);\n";
+    }
+
     function sri(cs) {
         cs.regs[cs.I_R1] = cs.regs[cs.I_R0] >> cs.I_IMM5;
+    }
+
+    function sri_e(es) {
+        return "cs.regs[" + es.I_R1 +"] = cs.regs[" + es.I_R0 + "] >> " + es.I_IMM5 + ";\n";
     }
 
     function sru(cs) {
         cs.regs[cs.I_R2] = cs.regs[cs.I_R0] >>> (cs.regs[cs.I_R1] & 0x1f);
     }
 
+    function sru_e(es) {
+        return "cs.regs[" + es.I_R2 + "] = cs.regs[" + es.I_R0 + "] >>> (cs.regs[" + es.I_R1 + "] & 0x1f);\n";
+    }
+
     function srui(cs) {
         cs.regs[cs.I_R1] = cs.regs[cs.I_R0] >>> cs.I_IMM5;
+    }
+
+    function srui_e(es) {
+        return "cs.regs[" + es.I_R1 + "] = cs.regs[" + es.I_R0 + "] >>> " + es.I_IMM5 + ";\n";
     }
 
     function sub(cs) {
         cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] - cs.regs[cs.I_R1]) | 0;
     }
 
+    function sub_e(es) {
+        return "cs.regs[" + es.I_R2 + "] = (cs.regs[" + es.I_R0 + "] - cs.regs[" + es.I_R1 + "]) | 0;\n";
+    }
+
     function xnor(cs) {
         cs.regs[cs.I_R2] = ~(cs.regs[cs.I_R0] ^ cs.regs[cs.I_R1]);
+    }
+
+    function xnor_e(es) {
+        return "cs.regs[" + es.I_R2 + "] = ~(cs.regs[" + es.I_R0 + "] ^ cs.regs[" + es.I_R1 + "]);\n";
     }
 
     function xnori(cs) {
         cs.regs[cs.I_R1] = ~(cs.regs[cs.I_R0] ^ cs.I_IMM16);
     }
 
+    function xnori_e(es) {
+        return "cs.regs[" + es.I_R1 + "] = ~(cs.regs[" + es.I_R0 + "] ^ " + es.I_IMM16 + ");\n";
+    }
+
     function xor(cs) {
         cs.regs[cs.I_R2] = cs.regs[cs.I_R0] ^ cs.regs[cs.I_R1];
+    }
+
+    function xor_e(es) {
+        return "cs.regs[" + es.I_R2 + "] = cs.regs[" + es.I_R0 + "] ^ cs.regs[" + es.I_R1 + "];\n";
     }
 
     function xori(cs) {
         cs.regs[cs.I_R1] = cs.regs[cs.I_R0] ^ cs.I_IMM16;
     }
 
+    function xori_e(es) {
+        return "cs.regs[" + es.I_R1 + "] = cs.regs[" + es.I_R0 + "] ^ " + es.I_IMM16 + ";\n";
+    }
+
     // branch and call implementations
     function b(cs) {
         var r0 = cs.I_R0;
-
         if(r0 == REG_EA) {
             // eret -> restore eie
             cs.ie.ie = cs.ie.eie;
@@ -488,56 +690,112 @@ lm32.lm32Cpu = function (params) {
             // bret -> restore bie
             cs.ie.ie = cs.ie.bie;
         }
+        cs.next_pc = lm32.bits.unsigned32(cs.regs[r0]);
+    }
 
-        cs.next_pc = bits.unsigned32(cs.regs[r0]);
+    function b_e(es) {
+        return "" +
+        "if(" + es.I_R0 + " === 30) {\n" +
+        "    cs.ie.ie = cs.ie.eie;\n" +
+        "} else if(" + es.I_R0 + " === 31) {\n" +
+        "    cs.ie.ie = cs.ie.bie;\n" +
+        "}\n" +
+        "cs.next_pc = lm32.bits.unsigned32(cs.regs[" + es.I_R0 + "]);\n";
     }
 
     function bi(cs) {
         var imm26 = cs.I_IMM26;
-        cs.next_pc = bits.unsigned32(cs.pc + bits.sign_extend(imm26 << 2, 28));
+        cs.next_pc = lm32.bits.unsigned32(cs.pc + lm32.bits.sign_extend(imm26 << 2, 28));
+    }
+
+    function bi_e(es) {
+        return "cs.next_pc = lm32.bits.unsigned32(" + es.I_PC + " + lm32.bits.sign_extend(" + es.I_IMM26  + " << 2, 28));\n";
     }
 
     function branch_conditional(cs, fcond) {
         var a = cs.regs[cs.I_R0];
         var b = cs.regs[cs.I_R1];
         if(fcond(a, b)) {
-            cs.next_pc = bits.unsigned32(cs.pc + bits.sign_extend(cs.I_IMM16 << 2, 18));
+            cs.next_pc = lm32.bits.unsigned32(cs.pc + lm32.bits.sign_extend(cs.I_IMM16 << 2, 18));
         }
+    }
+
+    function branch_conditional_e(es, cond, wrap) {
+        return "" +
+            "if(" + wrap + "(cs.regs[" + es.I_R0 + "]) " + cond + " " + wrap + "(cs.regs[" + es.I_R1 + "])) {\n" +
+            "    cs.next_pc = lm32.bits.unsigned32(" + es.I_PC + " + lm32.bits.sign_extend(" + es.I_IMM16 + " << 2, 18));\n" +
+            "}\n";
     }
 
     function be(cs) {
         branch_conditional(cs, fcond_eq);
     }
 
+    function be_e(es) {
+        return branch_conditional_e(es, "===", "");
+    }
+
     function bg(cs) {
         branch_conditional(cs, fcond_g);
+    }
+
+    function bg_e(es) {
+        return branch_conditional_e(es, ">", "");
     }
 
     function bge(cs) {
         branch_conditional(cs, fcond_ge);
     }
 
+    function bge_e(es) {
+        return branch_conditional_e(es, ">=", "");
+    }
+
     function bgeu(cs) {
         branch_conditional(cs, fcond_geu);
+    }
+
+    function bgeu_e(es) {
+        return branch_conditional_e(es, ">=", "lm32.bits.unsigned32");
     }
 
     function bgu(cs) {
         branch_conditional(cs, fcond_gu);
     }
 
+    function bgu_e(es) {
+        return branch_conditional_e(es, ">", "lm32.bits.unsigned32");
+    }
+
     function bne(cs) {
         branch_conditional(cs, fcond_ne);
     }
 
+    function bne_e(es) {
+        return branch_conditional_e(es, "!==", "");
+    }
+
     function call_(cs) {
         cs.regs[REG_RA] = (cs.pc + 4) | 0;
-        cs.next_pc = bits.unsigned32(cs.regs[cs.I_R0]);
+        cs.next_pc = lm32.bits.unsigned32(cs.regs[cs.I_R0]);
+    }
+
+    function call__e(es) {
+        return "" +
+            "cs.regs[29] = (" + es.I_PC + " + 4) | 0;\n" +
+            "cs.next_pc = lm32.bits.unsigned32(cs.regs[" + es.I_R0 + "]);\n";
     }
 
     function calli(cs) {
         var imm26 = cs.I_IMM26;
         cs.regs[REG_RA] = (cs.pc + 4) | 0;
-        cs.next_pc = bits.unsigned32(cs.pc + bits.sign_extend(imm26 << 2, 28));
+        cs.next_pc = lm32.bits.unsigned32(cs.pc + lm32.bits.sign_extend(imm26 << 2, 28));
+    }
+
+    function calli_e(es) {
+        return "" +
+            "cs.regs[29] = (" + es.I_PC + " + 4) | 0;\n" +
+            "cs.next_pc = lm32.bits.unsigned32(" + es.I_PC + " + lm32.bits.sign_extend(" + es.I_IMM26 + " << 2, 28));\n";
     }
 
     function scall(cs) {
@@ -551,22 +809,37 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
+    function scall_e(es) {
+        return "" +
+            "switch(" + es.I_IMM5 + ") {\n" +
+            "    case 7:\n" +
+            "        raise_exception(cs, 7);\n" +
+            "        break;\n" +
+            "    case 2:\n" +
+            "        raise_exception(cs, 2);\n" +
+            "        break;" +
+            "    default:\n" +
+            "        throw 'Invalid opcode';\n" +
+            "        break;\n" +
+            "}\n";
+    }
+
     // load and store instructions
     // helper functions
     function sign_extend_8(val) {
-        return bits.sign_extend(val, 8);
+        return lm32.bits.sign_extend(val, 8);
     }
 
     function sign_extend_16(val) {
-        return bits.sign_extend(val, 16);
+        return lm32.bits.sign_extend(val, 16);
     }
 
     /**
      *
      * @param width the width to read (8, 16 or 32)
-     * @param func the function to apply before assigning the result to a register
+     * @param aft the function or mask to apply before assigning the result to a register
      */
-    function load(cs, uaddr, width, mask_and) {
+    function load(cs, uaddr, width, aft) {
         var ok = false;
         var val = undefined;
         switch(width) {
@@ -586,17 +859,24 @@ lm32.lm32Cpu = function (params) {
 
         if(val !== undefined) {
             ok = true;
-            cs.regs[cs.I_R1] = val & mask_and;
+            if((typeof aft) === "function") {
+                cs.regs[cs.I_R1] = aft(val);
+            } else if((typeof aft) === "number") {
+                cs.regs[cs.I_R1] = val & aft;
+            } else {
+                throw "Invalid LOAD.";
+            }
         }
 
         if(!ok) {
-            console.log("Error reading at address " + bits.format(uaddr) + " with width " + width);
+            console.log("Error reading at address " + lm32.bits.format(uaddr) + " with width " + width);
             raise_exception(cs, EXCEPT_DATA_BUS_ERROR);
         }
     }
 
+
     function lb(cs) {
-        var uaddr = bits.unsigned32(cs.regs[cs.I_R0] + bits.sign_extend(cs.I_IMM16, 16));
+        var uaddr = lm32.bits.unsigned32(cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16));
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.regs[cs.I_R1] = lm32.bits.sign_extend(cs.ram.read_8(uaddr - cs.ram_base), 8);
         } else {
@@ -604,8 +884,16 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
+    function lb_e(es) {
+        return "" +
+            "cs.I_R0 = " + es.I_R0 + ";\n" +
+            "cs.I_R1 = " + es.I_R1 + ";\n" +
+            "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
+            "lb(cs);\n";
+    }
+
     function lbu(cs) {
-        var uaddr = bits.unsigned32(cs.regs[cs.I_R0] + bits.sign_extend(cs.I_IMM16, 16));
+        var uaddr = lm32.bits.unsigned32(cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16));
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.regs[cs.I_R1] = cs.ram.read_8(uaddr - cs.ram_base);
         } else {
@@ -613,8 +901,16 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
+    function lbu_e(es) {
+        return "" +
+            "cs.I_R0 = " + es.I_R0 + ";\n" +
+            "cs.I_R1 = " + es.I_R1 + ";\n" +
+            "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
+            "lbu(cs);\n";
+    }
+
     function lh(cs) {
-        var uaddr = bits.unsigned32(cs.regs[cs.I_R0] + bits.sign_extend(cs.I_IMM16, 16));
+        var uaddr = lm32.bits.unsigned32(cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16));
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.regs[cs.I_R1] = lm32.bits.sign_extend(cs.ram.read_16(uaddr - cs.ram_base), 16);
         } else {
@@ -622,8 +918,16 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
+    function lh_e(es) {
+        return "" +
+            "cs.I_R0 = " + es.I_R0 + ";\n" +
+            "cs.I_R1 = " + es.I_R1 + ";\n" +
+            "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
+            "lh(cs);\n";
+    }
+
     function lhu(cs) {
-        var uaddr = bits.unsigned32(cs.regs[cs.I_R0] + bits.sign_extend(cs.I_IMM16, 16));
+        var uaddr = lm32.bits.unsigned32(cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16));
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.regs[cs.I_R1] = cs.ram.read_16(uaddr - cs.ram_base);
         } else {
@@ -631,13 +935,29 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
+    function lhu_e(es) {
+        return "" +
+            "cs.I_R0 = " + es.I_R0 + ";\n" +
+            "cs.I_R1 = " + es.I_R1 + ";\n" +
+            "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
+            "lhu(cs);\n";
+    }
+
     function lw(cs) {
-        var uaddr = bits.unsigned32(cs.regs[cs.I_R0] + bits.sign_extend(cs.I_IMM16, 16));
+        var uaddr = lm32.bits.unsigned32(cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16));
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.regs[cs.I_R1] = cs.ram.read_32(uaddr - cs.ram_base);
         } else {
             load(cs, uaddr, 32, 0xffffffff);
         }
+    }
+
+    function lw_e(es) {
+        return "" +
+            "cs.I_R0 = " + es.I_R0 + ";\n" +
+            "cs.I_R1 = " + es.I_R1 + ";\n" +
+            "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
+            "lw(cs);\n";
     }
 
     function store(cs, uaddr, width) {
@@ -653,7 +973,7 @@ lm32.lm32Cpu = function (params) {
                 ok = cs.mmu.write_32(uaddr, cs.regs[cs.I_R1]);
                 break;
             default:
-                //console.log("Error writing to address " + bits.format(uaddr) + " with width " + width);
+                //console.log("Error writing to address " + lm32.bits.format(uaddr) + " with width " + width);
                 break;
         }
         if(!ok) {
@@ -663,7 +983,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function sb(cs) {
-        var uaddr = bits.unsigned32(cs.regs[cs.I_R0] + bits.sign_extend(cs.I_IMM16, 16));
+        var uaddr = lm32.bits.unsigned32(cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16));
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.ram.v8[uaddr - cs.ram_base] = cs.regs[cs.I_R1] & 0xff;
             //cs.ram.write_8(uaddr - cs.ram_base, cs.regs[cs.I_R1] & 0xff);
@@ -672,8 +992,16 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
+    function sb_e(es) {
+        return "" +
+            "cs.I_R0 = " + es.I_R0 + ";\n" +
+            "cs.I_R1 = " + es.I_R1 + ";\n" +
+            "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
+            "sb(cs);\n";
+    }
+
     function sh(cs) {
-        var uaddr = bits.unsigned32(cs.regs[cs.I_R0] + bits.sign_extend(cs.I_IMM16, 16));
+        var uaddr = lm32.bits.unsigned32(cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16));
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.ram.write_16(uaddr - cs.ram_base, cs.regs[cs.I_R1] & 0xffff);
         } else {
@@ -681,13 +1009,29 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
+    function sh_e(es) {
+        return "" +
+            "cs.I_R0 = " + es.I_R0 + ";\n" +
+            "cs.I_R1 = " + es.I_R1 + ";\n" +
+            "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
+            "sh(cs);\n";
+    }
+
     function sw(cs) {
-        var uaddr = bits.unsigned32(cs.regs[cs.I_R0] + bits.sign_extend(cs.I_IMM16, 16));
+        var uaddr = lm32.bits.unsigned32(cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16));
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.ram.write_32(uaddr - cs.ram_base, cs.regs[cs.I_R1] | 0);
         } else {
             store(cs, uaddr, 32);
         }
+    }
+
+    function sw_e(es) {
+        return "" +
+            "cs.I_R0 = " + es.I_R0 + ";\n" +
+            "cs.I_R1 = " + es.I_R1 + ";\n" +
+            "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
+            "sw(cs);\n";
     }
 
 
@@ -759,6 +1103,13 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
+    function rcsr_e(es) {
+        return "" +
+            "cs.I_CSR = " + es.I_CSR + ";\n" +
+            "cs.I_R2 = " + es.I_R2 + ";\n" +
+            "rcsr(cs)\n";
+    }
+
     function wcsr(cs) {
         var csr = cs.I_CSR;
         var rx = cs.I_R1;
@@ -795,12 +1146,12 @@ lm32.lm32Cpu = function (params) {
                 break;
 
             case CSR_JTX:
-                //console.log("Writing CSR_JTX at PC: 0x" + bits.unsigned32(cs.pc).toString(16));
+                //console.log("Writing CSR_JTX at PC: 0x" + lm32.bits.unsigned32(cs.pc).toString(16));
                 cs.jtx = val;
                 break;
 
             case CSR_JRX:
-                //console.log("Writing CSR_JRX at PC: 0x" + bits.unsigned32(cs.pc).toString(16));
+                //console.log("Writing CSR_JRX at PC: 0x" + lm32.bits.unsigned32(cs.pc).toString(16));
                 cs.jrx = val;
                 break;
 
@@ -824,12 +1175,162 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
+    function wcsr_e(es) {
+        return "" +
+            "cs.I_CSR = " + es.I_CSR + ";\n" +
+            "cs.I_R1 = " + es.I_R1 + ";\n" +
+            "wcsr(cs);\n";
+    }
+
     // reserved instruction
     function reserved() {
         //console.log("Someone called the reserved instruction. Not cool!");
         throw "This should never be  called";
     }
 
+    function reserved_e(es) {
+        return 'throw "Reserved instruction should not be used";\n';
+    }
+
+    var opnames = [
+        /* OPCODE      OP */
+        /* 0x00 */     "srui_e",
+        /* 0x01 */     "nori_e",
+        /* 0x02 */     "muli_e",
+        /* 0x03 */       "sh_e",
+        /* 0x04 */       "lb_e",
+        /* 0x05 */      "sri_e",
+        /* 0x06 */     "xori_e",
+        /* 0x07 */       "lh_e",
+        /* 0x08 */     "andi_e",
+        /* 0x09 */    "xnori_e",
+        /* 0x0a */       "lw_e",
+        /* 0x0b */      "lhu_e",
+        /* 0x0c */       "sb_e",
+        /* 0x0d */     "addi_e",
+        /* 0x0e */      "ori_e",
+        /* 0x0f */      "sli_e",
+        /* 0x10 */      "lbu_e",
+        /* 0x11 */       "be_e",
+        /* 0x12 */       "bg_e",
+        /* 0x13 */      "bge_e",
+        /* 0x14 */     "bgeu_e",
+        /* 0x15 */      "bgu_e",
+        /* 0x16 */       "sw_e",
+        /* 0x17 */      "bne_e",
+        /* 0x18 */    "andhi_e",
+        /* 0x19 */    "cmpei_e",
+        /* 0x1a */    "cmpgi_e",
+        /* 0x1b */   "cmpgei_e",
+        /* 0x1c */  "cmpgeui_e",
+        /* 0x1d */   "cmpgui_e",
+        /* 0x1e */     "orhi_e",
+        /* 0x1f */   "cmpnei_e",
+        /* 0x20 */      "sru_e",
+        /* 0x21 */      "nor_e",
+        /* 0x22 */      "mul_e",
+        /* 0x23 */     "divu_e",
+        /* 0x24 */     "rcsr_e",
+        /* 0x25 */       "sr_e",
+        /* 0x26 */      "xor_e",
+        /* 0x27 */      "div_e",
+        /* 0x28 */      "and_e",
+        /* 0x29 */     "xnor_e",
+        /* 0x2a */ "reserved_e",
+        /* 0x2b */    "scall_e",
+        /* 0x2c */    "sextb_e",
+        /* 0x2d */      "add_e",
+        /* 0x2e */       "or_e",
+        /* 0x2f */       "sl_e",
+
+        /* 0x30 */        "b_e",
+        /* 0x31 */     "modu_e",
+        /* 0x32 */      "sub_e",
+        /* 0x33 */ "reserved_e",
+        /* 0x34 */     "wcsr_e",
+        /* 0x35 */      "mod_e",
+        /* 0x36 */     "call__e",
+        /* 0x37 */    "sexth_e",
+        /* 0x38 */       "bi_e",
+        /* 0x39 */     "cmpe_e",
+        /* 0x3a */     "cmpg_e",
+        /* 0x3b */    "cmpge_e",
+        /* 0x3c */   "cmpgeu_e",
+        /* 0x3d */    "cmpgu_e",
+        /* 0x3e */    "calli_e",
+        /* 0x3f */    "cmpne_e"
+    ];
+
+    var emmiters = [
+        /* OPCODE      OP */
+        /* 0x00 */     srui_e,
+        /* 0x01 */     nori_e,
+        /* 0x02 */     muli_e,
+        /* 0x03 */       sh_e,
+        /* 0x04 */       lb_e,
+        /* 0x05 */      sri_e,
+        /* 0x06 */     xori_e,
+        /* 0x07 */       lh_e,
+        /* 0x08 */     andi_e,
+        /* 0x09 */    xnori_e,
+        /* 0x0a */       lw_e,
+        /* 0x0b */      lhu_e,
+        /* 0x0c */       sb_e,
+        /* 0x0d */     addi_e,
+        /* 0x0e */      ori_e,
+        /* 0x0f */      sli_e,
+
+        /* 0x10 */      lbu_e,
+        /* 0x11 */       be_e,
+        /* 0x12 */       bg_e,
+        /* 0x13 */      bge_e,
+        /* 0x14 */     bgeu_e,
+        /* 0x15 */      bgu_e,
+        /* 0x16 */       sw_e,
+        /* 0x17 */      bne_e,
+        /* 0x18 */    andhi_e,
+        /* 0x19 */    cmpei_e,
+        /* 0x1a */    cmpgi_e,
+        /* 0x1b */   cmpgei_e,
+        /* 0x1c */  cmpgeui_e,
+        /* 0x1d */   cmpgui_e,
+        /* 0x1e */     orhi_e,
+        /* 0x1f */   cmpnei_e,
+
+        /* 0x20 */      sru_e,
+        /* 0x21 */      nor_e,
+        /* 0x22 */      mul_e,
+        /* 0x23 */     divu_e,
+        /* 0x24 */     rcsr_e,
+        /* 0x25 */       sr_e,
+        /* 0x26 */      xor_e,
+        /* 0x27 */      div_e,
+        /* 0x28 */      and_e,
+        /* 0x29 */     xnor_e,
+        /* 0x2a */ reserved_e,
+        /* 0x2b */    scall_e,
+        /* 0x2c */    sextb_e,
+        /* 0x2d */      add_e,
+        /* 0x2e */       or_e,
+        /* 0x2f */       sl_e,
+
+        /* 0x30 */        b_e,
+        /* 0x31 */     modu_e,
+        /* 0x32 */      sub_e,
+        /* 0x33 */ reserved_e,
+        /* 0x34 */     wcsr_e,
+        /* 0x35 */      mod_e,
+        /* 0x36 */     call__e,
+        /* 0x37 */    sexth_e,
+        /* 0x38 */       bi_e,
+        /* 0x39 */     cmpe_e,
+        /* 0x3a */     cmpg_e,
+        /* 0x3b */    cmpge_e,
+        /* 0x3c */   cmpgeu_e,
+        /* 0x3d */    cmpgu_e,
+        /* 0x3e */    calli_e,
+        /* 0x3f */    cmpne_e
+    ];
 
     var optable = [
         /* OPCODE      OP */
@@ -919,9 +1420,9 @@ lm32.lm32Cpu = function (params) {
             ics.I_R1    = (op & 0x001f0000) >> 16;
             ics.I_R2    = (op & 0x0000f800) >> 11;
     
-    };
+    }
 
-    function step(instructions) {
+    function step_interpreter(instructions) {
         var i = 0;
         var ics = cs; // internal cs -> speeds things up
         var ps = ics.pic.state; // pic state
@@ -949,7 +1450,7 @@ lm32.lm32Cpu = function (params) {
             }
 
             pc = ics.pc;
-            ics.next_pc = pc + 4; //bits.unsigned32(pc + 4);
+            ics.next_pc = pc + 4; //lm32.bits.unsigned32(pc + 4);
 
             // Instruction fetching:
             // supports only code from ram (faster)
@@ -969,7 +1470,7 @@ lm32.lm32Cpu = function (params) {
             inc = 1;
             ticks += inc;
             if(ticks >= max_ticks) {
-                tick_f(max_ticks)
+                tick_f(max_ticks);
                 ticks -= max_ticks;
             }
             ics.cc = (ics.cc + inc) | 0;
@@ -986,13 +1487,90 @@ lm32.lm32Cpu = function (params) {
         tick_f(ticks);
     }
 
+    function step_eval(instructions) {
+        var gencode;
+        var i = 0;
+        var ics = cs; // internal cs -> speeds things up
+        var es;
+        var ps = ics.pic.state; // pic state
+        var inc;
+        var op, pc, opcode;
+        var rpc; // ram-based pc
+        var max_ticks = 1000; // max_ticks without informing timer
+        var ticks = 0; // ticks to inform
+        var tick_f; // function to be called for ticks
+        var ioptable = optable;
+        if(ics.orig_timers.length == 1) {
+            // optimize when there's only one timer
+            tick_f = ics.orig_timers[0].on_tick;
+        } else {
+            tick_f = tick;
+        }
+        var ram_base = ics.ram_base;
+        var v8 = ics.ram.v8;
+
+        do {
+            if((ps.ip & ps.im) && ics.interrupt && ics.ie.ie == 1) {
+                // here is the correct place to treat exceptions
+                ics.interrupt = false;
+                raise_exception(ics, 6);
+            }
+
+            pc = ics.pc;
+            ics.next_pc = pc + 4; //lm32.bits.unsigned32(pc + 4);
+
+            // Instruction fetching:
+            // supports only code from ram (faster)
+            rpc = pc - ram_base;
+            op = (v8[rpc] << 24) | (v8[rpc + 1] << 16) | (v8[rpc + 2] << 8) | (v8[rpc + 3]);
+
+            // supports code outside ram
+            // op = immu.read_32(pc);
+
+            // Instruction decoding:
+            es = {};
+            decode_instr(es, op);
+            es.I_PC = pc;
+
+            // Instruction execution:
+            opcode = es.I_OPC;
+            //console.log(opnames[opcode] + "\n\n\n");
+            gencode = "(function(cs) { "  + (emmiters[opcode])(es) + " /* dump(); */ })";
+            //console.log(gencode);
+            gencode = eval(gencode);
+            gencode(ics);
+
+            inc = 1;
+            ticks += inc;
+            if(ticks >= max_ticks) {
+                tick_f(max_ticks);
+                ticks -= max_ticks;
+            }
+            ics.cc = (ics.cc + inc) | 0;
+            ics.pc = ics.next_pc;
+        } while(++i < instructions);
+        ics.instr_count += i;
+        if(ics.instr_count >= 10000000) {
+            var time = (new Date()).getTime();
+            var delta = time - ics.instr_count_start;
+            ics.instr_count_start = time;
+            ics.instr_count = 0;
+            ics.mips_log_function(10000.0/delta);
+        }
+        tick_f(ticks);
+    }
+
+    var step = step_interpreter;
+
+
+
     function step_forever() {
         step(50000);
         setTimeout(step_forever, 0);
     }
 
     function set_timers(timers) {
-        var len = timers.length
+        var len = timers.length;
         cs.timers = new Array(len);
         cs.orig_timers = timers;
         for(var i = 0; i < len; i++) {

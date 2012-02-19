@@ -149,6 +149,8 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name) {
     var TIMER1_BASE = 0x8000a000;
     var TIMER1_IRQ  = 3;
 
+    var FB_BASE = 0x8000e000;
+
     var EBA_BASE, DEBA_BASE, BOOT_PC, KERNEL_BASE;
     EBA_BASE = DEBA_BASE = BOOT_PC = RAM_BASE;
     KERNEL_BASE = RAM_BASE;
@@ -191,11 +193,15 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name) {
     });
     var send_str = uart0.send_str;
 
+    var fb0 = lm32.lm32_frame_buffer('frameBuffer', mmu, ram, RAM_BASE, RAM_SIZE);
+
+
 
     mmu.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
     mmu.add_memory(UART0_BASE, uart0.iomem_size, uart0.get_mmio_handlers());
     mmu.add_memory(TIMER0_BASE, timer0.iomem_size, timer0.get_mmio_handlers());
     mmu.add_memory(TIMER1_BASE, timer1.iomem_size, timer1.get_mmio_handlers());
+    mmu.add_memory(FB_BASE, fb0.iomem_size, fb0.get_mmio_handlers());
 
     mmu.load_binary(kernel_file_name, KERNEL_BASE);
 
