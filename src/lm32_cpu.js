@@ -57,6 +57,18 @@ lm32.lm32Cpu = function (params) {
         cs.mmu = params.mmu;
         cs.block_cache = {};
 
+        // functions that might be called from generated code
+        cs.rcsr = rcsr;
+        cs.wcsr = wcsr;
+        cs.lb = lb;
+        cs.lbu = lbu;
+        cs.lh = lh;
+        cs.lhu = lhu;
+        cs.lw = lw;
+        cs.sb = sb;
+        cs.sh = sh;
+        cs.sw = sw;
+
         // general purpose registers
         cs.regs = new Array(32);
         for (var i = 0; i < 32; i++) {
@@ -152,9 +164,6 @@ lm32.lm32Cpu = function (params) {
         cs.wp2 = 0;
         cs.wp3 = 0;
     }
-
-    // initialization
-    reset(params);
 
     // exception ids
     var EXCEPT_RESET                 = 0;
@@ -921,7 +930,7 @@ lm32.lm32Cpu = function (params) {
             "cs.I_R0 = " + es.I_R0 + ";\n" +
             "cs.I_R1 = " + es.I_R1 + ";\n" +
             "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
-            "lb(cs);\n";
+            "cs.lb(cs);\n";
     }
 
     function lbu(cs) {
@@ -938,7 +947,7 @@ lm32.lm32Cpu = function (params) {
             "cs.I_R0 = " + es.I_R0 + ";\n" +
             "cs.I_R1 = " + es.I_R1 + ";\n" +
             "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
-            "lbu(cs);\n";
+            "cs.lbu(cs);\n";
     }
 
     function lh(cs) {
@@ -955,7 +964,7 @@ lm32.lm32Cpu = function (params) {
             "cs.I_R0 = " + es.I_R0 + ";\n" +
             "cs.I_R1 = " + es.I_R1 + ";\n" +
             "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
-            "lh(cs);\n";
+            "cs.lh(cs);\n";
     }
 
     function lhu(cs) {
@@ -972,7 +981,7 @@ lm32.lm32Cpu = function (params) {
             "cs.I_R0 = " + es.I_R0 + ";\n" +
             "cs.I_R1 = " + es.I_R1 + ";\n" +
             "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
-            "lhu(cs);\n";
+            "cs.lhu(cs);\n";
     }
 
     function lw(cs) {
@@ -989,7 +998,7 @@ lm32.lm32Cpu = function (params) {
             "cs.I_R0 = " + es.I_R0 + ";\n" +
             "cs.I_R1 = " + es.I_R1 + ";\n" +
             "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
-            "lw(cs);\n";
+            "cs.lw(cs);\n";
     }
 
     function store(cs, uaddr, width) {
@@ -1029,7 +1038,7 @@ lm32.lm32Cpu = function (params) {
             "cs.I_R0 = " + es.I_R0 + ";\n" +
             "cs.I_R1 = " + es.I_R1 + ";\n" +
             "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
-            "sb(cs);\n";
+            "cs.sb(cs);\n";
     }
 
     function sh(cs) {
@@ -1046,7 +1055,7 @@ lm32.lm32Cpu = function (params) {
             "cs.I_R0 = " + es.I_R0 + ";\n" +
             "cs.I_R1 = " + es.I_R1 + ";\n" +
             "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
-            "sh(cs);\n";
+            "cs.sh(cs);\n";
     }
 
     function sw(cs) {
@@ -1063,7 +1072,7 @@ lm32.lm32Cpu = function (params) {
             "cs.I_R0 = " + es.I_R0 + ";\n" +
             "cs.I_R1 = " + es.I_R1 + ";\n" +
             "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
-            "sw(cs);\n";
+            "cs.sw(cs);\n";
     }
 
 
@@ -1139,7 +1148,7 @@ lm32.lm32Cpu = function (params) {
         return "" +
             "cs.I_CSR = " + es.I_CSR + ";\n" +
             "cs.I_R2 = " + es.I_R2 + ";\n" +
-            "rcsr(cs)\n";
+            "cs.rcsr(cs)\n";
     }
 
     function wcsr(cs) {
@@ -1211,7 +1220,7 @@ lm32.lm32Cpu = function (params) {
         return "" +
             "cs.I_CSR = " + es.I_CSR + ";\n" +
             "cs.I_R1 = " + es.I_R1 + ";\n" +
-            "wcsr(cs);\n";
+            "cs.wcsr(cs);\n";
     }
 
     // reserved instruction
@@ -1560,13 +1569,14 @@ lm32.lm32Cpu = function (params) {
             // op = immu.read_32(pc);
 
             // Instruction decoding:
-            if(typeof(bc[pc]) !== "function") {
+            if(!bc[pc]) {
                 // emit a block
                 es = {};
                 decode_instr(es, op);
                 es.I_PC = pc;
                 opcode = es.I_OPC;
-                bc[pc] = eval("(function(cs) { "  + (emmiters[opcode])(es) + " })");
+                //bc[pc] = eval("(function(cs) { "  + (emmiters[opcode])(es) + " })");
+                bc[pc] = new Function('cs', (emmiters[opcode])(es));
             }
             (bc[pc])(ics);
             inc = 1;
@@ -1629,6 +1639,9 @@ lm32.lm32Cpu = function (params) {
             }
         }
     }
+
+    // initialization
+    reset(params);
 
     return {
         cs: cs,
