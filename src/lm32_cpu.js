@@ -55,7 +55,25 @@ lm32.lm32Cpu = function (params) {
         cs.ram_size = params.ram_size;
         cs.ram_max  = cs.ram_base + cs.ram_size;
         cs.mmu = params.mmu;
+
+
         cs.block_cache = {};
+        // instructions that end the generation of a block
+        cs.block_exit = {};
+        var v = true;
+        var bex = cs.block_exit;
+        bex[0x11] = v; // be
+        bex[0x12] = v; // bg
+        bex[0x13] = v; // bge
+        bex[0x14] = v; // bgeu
+        bex[0x15] = v; // bgu
+        bex[0x17] = v; // bne
+        bex[0x2b] = v; // scall
+        bex[0x30] = v; // b
+        bex[0x34] = v; // wcsr
+        bex[0x36] = v; // call_
+        bex[0x38] = v; // bi
+        bex[0x3e] = v; // calli
 
         // functions that might be called from generated code
         cs.rcsr = rcsr;
@@ -267,6 +285,12 @@ lm32.lm32Cpu = function (params) {
     }
 
     function raise_exception_e(es, id) {
+        /*
+         * note: as I didn't want instructions "div", "divu", "mod", and "modu"
+         * to be instructions that cause a block of code to stop being emmited,
+         * I added a "return" statement to the code generation so they always
+         * exit the executing block when they throw exceptions.
+         */
         var str = '// raise_exception id = ' + id + '\n';
         switch(id) {
             case EXCEPT_DATA_BUS_ERROR:
@@ -281,6 +305,7 @@ lm32.lm32Cpu = function (params) {
                 // exceptions write to both pc and next_pc
                 str += "cs.pc = lm32.bits.unsigned32((cs.dc.re ? cs.deba : cs.eba) + " + id + " * 32);\n";
                 str += "cs.next_pc = cs.pc;\n";
+                str += "return;\n";
                 break;
 
             case EXCEPT_BREAKPOINT:
@@ -292,6 +317,7 @@ lm32.lm32Cpu = function (params) {
                 // exceptions write to both pc and next_pc
                 str += "cs.pc = lm32.bits.unsigned32(cs.deba + " + id + " * 32);\n";
                 str += "cs.next_pc = cs.pc;\n";
+                str += "return;\n";
                 break;
             default:
                 str += 'throw ("Unhandled exception with id " + ' + id + ');\n';
@@ -490,6 +516,8 @@ lm32.lm32Cpu = function (params) {
     }
 
     function div_e(es) {
+        // returns from block when exception is thrown
+        // see raise_exception_e
         return "" +
             "if(cs.regs[" + es.I_R1 + "] === 0) {\n" +
             raise_exception_e(es, EXCEPT_DIVIDE_BY_ZERO) +
@@ -511,6 +539,8 @@ lm32.lm32Cpu = function (params) {
     }
 
     function divu_e(es) {
+        // returns from block when exception is thrown
+        // see raise_exception_e
         return "" +
             "if(cs.regs[" + es.I_R1 + "] === 0) {\n" +
             raise_exception_e(es, EXCEPT_DIVIDE_BY_ZERO) +
@@ -530,6 +560,8 @@ lm32.lm32Cpu = function (params) {
     }
 
     function mod_e(es) {
+        // returns from block when exception is thrown
+        // see raise_exception_e
         return "" +
             "if(cs.regs[" + es.I_R1 + "] === 0) {\n" +
             raise_exception_e(es, EXCEPT_DIVIDE_BY_ZERO) +
@@ -550,6 +582,8 @@ lm32.lm32Cpu = function (params) {
     }
 
     function modu_e(es) {
+        // returns from block when exception is thrown
+        // see raise_exception_e
         return "" +
             "if(cs.regs[" + es.I_R1 + "] === 0) {\n" +
             raise_exception_e(es, EXCEPT_DIVIDE_BY_ZERO) +
@@ -1148,7 +1182,7 @@ lm32.lm32Cpu = function (params) {
         return "" +
             "cs.I_CSR = " + es.I_CSR + ";\n" +
             "cs.I_R2 = " + es.I_R2 + ";\n" +
-            "cs.rcsr(cs)\n";
+            "cs.rcsr(cs);\n";
     }
 
     function wcsr(cs) {
@@ -1451,7 +1485,7 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
-    function  decode_instr(ics, op) {
+    function decode_instr(ics, op) {
             ics.I_OPC   = (op & 0xfc000000) >>> 26;
             ics.I_IMM5  = op & 0x1f;
             ics.I_IMM16 = op & 0xffff;
@@ -1528,11 +1562,13 @@ lm32.lm32Cpu = function (params) {
         tick_f(ticks);
     }
 
-    function step_eval(instructions) {
+    function step_dynrec(instructions) {
+        instructions *= 10;
         var i = 0;
         var ics = cs; // internal cs -> speeds things up
         var bc = ics.block_cache;
-        var es;
+        var block;
+        var es; // emmiter state
         var ps = ics.pic.state; // pic state
         var inc;
         var op, pc, opcode;
@@ -1540,7 +1576,6 @@ lm32.lm32Cpu = function (params) {
         var max_ticks = 1000; // max_ticks without informing timer
         var ticks = 0; // ticks to inform
         var tick_f; // function to be called for ticks
-        var ioptable = optable;
         if(ics.orig_timers.length == 1) {
             // optimize when there's only one timer
             tick_f = ics.orig_timers[0].on_tick;
@@ -1558,28 +1593,40 @@ lm32.lm32Cpu = function (params) {
             }
 
             pc = ics.pc;
-            ics.next_pc = pc + 4; //lm32.bits.unsigned32(pc + 4);
-
-            // Instruction fetching:
-            // supports only code from ram (faster)
-            rpc = pc - ram_base;
-            op = (v8[rpc] << 24) | (v8[rpc + 1] << 16) | (v8[rpc + 2] << 8) | (v8[rpc + 3]);
-
-            // supports code outside ram
-            // op = immu.read_32(pc);
-
-            // Instruction decoding:
             if(!bc[pc]) {
                 // emit a block
-                es = {};
-                decode_instr(es, op);
-                es.I_PC = pc;
-                opcode = es.I_OPC;
-                //bc[pc] = eval("(function(cs) { "  + (emmiters[opcode])(es) + " })");
-                bc[pc] = new Function('cs', (emmiters[opcode])(es));
+                block = new Array(2); // block = [BLOCK_END, BLOCK_CODE];
+                block[0] = pc;
+                block[1] = "";
+                do {
+                    // Instruction fetching:
+                    // supports only code from ram (faster)
+                    rpc = block[0] - ram_base;
+                    op = (v8[rpc] << 24) | (v8[rpc + 1] << 16) | (v8[rpc + 2] << 8) | (v8[rpc + 3]);
+                    // supports code outside ram
+                    // op = immu.read_32(block[0]);
+
+                    es = {};
+                    decode_instr(es, op);
+                    es.I_PC = block[0];
+                    opcode = es.I_OPC;
+                    block[1] +=  (emmiters[opcode])(es);
+
+                    if(ics.block_exit[opcode]) {
+                        break;
+                    } else {
+                        block[0] = lm32.bits.unsigned32(block[0] + 4);
+                    }
+                } while(true);
+
+                block[1] = new Function('cs', block[1]);
+                bc[pc] = block;
             }
-            (bc[pc])(ics);
-            inc = 1;
+            block = bc[pc];
+            ics.next_pc = block[0] + 4;
+            (block[1])(ics);
+            inc = block[0] - pc + 1;
+            i += inc;
             ticks += inc;
             if(ticks >= max_ticks) {
                 tick_f(max_ticks);
@@ -1587,19 +1634,11 @@ lm32.lm32Cpu = function (params) {
             }
             ics.cc = (ics.cc + inc) | 0;
             ics.pc = ics.next_pc;
-        } while(++i < instructions);
-        ics.instr_count += i;
-        if(ics.instr_count >= 10000000) {
-            var time = (new Date()).getTime();
-            var delta = time - ics.instr_count_start;
-            ics.instr_count_start = time;
-            ics.instr_count = 0;
-            ics.mips_log_function(10000.0/delta);
-        }
+        } while(i < instructions);
         tick_f(ticks);
     }
 
-    var step = step_interpreter;
+    var step = step_dynrec;
 
 
 
@@ -1648,7 +1687,6 @@ lm32.lm32Cpu = function (params) {
         reset: reset,
         step_forever: step_forever,
         step: step,
-        dump_ie: dump_ie,
         dump: dump,
         set_timers: set_timers
     }
