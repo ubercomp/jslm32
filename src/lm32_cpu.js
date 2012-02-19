@@ -1625,7 +1625,7 @@ lm32.lm32Cpu = function (params) {
             block = bc[pc];
             ics.next_pc = block[0] + 4;
             (block[1])(ics);
-            inc = block[0] - pc + 1;
+            inc = ((block[0] - pc) >> 2) + 1;
             i += inc;
             ticks += inc;
             if(ticks >= max_ticks) {

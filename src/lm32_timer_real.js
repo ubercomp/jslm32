@@ -11,7 +11,7 @@
  */
 "use strict";
 
-lm32.lm32Timer = function(params) {
+lm32.lm32TimerReal = function(params) {
     // dependencies
     var bits = lm32.bits;
 
