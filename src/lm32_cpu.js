@@ -13,8 +13,6 @@
 "use strict";
 
 // Conventions:
-// * always use mask 0xffffffff when writing registers;
-// * never use mask 0xffffffff when reading registers;
 // * always use unsigned32 when writing to pc
 
 lm32.lm32Cpu = function (params) {
@@ -57,6 +55,7 @@ lm32.lm32Cpu = function (params) {
         cs.ram_size = params.ram_size;
         cs.ram_max  = cs.ram_base + cs.ram_size;
         cs.mmu = params.mmu;
+        cs.block_cache = {};
 
         // general purpose registers
         cs.regs = new Array(32);
@@ -108,8 +107,6 @@ lm32.lm32Cpu = function (params) {
         //(0  0  0  0)(1  1  0  1)(0  0  0  1)(0  0  1  0)(0  0  0  0)(0  0  0  0)(0  0  1  1)(0  1  1  1)
         //     0           d           1           2            0          0            3          7
         cs.cfg = 0x0d120037;
-        //cs.cfg = 0x0d1200f7; // Using QEMU's
-
 
         cs.eba = params.bootstrap_eba;       // exception base address
 
@@ -260,6 +257,40 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
+    function raise_exception_e(es, id) {
+        var str = '// raise_exception id = ' + id + '\n';
+        switch(id) {
+            case EXCEPT_DATA_BUS_ERROR:
+            case EXCEPT_DIVIDE_BY_ZERO:
+            case EXCEPT_INSTRUCTION_BUS_ERROR:
+            case EXCEPT_INTERRUPT:
+            case EXCEPT_SYSTEM_CALL:
+                // non-debug
+                str += "cs.regs[30] = " + es.I_PC + " | 0;\n";
+                str += "cs.ie.eie = cs.ie.ie;\n";
+                str += "cs.ie.ie = 0;\n";
+                // exceptions write to both pc and next_pc
+                str += "cs.pc = lm32.bits.unsigned32((cs.dc.re ? cs.deba : cs.eba) + " + id + " * 32);\n";
+                str += "cs.next_pc = cs.pc;\n";
+                break;
+
+            case EXCEPT_BREAKPOINT:
+            case EXCEPT_WATCHPOINT:
+                // debug
+                str += "cs.regs[31] = " + es.I_PC + " | 0;\n";
+                str += "cs.ie.bie = cs.ie.ie;\n";
+                str += "cs.ie.ie = 0;\n";
+                // exceptions write to both pc and next_pc
+                str += "cs.pc = lm32.bits.unsigned32(cs.deba + " + id + " * 32);\n";
+                str += "cs.next_pc = cs.pc;\n";
+                break;
+            default:
+                str += 'throw ("Unhandled exception with id " + ' + id + ');\n';
+                break;
+        }
+        return str;
+    }
+
     // instruction implementations:
 
     // arithmetic and comparison instructions
@@ -326,7 +357,7 @@ lm32.lm32Cpu = function (params) {
 
     function compare_rr_e(es, cond, wrap) {
         return "" +
-            "if(" + wrap + "(cs.regs[" + es.I_R0 + "]) " + cond + wrap +" (cs.regs[" + es.I_R1 + "])) {\n" +
+            "if(" + wrap + "(cs.regs[" + es.I_R0 + "]) " + cond + wrap + "(cs.regs[" + es.I_R1 + "])) {\n" +
             "    cs.regs[" + es.I_R2 + "] = 1;\n" +
             "} else { \n" +
             "    cs.regs[" + es.I_R2 + "] = 0;\n" +
@@ -452,7 +483,7 @@ lm32.lm32Cpu = function (params) {
     function div_e(es) {
         return "" +
             "if(cs.regs[" + es.I_R1 + "] === 0) {\n" +
-            "    raise_exception(cs, 5);\n" +
+            raise_exception_e(es, EXCEPT_DIVIDE_BY_ZERO) +
             "} else {\n" +
             "    cs.regs[" + es.I_R2 + "] = (Math.floor(cs.regs[" + es.I_R0 + "]/cs.regs[" + es.I_R1 + "])) | 0;\n" +
             "}\n";
@@ -473,7 +504,7 @@ lm32.lm32Cpu = function (params) {
     function divu_e(es) {
         return "" +
             "if(cs.regs[" + es.I_R1 + "] === 0) {\n" +
-            "    raise_exception(cs, 5);\n" +
+            raise_exception_e(es, EXCEPT_DIVIDE_BY_ZERO) +
             "} else {\n" +
             "    cs.regs[" + es.I_R2 + "] = (Math.floor(lm32.bits.unsigned32(cs.regs[" + es.I_R0 + "])/lm32.bits.unsigned32(cs.regs[" + es.I_R1 + "]))) | 0;\n" +
             "}\n";
@@ -492,7 +523,7 @@ lm32.lm32Cpu = function (params) {
     function mod_e(es) {
         return "" +
             "if(cs.regs[" + es.I_R1 + "] === 0) {\n" +
-            "    raise_exception(cs, 5);\n" +
+            raise_exception_e(es, EXCEPT_DIVIDE_BY_ZERO) +
             "} else {\n" +
             "    cs.regs[" + es.I_R2 + "] = (cs.regs[" + es.I_R0 + "] % cs.regs[" + es.I_R1 + "]) | 0;\n" +
             "}\n";
@@ -512,7 +543,7 @@ lm32.lm32Cpu = function (params) {
     function modu_e(es) {
         return "" +
             "if(cs.regs[" + es.I_R1 + "] === 0) {\n" +
-            "    raise_exception(cs, 5);\n" +
+            raise_exception_e(es, EXCEPT_DIVIDE_BY_ZERO) +
             "} else {\n" +
             "    cs.regs[" + es.I_R2 + "] = (lm32.bits.unsigned32(cs.regs[" + es.I_R0 + "]) % lm32.bits.unsigned32(cs.regs[" + es.I_R1 + "])) | 0;\n" +
             "}\n";
@@ -810,18 +841,19 @@ lm32.lm32Cpu = function (params) {
     }
 
     function scall_e(es) {
-        return "" +
-            "switch(" + es.I_IMM5 + ") {\n" +
-            "    case 7:\n" +
-            "        raise_exception(cs, 7);\n" +
-            "        break;\n" +
-            "    case 2:\n" +
-            "        raise_exception(cs, 2);\n" +
-            "        break;" +
-            "    default:\n" +
-            "        throw 'Invalid opcode';\n" +
-            "        break;\n" +
-            "}\n";
+        var str;
+        switch(es.I_IMM5) {
+            case 7:
+                str = raise_exception_e(es, EXCEPT_SYSTEM_CALL);
+                break;
+            case 2:
+                str = raise_exception_e(es, EXCEPT_BREAKPOINT);
+                break;
+            default:
+                str = "throw 'Invalid opcode';\n";
+                break;
+        }
+        return str;
     }
 
     // load and store instructions
@@ -1488,9 +1520,9 @@ lm32.lm32Cpu = function (params) {
     }
 
     function step_eval(instructions) {
-        var gencode;
         var i = 0;
         var ics = cs; // internal cs -> speeds things up
+        var bc = ics.block_cache;
         var es;
         var ps = ics.pic.state; // pic state
         var inc;
@@ -1528,18 +1560,15 @@ lm32.lm32Cpu = function (params) {
             // op = immu.read_32(pc);
 
             // Instruction decoding:
-            es = {};
-            decode_instr(es, op);
-            es.I_PC = pc;
-
-            // Instruction execution:
-            opcode = es.I_OPC;
-            //console.log(opnames[opcode] + "\n\n\n");
-            gencode = "(function(cs) { "  + (emmiters[opcode])(es) + " /* dump(); */ })";
-            //console.log(gencode);
-            gencode = eval(gencode);
-            gencode(ics);
-
+            if(typeof(bc[pc]) !== "function") {
+                // emit a block
+                es = {};
+                decode_instr(es, op);
+                es.I_PC = pc;
+                opcode = es.I_OPC;
+                bc[pc] = eval("(function(cs) { "  + (emmiters[opcode])(es) + " })");
+            }
+            (bc[pc])(ics);
             inc = 1;
             ticks += inc;
             if(ticks >= max_ticks) {
