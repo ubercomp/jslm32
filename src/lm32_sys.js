@@ -191,6 +191,7 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name) {
         set_irq: set_irq,
         frequency: CPU_FREQ
     });
+    uart0.set_echo(true);
     var send_str = uart0.send_str;
 
     var fb0 = lm32.lm32_frame_buffer('frameBuffer', mmu, ram, RAM_BASE, RAM_SIZE);
