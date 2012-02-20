@@ -27,7 +27,7 @@ function worker_on_message(e) {
     var type = msg.type;
     switch(type) {
         case 'work':
-            step(5000);
+            step(10000);
             self.postMessage({type: 'work_done'});
             break;
 
