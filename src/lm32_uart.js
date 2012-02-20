@@ -13,6 +13,7 @@
 "use strict";
 
 lm32.lm32UART = function(params) {
+    var echo       = false; // echo when receive a char?
     var bits       = lm32.bits;
     
     // parameters
@@ -160,7 +161,14 @@ lm32.lm32UART = function(params) {
         }
 
         regs[R_LSR]  = regs[R_LSR] | LSR_DR;
-        regs[R_RXTX] = value & 0xff;
+        value &= 0xff;
+        regs[R_RXTX] = value
+        if(echo && putchar) {
+            if(value == ('\n').charCodeAt(0)) {
+                putchar(('\r').charCodeAt(0));
+            }
+            putchar(bits.unsigned32(regs[R_RXTX]));
+        }
         update_irq();
     }
 
@@ -208,6 +216,14 @@ lm32.lm32UART = function(params) {
         }
     }
 
+    function get_echo() {
+        return echo;
+    }
+
+    function set_echo(new_echo) {
+        echo = new_echo;
+    }
+
     // initialization:
     reset();
 
@@ -216,9 +232,11 @@ lm32.lm32UART = function(params) {
         iomem_size: 4 * R_MAX,
         can_rx: can_rx,
         do_rx: do_rx,
+        get_echo: get_echo,
         get_mmio_handlers: get_mmio_handlers,
         process_str: process_str,
         send_str: send_str,
+        set_echo: set_echo,
         reset: reset,
         update_irq: update_irq
     };
