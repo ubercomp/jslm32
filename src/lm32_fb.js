@@ -41,7 +41,7 @@ lm32.lm32_frame_buffer = function(container, mmu, ram, ram_base, ram_size) {
         canvas.height = DEFAULT_HEIGHT;
         c2d = canvas.getContext('2d');
         imgData = c2d.createImageData(width, height);
-        if(! c2d) {
+        if(!c2d) {
             fb_div.innerHTML = "<h3>Can't get canvas 2d context</h3>";
             throw "Can't get 2d context from canvas";
         }
