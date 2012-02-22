@@ -58,17 +58,18 @@ lm32.lm32Cpu = function (params) {
 
 
         cs.block_cache = {};
+        cs.block_call_stack = 0; // calls from blocks to blocks
+        cs.n_blocks = 0;
+        cs.size_blocks = 0;
+        cs.max_block = 1;
+
         // instructions that end the generation of a block
+        // only unconditional branches and wcsr do this
+        // conditional branches don't, they just
+        // break out from the loop when the branch is taken
         cs.block_exit = {};
         var v = true;
         var bex = cs.block_exit;
-        bex[0x11] = v; // be
-        bex[0x12] = v; // bg
-        bex[0x13] = v; // bge
-        bex[0x14] = v; // bgeu
-        bex[0x15] = v; // bgu
-        bex[0x17] = v; // bne
-        bex[0x2b] = v; // scall
         bex[0x30] = v; // b
         bex[0x34] = v; // wcsr
         bex[0x36] = v; // call_
@@ -182,6 +183,12 @@ lm32.lm32Cpu = function (params) {
         cs.wp2 = 0;
         cs.wp3 = 0;
     }
+
+    // block label and variable names
+    var BLOCK_LOOP = "block_loop";
+    var BLOCK_CHOICE = "block_choice";
+    var BLOCK_START = "block_start";
+    var BLOCK_END = "block_end";
 
     // exception ids
     var EXCEPT_RESET                 = 0;
@@ -305,7 +312,7 @@ lm32.lm32Cpu = function (params) {
                 // exceptions write to both pc and next_pc
                 str += "cs.pc = lm32.bits.unsigned32((cs.dc.re ? cs.deba : cs.eba) + " + id + " * 32);\n";
                 str += "cs.next_pc = cs.pc;\n";
-                str += "return;\n";
+                str += "break " + BLOCK_LOOP + ";\n";
                 break;
 
             case EXCEPT_BREAKPOINT:
@@ -317,10 +324,10 @@ lm32.lm32Cpu = function (params) {
                 // exceptions write to both pc and next_pc
                 str += "cs.pc = lm32.bits.unsigned32(cs.deba + " + id + " * 32);\n";
                 str += "cs.next_pc = cs.pc;\n";
-                str += "return;\n";
+                str += "break " + BLOCK_LOOP + ";\n";
                 break;
             default:
-                str += 'throw ("Unhandled exception with id " + ' + id + ');\n';
+                throw("Code generation: Such exception does not exist: " + id);
                 break;
         }
         return str;
@@ -329,6 +336,7 @@ lm32.lm32Cpu = function (params) {
     // instruction implementations:
 
     // arithmetic and comparison instructions
+
     function add(cs) {
         cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] + cs.regs[cs.I_R1]) | 0;
     }
@@ -798,6 +806,7 @@ lm32.lm32Cpu = function (params) {
         return "" +
             "if(" + wrap + "(cs.regs[" + es.I_R0 + "]) " + cond + " " + wrap + "(cs.regs[" + es.I_R1 + "])) {\n" +
             "    cs.next_pc = lm32.bits.unsigned32(" + es.I_PC + " + lm32.bits.sign_extend(" + es.I_IMM16 + " << 2, 18));\n" +
+            "    break " + BLOCK_LOOP + ";\n" +
             "}\n";
     }
 
@@ -1073,6 +1082,18 @@ lm32.lm32Cpu = function (params) {
             "cs.I_R1 = " + es.I_R1 + ";\n" +
             "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
             "cs.sb(cs);\n";
+        // */
+
+
+        /*return "" +
+            "var uaddr = lm32.bits.unsigned32(cs.regs[" + es.I_R0 + "] + lm32.bits.sign_extend(" + es.I_IMM16 + ", 16));\n" +
+            "if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {\n" +
+            "    var raddr = uaddr - cs.ram_base;\n" +
+            "    cs.ram.v8[raddr] = (cs.regs[" + es.I_R1 + "] & 0xff);\n" +
+            "} else {\n" +
+            "    var ok = cs.mmu.write_8(uaddr, cs.regs[" + es.I_R1 + "]);\n" +
+            "}\n";
+        // */
     }
 
     function sh(cs) {
@@ -1090,6 +1111,19 @@ lm32.lm32Cpu = function (params) {
             "cs.I_R1 = " + es.I_R1 + ";\n" +
             "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
             "cs.sh(cs);\n";
+        // */
+
+
+        /*return "" +
+            "var uaddr = lm32.bits.unsigned32(cs.regs[" + es.I_R0 + "] + lm32.bits.sign_extend(" + es.I_IMM16 + ", 16));\n" +
+            "if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {\n" +
+            "    var raddr = uaddr - cs.ram_base;\n" +
+            "    cs.ram.v8[raddr] = (cs.regs[" + es.I_R1 + "] & 0xff00) >> 8;\n" +
+            "    cs.ram.v8[raddr + 1] = (cs.regs[" + es.I_R1 + "] & 0x00ff);\n" +
+            "} else {\n" +
+            "    var ok = cs.mmu.write_16(uaddr, cs.regs[" + es.I_R1 + "]);\n" +
+            "}\n";
+        // */
     }
 
     function sw(cs) {
@@ -1107,6 +1141,20 @@ lm32.lm32Cpu = function (params) {
             "cs.I_R1 = " + es.I_R1 + ";\n" +
             "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
             "cs.sw(cs);\n";
+        // */
+
+        /*return "" +
+            "var uaddr = lm32.bits.unsigned32(cs.regs[" + es.I_R0 + "] + lm32.bits.sign_extend(" + es.I_IMM16 + ", 16));\n" +
+            "if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {\n" +
+            "    var raddr = uaddr - cs.ram_base;\n" +
+            "    cs.ram.v8[raddr] = (cs.regs[" + es.I_R1 + "] & 0xff000000) >>> 24;\n" +
+            "    cs.ram.v8[raddr + 1] = (cs.regs[" + es.I_R1 + "] & 0x00ff0000) >> 16;\n" +
+            "    cs.ram.v8[raddr + 2] = (cs.regs[" + es.I_R1 + "] & 0x0000ff00) >> 8;\n" +
+            "    cs.ram.v8[raddr + 3] = (cs.regs[" + es.I_R1 + "] & 0x000000ff);\n" +
+            "} else {\n" +
+            "    cs.mmu.write_32(uaddr, cs.regs[" + es.I_R1 + "]);\n" +
+            "}\n";
+         // */
     }
 
 
@@ -1251,10 +1299,12 @@ lm32.lm32Cpu = function (params) {
     }
 
     function wcsr_e(es) {
+        // all block exit instruction have to set next_pc, that's why it's done here
         return "" +
             "cs.I_CSR = " + es.I_CSR + ";\n" +
             "cs.I_R1 = " + es.I_R1 + ";\n" +
-            "cs.wcsr(cs);\n";
+            "cs.wcsr(cs);\n" +
+            "cs.next_pc = " + (lm32.bits.unsigned32(es.I_PC) + 4) + ";\n";
     }
 
     // reserved instruction
@@ -1563,7 +1613,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function step_dynrec(instructions) {
-        instructions *= 10;
+        instructions *= 5;
         var i = 0;
         var ics = cs; // internal cs -> speeds things up
         var bc = ics.block_cache;
@@ -1594,10 +1644,14 @@ lm32.lm32Cpu = function (params) {
 
             pc = ics.pc;
             if(!bc[pc]) {
-                // emit a block
-                block = new Array(2); // block = [BLOCK_END, BLOCK_CODE];
+                // emmit a block
+                block = new Array(3); // block = [BLOCK_END, BLOCK_CODE, BLOCK_LENGTH];
                 block[0] = pc;
                 block[1] = "";
+                block[1]+= "cs.next_pc = " + pc + ";\n";
+                block[1]+= BLOCK_LOOP + ": while(true) {\n";
+                block[1]+= "    " + BLOCK_CHOICE + ": switch(cs.next_pc) {\n";
+                block[2] = 0;
                 do {
                     // Instruction fetching:
                     // supports only code from ram (faster)
@@ -1610,22 +1664,32 @@ lm32.lm32Cpu = function (params) {
                     decode_instr(es, op);
                     es.I_PC = block[0];
                     opcode = es.I_OPC;
-                    block[1] +=  (emmiters[opcode])(es);
+                    block[1] += "case " + es.I_PC + ": " + (emmiters[opcode])(es);
+                    block[2] += 1;
 
                     if(ics.block_exit[opcode]) {
+                        // block exit falls through default
+                        block[1] += "default: break " + BLOCK_LOOP + ";\n";
+
+                        // statistics
+                        ics.n_blocks += 1;
+                        ics.size_blocks += block[2];
+                        if(block[2] > ics.max_block) {
+                            ics.max_block = block[2];
+                        }
                         break;
                     } else {
                         block[0] = lm32.bits.unsigned32(block[0] + 4);
                     }
                 } while(true);
-
+                block[1] += "    }\n"; // close switch
+                block[1] += "}\n";     //close while
                 block[1] = new Function('cs', block[1]);
                 bc[pc] = block;
             }
             block = bc[pc];
-            ics.next_pc = block[0] + 4;
             (block[1])(ics);
-            inc = ((block[0] - pc) >> 2) + 1;
+            inc = block[2];
             i += inc;
             ticks += inc;
             if(ticks >= max_ticks) {
@@ -1635,6 +1699,14 @@ lm32.lm32Cpu = function (params) {
             ics.cc = (ics.cc + inc) | 0;
             ics.pc = ics.next_pc;
         } while(i < instructions);
+        ics.instr_count += i;
+        if(ics.instr_count >= 10000000) {
+            var time = (new Date()).getTime();
+            var delta = time - ics.instr_count_start;
+            ics.instr_count_start = time;
+            ics.instr_count = 0;
+            ics.mips_log_function(10000.0/delta);
+        }
         tick_f(ticks);
     }
 
