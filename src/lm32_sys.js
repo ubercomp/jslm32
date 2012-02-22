@@ -52,7 +52,7 @@ lm32.start_uclinux = function(console_putchar_fn) {
     var cpu = lm32.lm32Cpu(cpu_params);
     var set_irq = cpu.cs.pic.irq_handler;
 
-    var timer0 = lm32.lm32Timer({
+    var timer0 = lm32.lm32TimerReal({
         id: 0,
         irq_line: TIMER0_IRQ,
         set_irq: set_irq,

@@ -8,6 +8,7 @@ importScripts('lm32_base.js',
     'lm32_hwsetup.js',
     'lm32_sys.js',
     'lm32_timer.js',
+    'lm32_timer_real.js',
     'lm32_uart.js');
 
 var sys;
