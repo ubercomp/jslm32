@@ -806,7 +806,7 @@ lm32.lm32Cpu = function (params) {
         return "" +
             "if(" + wrap + "(cs.regs[" + es.I_R0 + "]) " + cond + " " + wrap + "(cs.regs[" + es.I_R1 + "])) {\n" +
             "    cs.next_pc = lm32.bits.unsigned32(" + es.I_PC + " + lm32.bits.sign_extend(" + es.I_IMM16 + " << 2, 18));\n" +
-            "    break " + BLOCK_LOOP + ";\n" +
+            "    break " + BLOCK_CHOICE + ";\n" +
             "}\n";
     }
 
@@ -1648,8 +1648,10 @@ lm32.lm32Cpu = function (params) {
                 block = new Array(3); // block = [BLOCK_END, BLOCK_CODE, BLOCK_LENGTH];
                 block[0] = pc;
                 block[1] = "";
+                block[1]+= "var count = 0;"
                 block[1]+= "cs.next_pc = " + pc + ";\n";
-                block[1]+= BLOCK_LOOP + ": while(true) {\n";
+                block[1]+= BLOCK_LOOP + ": while(count < 3) {\n";
+                block[1]+= "    count++;\n";
                 block[1]+= "    " + BLOCK_CHOICE + ": switch(cs.next_pc) {\n";
                 block[2] = 0;
                 do {

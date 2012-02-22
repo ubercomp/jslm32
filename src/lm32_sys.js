@@ -5,7 +5,7 @@
  */
 "use strict";
 lm32.start_uclinux = function(console_putchar_fn) {
-    var CPU_FREQ = 8000000; // TODO make it a parameter?
+    var CPU_FREQ = 4000000; // TODO make it a parameter?
 
     var RAM_BASE = 0x08000000;
     var RAM_SIZE = 64 * 1024 * 1024;
@@ -52,7 +52,7 @@ lm32.start_uclinux = function(console_putchar_fn) {
     var cpu = lm32.lm32Cpu(cpu_params);
     var set_irq = cpu.cs.pic.irq_handler;
 
-    var timer0 = lm32.lm32TimerReal({
+    var timer0 = lm32.lm32Timer({
         id: 0,
         irq_line: TIMER0_IRQ,
         set_irq: set_irq,
