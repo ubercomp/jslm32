@@ -1,5 +1,5 @@
 /**
- * LatticeMico32 emulation by interpretation.
+ * LatticeMico32 emulation by interpretation and dynamic recompilation.
  *
  * Copyright (c) 2011 Reginaldo Silva (reginaldo@ubercomp.com)
  * Created: 10/09/11 17:21
