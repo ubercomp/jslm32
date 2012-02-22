@@ -5,7 +5,7 @@
  */
 "use strict";
 lm32.start_uclinux = function(console_putchar_fn) {
-    var CPU_FREQ = 20000000; // TODO make it a parameter?
+    var CPU_FREQ = 8000000; // TODO make it a parameter?
 
     var RAM_BASE = 0x08000000;
     var RAM_SIZE = 64 * 1024 * 1024;
