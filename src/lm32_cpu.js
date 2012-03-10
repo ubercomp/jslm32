@@ -310,7 +310,7 @@ lm32.lm32Cpu = function (params) {
             case EXCEPT_INTERRUPT:
             case EXCEPT_SYSTEM_CALL:
                 // non-debug
-                str += "cs.regs[30] = " + es.I_PC + " | 0;\n";
+                str += "cs.regs[30] = " + (es.I_PC | 0) + ";\n";
                 str += "cs.ie.eie = cs.ie.ie;\n";
                 str += "cs.ie.ie = 0;\n";
                 // exceptions write to both pc and next_pc
@@ -322,7 +322,7 @@ lm32.lm32Cpu = function (params) {
             case EXCEPT_BREAKPOINT:
             case EXCEPT_WATCHPOINT:
                 // debug
-                str += "cs.regs[31] = " + es.I_PC + " | 0;\n";
+                str += "cs.regs[31] = " + (es.I_PC | 0) + ";\n";
                 str += "cs.ie.bie = cs.ie.ie;\n";
                 str += "cs.ie.ie = 0;\n";
                 // exceptions write to both pc and next_pc
