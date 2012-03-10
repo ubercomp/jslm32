@@ -25,20 +25,8 @@ lm32.bits.sign_extend = function(val, width) {
     return sval;
 };
 
-lm32.bits.unsigned32 = function(n) {
-    // gets the unsigned 32 bit value of the number
-    var s32 = n & 0xffffffff; // signed n value
-    var u32 = s32;
-    if(s32 < 0) {
-        // number was negative -> add
-        var mag = u32 & 0x7fffffff; // mask_00_30
-        u32 = mag + 0x80000000;
-    }
-    return u32;
-};
-
 lm32.bits.format = function(n) {
-    var u32 = lm32.bits.unsigned32(n);
+    var u32 = n>>>0;
     var u32s = u32.toString(16);
     var pad = (new Array(8 - u32s.length + 1)).join('0');
     return "0x" + pad + u32s;
@@ -46,7 +34,7 @@ lm32.bits.format = function(n) {
 
 // Count trailing zeroes of a 32 bits quantity
 lm32.bits.ctz32 = function(n) {
-    n = lm32.bits.unsigned32(n);
+    n >>>= 0;
     if(n == 0) {
         return 32;
     }

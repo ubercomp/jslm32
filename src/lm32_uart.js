@@ -14,7 +14,6 @@
 
 lm32.lm32UART = function(params) {
     var echo       = false; // echo when receive a char?
-    var bits       = lm32.bits;
     
     // parameters
     var set_irq    = params.set_irq;   // function(irq_line, irq_value)
@@ -130,7 +129,7 @@ lm32.lm32UART = function(params) {
         switch (addr) {
             case R_RXTX:
                 if (putchar) {
-                    putchar(bits.unsigned32(value));
+                    putchar(value >>> 0);
                 }
                 break;
             case R_IER:
@@ -167,7 +166,7 @@ lm32.lm32UART = function(params) {
             if(value == ('\n').charCodeAt(0)) {
                 putchar(('\r').charCodeAt(0));
             }
-            putchar(bits.unsigned32(regs[R_RXTX]));
+            putchar(regs[R_RXTX] >>> 0);
         }
         update_irq();
     }

@@ -98,7 +98,7 @@ lm32.lm32_frame_buffer = function(container, mmu, ram, ram_base, ram_size) {
                 imgData = c2d.createImageData(width, height);
                 break;
             case R_DATA:
-                var pix = lm32.bits.unsigned32(val) - ram_base;
+                var pix = (val >>> 0) - ram_base;
                 var iImgData = imgData; // internal img data
                 var end = 4 * width * height;
                 for(var i = 0; i < end; i++) {

@@ -6,8 +6,6 @@
  * Created: 03/02/12
  */
 lm32.libc_dev = function(mmu, ram_array, ram_base, ram_size) {
-    var u32 = lm32.bits.unsigned32;
-
     var NULL_VALUE = 0;
 
     var R_ARG0  = 0;
@@ -94,9 +92,9 @@ lm32.libc_dev = function(mmu, ram_array, ram_base, ram_size) {
     function string_memcmp() { }
 
     function string_memcpy(to, from, size) {
-        to = u32(to);
-        from = u32(from);
-        size = u32(size);
+        to >>>= 0;
+        from >>>= 0;
+        size >>>= 0;
         if(size === 0) { return; }
         var i;
         if(region_from_ram(to, size) && region_from_ram(from, size)) {
@@ -113,9 +111,9 @@ lm32.libc_dev = function(mmu, ram_array, ram_base, ram_size) {
     }
 
     function string_memmove(dest, src, count) {
-        dest = u32(dest);
-        src = u32(src);
-        count = u32(count);
+        dest >>>= 0;
+        src >>>= 0;
+        count >>>= 0;
         if(count === 0) { return; }
         // TODO support outside ram:
         // TODO optimize
@@ -145,9 +143,9 @@ lm32.libc_dev = function(mmu, ram_array, ram_base, ram_size) {
     function string_memscan() { }
 
     function string_memset(s, c, count) {
-        s = u32(s);
-        c = u32(c);
-        count = u32(count);
+        s >>>= 0;
+        c >>>= 0;
+        count >>>= 0;
         if(count === 0) { return; }
         if(region_from_ram(s, count)) {
             s -= ram_base;
