@@ -14,6 +14,10 @@
 
 // Conventions:
 // (x >>> 0) is used to convert value to unsigned value.
+// sign_extend(n, size) -> n << (32 - size) >> (32-size)
+// e.g.
+// sign_extend(128, 8) -> 128 << 24 >> 24 -> -128
+
 
 lm32.lm32Cpu = function (params) {
     // dependencies
@@ -346,16 +350,16 @@ lm32.lm32Cpu = function (params) {
     }
 
     function addi(cs) {
-        cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16)) | 0;
+        cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) | 0;
     }
 
     function addi_e(es) {
-        return "cs.regs[" + es.I_R1 + "] = (cs.regs[" + es.I_R0 + "] + lm32.bits.sign_extend(" + es.I_IMM16 + ", 16)) | 0;\n";
+        return "cs.regs[" + es.I_R1 + "] = (cs.regs[" + es.I_R0 + "] + " + (es.I_IMM16 << 16 >> 16) + ") | 0;\n";
     }
 
 
     function and(cs) {
-        // logical ops don't need to and with mask00_31
+        // logical ops don't need to or the result with 0;
         cs.regs[cs.I_R2] = cs.regs[cs.I_R0] & cs.regs[cs.I_R1];
     }
 
@@ -389,7 +393,7 @@ lm32.lm32Cpu = function (params) {
         var rz = reg_p ? cs.I_R1 : -1;
 
         var a = cs.regs[ry];
-        var b = reg_p ? cs.regs[rz] : lm32.bits.sign_extend(cs.I_IMM16, 16);
+        var b = reg_p ? cs.regs[rz] : (cs.I_IMM16 << 16 >> 16);
 
         if(fcond(a, b)) {
             cs.regs[rx] = 1;
@@ -405,7 +409,7 @@ lm32.lm32Cpu = function (params) {
 
     function compare_ri_e(es, cond, wrap) {
         return "cs.regs[" + es.I_R1 + "] = ((cs.regs[" + es.I_R0 + "]" + wrap + ") " + 
-           cond  + "(lm32.bits.sign_extend(" + es.I_IMM16 + ", 16)" + wrap + ")) ? 1 : 0;\n";
+           cond  + "((" + (es.I_IMM16 << 16 >> 16) + ")" + wrap + ")) ? 1 : 0;\n";
     }
 
     function cmpe(cs) {
@@ -599,11 +603,11 @@ lm32.lm32Cpu = function (params) {
     }
 
     function muli(cs) {
-        cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] * lm32.bits.sign_extend(cs.I_IMM16, 16)) | 0;
+        cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] * (cs.I_IMM16 << 16 >> 16)) | 0;
     }
 
     function muli_e(es) {
-        return "cs.regs[" + es.I_R1 + "] = (cs.regs[" + es.I_R0 + "] * lm32.bits.sign_extend(" + es.I_IMM16 + ", 16)) | 0;\n";
+        return "cs.regs[" + es.I_R1 + "] = (cs.regs[" + es.I_R0 + "] * (" + (es.I_IMM16 << 16 >> 16) + ")) | 0;\n";
     }
 
     function nor(cs) {
@@ -777,25 +781,25 @@ lm32.lm32Cpu = function (params) {
 
     function bi(cs) {
         var imm26 = cs.I_IMM26;
-        cs.next_pc = (cs.pc + lm32.bits.sign_extend(imm26 << 2, 28)) >>> 0;
+        cs.next_pc = (cs.pc + ((imm26 << 2) << 4 >> 4)) >>> 0;
     }
 
     function bi_e(es) {
-        return "cs.next_pc = (" + es.I_PC + " + lm32.bits.sign_extend(" + es.I_IMM26  + " << 2, 28)) >>> 0;\n";
+        return "cs.next_pc = (" + es.I_PC + " + (" + ((es.I_IMM26 << 2) << 4 >> 4)  + " )) >>> 0;\n";
     }
 
     function branch_conditional(cs, fcond) {
         var a = cs.regs[cs.I_R0];
         var b = cs.regs[cs.I_R1];
         if(fcond(a, b)) {
-            cs.next_pc = (cs.pc + lm32.bits.sign_extend(cs.I_IMM16 << 2, 18)) >>> 0;
+            cs.next_pc = (cs.pc + ((cs.I_IMM16 << 2) << 14 >> 14)) >>> 0;
         }
     }
 
     function branch_conditional_e(es, cond, wrap) {
         return "" +
             "if((cs.regs[" + es.I_R0 + "] " + wrap + ") " + cond + "(cs.regs[" + es.I_R1 + "] " + wrap + ")) {\n" +
-            "    cs.next_pc = (" + es.I_PC + " + lm32.bits.sign_extend(" + es.I_IMM16 + " << 2, 18)) >>> 0;\n" +
+            "    cs.next_pc = (" + es.I_PC + " + (" + ((es.I_IMM16 << 2) << 14 >> 14) + ")) >>> 0;\n" +
             "    break " + BLOCK_CHOICE + ";\n" +
             "}\n";
     }
@@ -862,13 +866,13 @@ lm32.lm32Cpu = function (params) {
     function calli(cs) {
         var imm26 = cs.I_IMM26;
         cs.regs[REG_RA] = (cs.pc + 4) | 0;
-        cs.next_pc = (cs.pc + lm32.bits.sign_extend(imm26 << 2, 28)) >>> 0;
+        cs.next_pc = (cs.pc + ((imm26 << 2) << 4 >> 4)) >>> 0;
     }
 
     function calli_e(es) {
         return "" +
             "cs.regs[29] = (" + es.I_PC + " + 4) | 0;\n" +
-            "cs.next_pc = (" + es.I_PC + " + lm32.bits.sign_extend(" + es.I_IMM26 + " << 2, 28)) >>> 0;\n";
+            "cs.next_pc = (" + es.I_PC + " + (" + ((es.I_IMM26 << 2) << 4 >> 4) + ")) >>> 0;\n";
     }
 
     function scall(cs) {
@@ -898,16 +902,6 @@ lm32.lm32Cpu = function (params) {
         return str;
     }
 
-    // load and store instructions
-    // helper functions
-    function sign_extend_8(val) {
-        return lm32.bits.sign_extend(val, 8);
-    }
-
-    function sign_extend_16(val) {
-        return lm32.bits.sign_extend(val, 16);
-    }
-
     /**
      *
      * @param width the width to read (8, 16 or 32)
@@ -933,13 +927,10 @@ lm32.lm32Cpu = function (params) {
 
         if(val !== undefined) {
             ok = true;
-            if((typeof aft) === "function") {
-                cs.regs[cs.I_R1] = aft(val);
-            } else if((typeof aft) === "number") {
-                cs.regs[cs.I_R1] = val & aft;
-            } else {
-                throw "Invalid LOAD.";
+            if(aft != 0) {
+                val = val << aft >> aft;
             }
+            cs.regs[cs.I_R1] = val;
         }
 
         if(!ok) {
@@ -950,11 +941,11 @@ lm32.lm32Cpu = function (params) {
 
 
     function lb(cs) {
-        var uaddr = (cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16)) >>> 0;
+        var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
-            cs.regs[cs.I_R1] = lm32.bits.sign_extend(cs.ram.read_8(uaddr - cs.ram_base), 8);
+            cs.regs[cs.I_R1] = (cs.ram.read_8(uaddr - cs.ram_base) << 24 >> 24);
         } else {
-            load(cs, uaddr, 8, sign_extend_8);
+            load(cs, uaddr, 8, 24);
         }
     }
 
@@ -967,11 +958,11 @@ lm32.lm32Cpu = function (params) {
     }
 
     function lbu(cs) {
-        var uaddr = (cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16)) >>> 0;
+        var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.regs[cs.I_R1] = cs.ram.read_8(uaddr - cs.ram_base);
         } else {
-            load(cs, uaddr, 8, 0xff);
+            load(cs, uaddr, 8, 0);
         }
     }
 
@@ -984,11 +975,11 @@ lm32.lm32Cpu = function (params) {
     }
 
     function lh(cs) {
-        var uaddr = (cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16)) >>> 0;
+        var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
-            cs.regs[cs.I_R1] = lm32.bits.sign_extend(cs.ram.read_16(uaddr - cs.ram_base), 16);
+            cs.regs[cs.I_R1] = (cs.ram.read_16(uaddr - cs.ram_base) << 16 >> 16);
         } else {
-            load(cs, uaddr, 16, sign_extend_16);
+            load(cs, uaddr, 16, 16);
         }
     }
 
@@ -1001,11 +992,11 @@ lm32.lm32Cpu = function (params) {
     }
 
     function lhu(cs) {
-        var uaddr = (cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16)) >>> 0;
+        var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.regs[cs.I_R1] = cs.ram.read_16(uaddr - cs.ram_base);
         } else {
-            load(cs, uaddr, 16, 0xffff);
+            load(cs, uaddr, 16, 0);
         }
     }
 
@@ -1018,11 +1009,11 @@ lm32.lm32Cpu = function (params) {
     }
 
     function lw(cs) {
-        var uaddr = (cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16)) >>> 0;
+        var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.regs[cs.I_R1] = cs.ram.read_32(uaddr - cs.ram_base);
         } else {
-            load(cs, uaddr, 32, 0xffffffff);
+            load(cs, uaddr, 32, 0);
         }
     }
 
@@ -1057,7 +1048,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function sb(cs) {
-        var uaddr = (cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16)) >>> 0;
+        var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.ram.v8[uaddr - cs.ram_base] = cs.regs[cs.I_R1] & 0xff;
             //cs.ram.write_8(uaddr - cs.ram_base, cs.regs[cs.I_R1] & 0xff);
@@ -1076,7 +1067,7 @@ lm32.lm32Cpu = function (params) {
 
 
         /*return "" +
-            "var uaddr = (cs.regs[" + es.I_R0 + "] + lm32.bits.sign_extend(" + es.I_IMM16 + ", 16)) >>> 0;\n" +
+            "var uaddr = (cs.regs[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
             "if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {\n" +
             "    var raddr = uaddr - cs.ram_base;\n" +
             "    cs.ram.v8[raddr] = (cs.regs[" + es.I_R1 + "] & 0xff);\n" +
@@ -1087,7 +1078,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function sh(cs) {
-        var uaddr = (cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16)) >>> 0;
+        var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.ram.write_16(uaddr - cs.ram_base, cs.regs[cs.I_R1] & 0xffff);
         } else {
@@ -1105,7 +1096,7 @@ lm32.lm32Cpu = function (params) {
 
 
         /*return "" +
-            "var uaddr = (cs.regs[" + es.I_R0 + "] + lm32.bits.sign_extend(" + es.I_IMM16 + ", 16)) >>> 0;\n" +
+            "var uaddr = (cs.regs[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
             "if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {\n" +
             "    var raddr = uaddr - cs.ram_base;\n" +
             "    cs.ram.v8[raddr] = (cs.regs[" + es.I_R1 + "] & 0xff00) >> 8;\n" +
@@ -1117,7 +1108,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function sw(cs) {
-        var uaddr = (cs.regs[cs.I_R0] + lm32.bits.sign_extend(cs.I_IMM16, 16)) >>> 0;
+        var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.ram.write_32(uaddr - cs.ram_base, cs.regs[cs.I_R1] | 0);
         } else {
@@ -1134,7 +1125,7 @@ lm32.lm32Cpu = function (params) {
         // */
 
         /*return "" +
-            "var uaddr = (cs.regs[" + es.I_R0 + "] + lm32.bits.sign_extend(" + es.I_IMM16 + ", 16)) >>> 0;\n" +
+            "var uaddr = (cs.regs[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
             "if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {\n" +
             "    var raddr = uaddr - cs.ram_base;\n" +
             "    cs.ram.v8[raddr] = (cs.regs[" + es.I_R1 + "] & 0xff000000) >>> 24;\n" +

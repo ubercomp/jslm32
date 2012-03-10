@@ -7,24 +7,6 @@
 "use strict";
 lm32.bits = {};
 
-lm32.bits.mask26_31 = 0xfc000000;
-lm32.bits.mask21_25 = 0x03e00000;
-lm32.bits.mask16_20 = 0x001f0000;
-lm32.bits.mask11_15 = 0x0000f800;
-lm32.bits.mask00_31 = 0xffffffff;
-lm32.bits.mask00_25 = 0x03ffffff;
-lm32.bits.mask00_15 = 0x0000ffff;
-
-lm32.bits.sign_extend = function(val, width) {
-    var sval;
-    /* LSL.  */
-    val <<= 32 - width;
-    sval = val;
-    /* ASR.  */
-    sval >>= 32 - width;
-    return sval;
-};
-
 lm32.bits.format = function(n) {
     var u32 = n>>>0;
     var u32s = u32.toString(16);
