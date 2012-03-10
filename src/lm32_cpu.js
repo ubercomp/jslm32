@@ -55,6 +55,7 @@ lm32.lm32Cpu = function (params) {
 
     function reset(params) {
         cs.ram = params.ram;
+        cs.v8 = cs.ram.v8;
         cs.ram_base = params.ram_base;
         cs.ram_size = params.ram_size;
         cs.ram_max  = cs.ram_base + cs.ram_size;
@@ -81,13 +82,6 @@ lm32.lm32Cpu = function (params) {
         bex[0x3e] = v; // calli
 
         // functions that might be called from generated code
-        cs.rcsr = rcsr;
-        cs.wcsr = wcsr;
-        cs.lb = lb;
-        cs.lbu = lbu;
-        cs.lh = lh;
-        cs.lhu = lhu;
-        cs.lw = lw;
         cs.sb = sb;
         cs.sh = sh;
         cs.sw = sw;
@@ -939,6 +933,38 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
+    function ram_read_e(width) {
+        var code = "";
+        switch(width) {
+            case 8:
+                code = "v8[ridx]";
+                break;
+            case 16:
+                code = "(v8[ridx] << 8) | v8[ridx + 1]";
+                break
+            case 32:
+                code = "(v8[ridx] << 24) | (v8[ridx + 1] << 16) | (v8[ridx + 2] << 8) | v8[ridx + 3]";
+                break;
+            default:
+                throw "Unknown ram width: " + width;
+                break;
+        }
+        return code;
+
+    }
+
+    function load_e(es, width, signed) {
+        var wrap = signed ? " << " + (32 - width) + " >> " + (32 - width) + "" : "";
+        return "" +
+            "uaddr = (cs.regs[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
+            "if((uaddr >= " + (cs.ram_base >>> 0) + ") && (uaddr < " + (cs.ram_max >>> 0) + ")) {\n" +
+            "    ridx = uaddr - " + cs.ram_base + ";\n" +
+            "    cs.regs[" + es.I_R1 + "] = (" + ram_read_e(width) + ")" + wrap + ";\n" +
+            "} else {\n" +
+            "    cs.regs[" + es.I_R1 + "] = cs.mmu.read_" + width + "(uaddr)" + wrap + ";\n" +
+            "}\n";
+    }
+
 
     function lb(cs) {
         var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
@@ -950,11 +976,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function lb_e(es) {
-        return "" +
-            "cs.I_R0 = " + es.I_R0 + ";\n" +
-            "cs.I_R1 = " + es.I_R1 + ";\n" +
-            "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
-            "cs.lb(cs);\n";
+        return load_e(es, 8, true);
     }
 
     function lbu(cs) {
@@ -967,11 +989,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function lbu_e(es) {
-        return "" +
-            "cs.I_R0 = " + es.I_R0 + ";\n" +
-            "cs.I_R1 = " + es.I_R1 + ";\n" +
-            "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
-            "cs.lbu(cs);\n";
+        return load_e(es, 8, false);
     }
 
     function lh(cs) {
@@ -984,11 +1002,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function lh_e(es) {
-        return "" +
-            "cs.I_R0 = " + es.I_R0 + ";\n" +
-            "cs.I_R1 = " + es.I_R1 + ";\n" +
-            "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
-            "cs.lh(cs);\n";
+        return load_e(es, 16, true);
     }
 
     function lhu(cs) {
@@ -1001,11 +1015,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function lhu_e(es) {
-        return "" +
-            "cs.I_R0 = " + es.I_R0 + ";\n" +
-            "cs.I_R1 = " + es.I_R1 + ";\n" +
-            "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
-            "cs.lhu(cs);\n";
+        return load_e(es, 16, false);
     }
 
     function lw(cs) {
@@ -1018,11 +1028,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function lw_e(es) {
-        return "" +
-            "cs.I_R0 = " + es.I_R0 + ";\n" +
-            "cs.I_R1 = " + es.I_R1 + ";\n" +
-            "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
-            "cs.lw(cs);\n";
+        return load_e(es, 32, false);
     }
 
     function store(cs, uaddr, width) {
@@ -1208,10 +1214,77 @@ lm32.lm32Cpu = function (params) {
     }
 
     function rcsr_e(es) {
-        return "" +
-            "cs.I_CSR = " + es.I_CSR + ";\n" +
-            "cs.I_R2 = " + es.I_R2 + ";\n" +
-            "cs.rcsr(cs);\n";
+        var csr = es.I_CSR;
+        var val = "0";
+        switch (csr) {
+            // These cannot be read from:
+            case CSR_ICC:
+            case CSR_DCC:
+                break;
+
+            case CSR_BP0:
+                val = "cs.bp0";
+                break;
+            case CSR_BP1:
+                val = "cs.bp1";
+                break;
+            case CSR_BP2:
+                val = "cs.bp2";
+                break;
+            case CSR_BP3:
+                val = "cs.bp3";
+                break;
+            case CSR_WP0:
+                val = "cs.wp0";
+                break;
+            case CSR_WP1:
+                val = "cs.wp1";
+                break;
+            case CSR_WP2:
+                val = "cs.wp2";
+                break;
+            case CSR_WP3:
+                val = "cs.wp3";
+                break;
+            case CSR_DC:
+                val = "cs.dc_val()";
+                break;
+
+            case CSR_IE:
+                val = "cs.ie_val()";
+                break;
+            case CSR_IM:
+                val = "cs.pic.get_im()";
+                break;
+            case CSR_IP:
+                val = "cs.pic.get_ip()";
+                break;
+            case CSR_CC:
+                val = "cs.cc";
+                break;
+            case CSR_CFG:
+                val = "cs.cfg";
+                break;
+            case CSR_EBA:
+                val = "cs.eba";
+                break;
+
+            case CSR_DEBA:
+                val = "cs.deba";
+                break;
+
+            case CSR_JTX:
+                val = "cs.jtx";
+                break;
+            case CSR_JRX:
+                val = "cs.jrx";
+                break;
+
+            default:
+                throw ("No such CSR register: " + csr);
+                break;
+        }
+        return "cs.regs[" + es.I_R2+ "] = (" + val + ") | 0;\n";
     }
 
     function wcsr(cs) {
@@ -1280,12 +1353,75 @@ lm32.lm32Cpu = function (params) {
     }
 
     function wcsr_e(es) {
-        // all block exit instruction have to set next_pc, that's why it's done here
-        return "" +
-            "cs.I_CSR = " + es.I_CSR + ";\n" +
-            "cs.I_R1 = " + es.I_R1 + ";\n" +
-            "cs.wcsr(cs);\n" +
-            "cs.next_pc = " + (es.I_PC + 4) + ";\n";
+        var csr = es.I_CSR;
+        var val = "cs.regs[" + es.I_R1 + "]";
+        var code = "";
+        switch(csr) {
+            // these cannot be written to:
+            case CSR_CC:
+            case CSR_CFG:
+                //console.log("Cannot write to csr number " + csr);
+                break;
+
+            case CSR_IP:
+                code = "cs.pic.set_ip(" + val + ");\n";
+                break;
+            case CSR_IE:
+                code = "cs.ie_wrt(" + val + ");\n";
+                break;
+            case CSR_IM:
+                code = "cs.pic.set_im(" + val + ");\n";
+                break;
+            case CSR_ICC:
+            case CSR_DCC:
+                break; // i just fake icc
+            case CSR_EBA:
+                code = "cs.eba = " + val + " & 0xffffff00;\n";
+                break;
+            case CSR_DC:
+                code = "cs.dc_wrt(" + val + ");\n";
+                break;
+
+            case CSR_DEBA:
+                code = "cs.deba = " + val + " & 0xffffff00;\n";
+                break;
+
+            case CSR_JTX:
+                code = "cs.jtx = " + val + ";\n";
+                break;
+
+            case CSR_JRX:
+                //console.log("Writing CSR_JRX at PC: 0x" + (cs.pc).toString(16));
+                code = "cs.jrx = " + val + ";\n";
+                break;
+
+            case CSR_BP0:
+                code = "cs.bp0 = " + val + ";\n";
+                break;
+            case CSR_BP1:
+                code = "cs.bp1 = " + val + ";\n";
+                break;
+            case CSR_BP2:
+                code = "cs.bp3 = " + val + ";\n";
+                break;
+            case CSR_BP3:
+                code = "cs.bp3 = " + val + ";\n";
+                break;
+
+            case CSR_WP0:
+                code = "cs.wp0 = " + val + ";\n";
+                break;
+            case CSR_WP1:
+                code = "cs.wp1 = " + val + ";\n";
+                break;
+            case CSR_WP2:
+                code = "cs.wp2 = " + val + ";\n";
+                break;
+            case CSR_WP3:
+                code = "cs.wp3 = " + val + ";\n";
+                break;
+        }
+        return code + "cs.next_pc = " + (es.I_PC + 4) + ";\n";
     }
 
     // reserved instruction
@@ -1629,7 +1765,9 @@ lm32.lm32Cpu = function (params) {
                 block = new Array(3); // block = [BLOCK_END, BLOCK_CODE, BLOCK_LENGTH];
                 block[0] = pc;
                 block[1] = "";
-                block[1]+= "var count = 0;"
+                block[1]+= "var uaddr, ridx;\n"; // variables for load_e and store_e
+                block[1]+= "var v8 = cs.v8;\n";
+                block[1]+= "var count = 0;\n";
                 block[1]+= "cs.next_pc = " + pc + ";\n";
                 block[1]+= BLOCK_LOOP + ": while(count < 3) {\n";
                 block[1]+= "    count++;\n";
