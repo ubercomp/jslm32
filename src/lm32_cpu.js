@@ -81,11 +81,6 @@ lm32.lm32Cpu = function (params) {
         bex[0x38] = v; // bi
         bex[0x3e] = v; // calli
 
-        // functions that might be called from generated code
-        cs.sb = sb;
-        cs.sh = sh;
-        cs.sw = sw;
-
         // general purpose registers
         cs.regs = new Array(32);
         for (var i = 0; i < 32; i++) {
@@ -954,6 +949,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function load_e(es, width, signed) {
+        // TODO test for invalid mmu reads if necessary
         var wrap = signed ? " << " + (32 - width) + " >> " + (32 - width) + "" : "";
         return "" +
             "uaddr = (cs.regs[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
@@ -1053,6 +1049,42 @@ lm32.lm32Cpu = function (params) {
         }
     }
 
+    function ram_write_e(width) {
+        var code = "";
+        switch(width) {
+            case 8:
+                code = "v8[ridx] = tmp & 0xff;\n";
+                break;
+            case 16:
+                code = "v8[ridx] = (tmp >> 8) & 0xff;\n";
+                code+= "v8[ridx + 1] = tmp & 0xff;\n";
+                break;
+            case 32:
+                code = "v8[ridx] = (tmp >>> 24) & 0xff;\n";
+                code+= "v8[ridx + 1] = (tmp >> 16) & 0xff;\n";
+                code+= "v8[ridx + 2] = (tmp >> 8) & 0xff;\n";
+                code+= "v8[ridx + 3] = tmp & 0xff;\n";
+                break
+            default:
+                throw "Invalid width for data: " + width;
+                break;
+        }
+        return code;
+    }
+
+    function store_e(es, width) {
+        // TODO test for invalid mmu writes if necessary
+        return "" +
+            "uaddr = (cs.regs[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
+            "tmp = cs.regs[" + es.I_R1 + "];\n" +
+            "if((uaddr >= " + (cs.ram_base >>> 0) + ") && (uaddr < " + (cs.ram_max >>> 0) + ")) {\n" +
+            "    ridx = uaddr - " + cs.ram_base + ";\n" +
+            ram_write_e(width) +
+            "} else {\n" +
+            "    cs.mmu.write_" + width + "(uaddr, tmp);\n" +
+            "}\n";
+    }
+
     function sb(cs) {
         var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
         if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
@@ -1064,23 +1096,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function sb_e(es) {
-        return "" +
-            "cs.I_R0 = " + es.I_R0 + ";\n" +
-            "cs.I_R1 = " + es.I_R1 + ";\n" +
-            "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
-            "cs.sb(cs);\n";
-        // */
-
-
-        /*return "" +
-            "var uaddr = (cs.regs[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
-            "if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {\n" +
-            "    var raddr = uaddr - cs.ram_base;\n" +
-            "    cs.ram.v8[raddr] = (cs.regs[" + es.I_R1 + "] & 0xff);\n" +
-            "} else {\n" +
-            "    var ok = cs.mmu.write_8(uaddr, cs.regs[" + es.I_R1 + "]);\n" +
-            "}\n";
-        // */
+        return store_e(es, 8);
     }
 
     function sh(cs) {
@@ -1093,24 +1109,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function sh_e(es) {
-        return "" +
-            "cs.I_R0 = " + es.I_R0 + ";\n" +
-            "cs.I_R1 = " + es.I_R1 + ";\n" +
-            "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
-            "cs.sh(cs);\n";
-        // */
-
-
-        /*return "" +
-            "var uaddr = (cs.regs[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
-            "if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {\n" +
-            "    var raddr = uaddr - cs.ram_base;\n" +
-            "    cs.ram.v8[raddr] = (cs.regs[" + es.I_R1 + "] & 0xff00) >> 8;\n" +
-            "    cs.ram.v8[raddr + 1] = (cs.regs[" + es.I_R1 + "] & 0x00ff);\n" +
-            "} else {\n" +
-            "    var ok = cs.mmu.write_16(uaddr, cs.regs[" + es.I_R1 + "]);\n" +
-            "}\n";
-        // */
+        return store_e(es, 16);
     }
 
     function sw(cs) {
@@ -1123,27 +1122,8 @@ lm32.lm32Cpu = function (params) {
     }
 
     function sw_e(es) {
-        return "" +
-            "cs.I_R0 = " + es.I_R0 + ";\n" +
-            "cs.I_R1 = " + es.I_R1 + ";\n" +
-            "cs.I_IMM16 = " + es.I_IMM16 + ";\n" +
-            "cs.sw(cs);\n";
-        // */
-
-        /*return "" +
-            "var uaddr = (cs.regs[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
-            "if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {\n" +
-            "    var raddr = uaddr - cs.ram_base;\n" +
-            "    cs.ram.v8[raddr] = (cs.regs[" + es.I_R1 + "] & 0xff000000) >>> 24;\n" +
-            "    cs.ram.v8[raddr + 1] = (cs.regs[" + es.I_R1 + "] & 0x00ff0000) >> 16;\n" +
-            "    cs.ram.v8[raddr + 2] = (cs.regs[" + es.I_R1 + "] & 0x0000ff00) >> 8;\n" +
-            "    cs.ram.v8[raddr + 3] = (cs.regs[" + es.I_R1 + "] & 0x000000ff);\n" +
-            "} else {\n" +
-            "    cs.mmu.write_32(uaddr, cs.regs[" + es.I_R1 + "]);\n" +
-            "}\n";
-         // */
+        return store_e(es, 32);
     }
-
 
     // csr instructions
     function rcsr(cs) {
@@ -1765,7 +1745,7 @@ lm32.lm32Cpu = function (params) {
                 block = new Array(3); // block = [BLOCK_END, BLOCK_CODE, BLOCK_LENGTH];
                 block[0] = pc;
                 block[1] = "";
-                block[1]+= "var uaddr, ridx;\n"; // variables for load_e and store_e
+                block[1]+= "var ridx, uaddr, tmp;\n"; // variables for load_e and store_e
                 block[1]+= "var v8 = cs.v8;\n";
                 block[1]+= "var count = 0;\n";
                 block[1]+= "cs.next_pc = " + pc + ";\n";
