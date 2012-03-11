@@ -287,24 +287,24 @@ lm32.lm32Cpu = function (params) {
             case EXCEPT_INTERRUPT:
             case EXCEPT_SYSTEM_CALL:
                 // non-debug
-                str += "_r[" + REG_EA + "] = " + (es.I_PC | 0) + ";\n";
+                str += "$r[" + REG_EA + "] = " + (es.I_PC | 0) + ";\n";
                 str += "cs.ie.eie = cs.ie.ie;\n";
                 str += "cs.ie.ie = 0;\n";
                 // exceptions write to both pc and next_pc
                 str += "cs.pc = ((cs.dc.re ? cs.deba : cs.eba) + " + id + " * 32) >>> 0;\n";
-                str += "cs.next_pc = cs.pc;\n";
+                str += "$n = cs.pc;\n";
                 str += "break " + BLOCK_LOOP + ";\n";
                 break;
 
             case EXCEPT_BREAKPOINT:
             case EXCEPT_WATCHPOINT:
                 // debug
-                str += "_r[" + REG_BA + "] = " + (es.I_PC | 0) + ";\n";
+                str += "$r[" + REG_BA + "] = " + (es.I_PC | 0) + ";\n";
                 str += "cs.ie.bie = cs.ie.ie;\n";
                 str += "cs.ie.ie = 0;\n";
                 // exceptions write to both pc and next_pc
                 str += "cs.pc = (cs.deba + " + id + " * 32) >>> 0;\n";
-                str += "cs.next_pc = cs.pc;\n";
+                str += "$n = cs.pc;\n";
                 str += "break " + BLOCK_LOOP + ";\n";
                 break;
             default:
@@ -323,7 +323,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function add_e(es) {
-        return "_r[" + es.I_R2 + "] = (_r[" + es.I_R0 + "] + _r[" + es.I_R1 + "]) | 0;\n";
+        return "$r[" + es.I_R2 + "] = ($r[" + es.I_R0 + "] + $r[" + es.I_R1 + "]) | 0;\n";
     }
 
     function addi(cs) {
@@ -331,7 +331,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function addi_e(es) {
-        return "_r[" + es.I_R1 + "] = (_r[" + es.I_R0 + "] + " + (es.I_IMM16 << 16 >> 16) + ") | 0;\n";
+        return "$r[" + es.I_R1 + "] = ($r[" + es.I_R0 + "] + " + (es.I_IMM16 << 16 >> 16) + ") | 0;\n";
     }
 
 
@@ -341,7 +341,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function and_e(es) {
-        return "_r[" + es.I_R2 + "] = _r[" + es.I_R0 + "] & _r[" + es.I_R1 + "];\n";
+        return "$r[" + es.I_R2 + "] = $r[" + es.I_R0 + "] & $r[" + es.I_R1 + "];\n";
     }
 
     function andhi(cs) {
@@ -349,7 +349,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function andhi_e(es) {
-        return "_r[" + es.I_R1 + "] = _r[" + es.I_R0 + "] & (" + es.I_IMM16 + " << 16);\n";
+        return "$r[" + es.I_R1 + "] = $r[" + es.I_R0 + "] & (" + es.I_IMM16 + " << 16);\n";
     }
 
     function andi(cs) {
@@ -357,7 +357,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function andi_e(es) {
-        return "_r[" + es.I_R1+ "] = _r[" + es.I_R0 + "] & " + es.I_IMM16 + ";\n";
+        return "$r[" + es.I_R1+ "] = $r[" + es.I_R0 + "] & " + es.I_IMM16 + ";\n";
     }
 
     /**
@@ -380,12 +380,12 @@ lm32.lm32Cpu = function (params) {
     }
 
     function compare_rr_e(es, cond, wrap) {
-        return "_r[" + es.I_R2 + "] = ((_r[" + es.I_R0 + "]" + wrap + ") " + 
-                   cond  + "(_r[" + es.I_R1 + "]" + wrap + ")) ? 1 : 0;\n";
+        return "$r[" + es.I_R2 + "] = (($r[" + es.I_R0 + "]" + wrap + ") " + 
+                   cond  + "($r[" + es.I_R1 + "]" + wrap + ")) ? 1 : 0;\n";
     }
 
     function compare_ri_e(es, cond, wrap) {
-        return "_r[" + es.I_R1 + "] = ((_r[" + es.I_R0 + "]" + wrap + ") " + 
+        return "$r[" + es.I_R1 + "] = (($r[" + es.I_R0 + "]" + wrap + ") " + 
            cond  + "((" + (es.I_IMM16 << 16 >> 16) + ")" + wrap + ")) ? 1 : 0;\n";
     }
 
@@ -500,10 +500,10 @@ lm32.lm32Cpu = function (params) {
         // returns from block when exception is thrown
         // see raise_exception_e
         return "" +
-            "if(_r[" + es.I_R1 + "] === 0) {\n" +
+            "if($r[" + es.I_R1 + "] === 0) {\n" +
             raise_exception_e(es, EXCEPT_DIVIDE_BY_ZERO) +
             "} else {\n" +
-            "    _r[" + es.I_R2 + "] = (Math.floor(_r[" + es.I_R0 + "]/_r[" + es.I_R1 + "])) | 0;\n" +
+            "    $r[" + es.I_R2 + "] = (Math.floor($r[" + es.I_R0 + "]/$r[" + es.I_R1 + "])) | 0;\n" +
             "}\n";
     }
 
@@ -522,10 +522,10 @@ lm32.lm32Cpu = function (params) {
         // returns from block when exception is thrown
         // see raise_exception_e
         return "" +
-            "if(_r[" + es.I_R1 + "] === 0) {\n" +
+            "if($r[" + es.I_R1 + "] === 0) {\n" +
             raise_exception_e(es, EXCEPT_DIVIDE_BY_ZERO) +
             "} else {\n" +
-            "    _r[" + es.I_R2 + "] = (Math.floor((_r[" + es.I_R0 + "] >>> 0)/(_r[" + es.I_R1 + "] >>> 0))) | 0;\n" +
+            "    $r[" + es.I_R2 + "] = (Math.floor(($r[" + es.I_R0 + "] >>> 0)/($r[" + es.I_R1 + "] >>> 0))) | 0;\n" +
             "}\n";
     }
 
@@ -543,10 +543,10 @@ lm32.lm32Cpu = function (params) {
         // returns from block when exception is thrown
         // see raise_exception_e
         return "" +
-            "if(_r[" + es.I_R1 + "] === 0) {\n" +
+            "if($r[" + es.I_R1 + "] === 0) {\n" +
             raise_exception_e(es, EXCEPT_DIVIDE_BY_ZERO) +
             "} else {\n" +
-            "    _r[" + es.I_R2 + "] = (_r[" + es.I_R0 + "] % _r[" + es.I_R1 + "]) | 0;\n" +
+            "    $r[" + es.I_R2 + "] = ($r[" + es.I_R0 + "] % $r[" + es.I_R1 + "]) | 0;\n" +
             "}\n";
     }
 
@@ -564,10 +564,10 @@ lm32.lm32Cpu = function (params) {
         // returns from block when exception is thrown
         // see raise_exception_e
         return "" +
-            "if(_r[" + es.I_R1 + "] === 0) {\n" +
+            "if($r[" + es.I_R1 + "] === 0) {\n" +
             raise_exception_e(es, EXCEPT_DIVIDE_BY_ZERO) +
             "} else {\n" +
-            "    _r[" + es.I_R2 + "] = ((_r[" + es.I_R0 + "] >>> 0) % (_r[" + es.I_R1 + "] >>> 0)) | 0;\n" +
+            "    $r[" + es.I_R2 + "] = (($r[" + es.I_R0 + "] >>> 0) % ($r[" + es.I_R1 + "] >>> 0)) | 0;\n" +
             "}\n";
     }
 
@@ -576,7 +576,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function mul_e(es) {
-        return "_r[" + es.I_R2 + "] = (_r[" + es.I_R0 + "] * _r[" + es.I_R1 + "]) | 0;\n";
+        return "$r[" + es.I_R2 + "] = ($r[" + es.I_R0 + "] * $r[" + es.I_R1 + "]) | 0;\n";
     }
 
     function muli(cs) {
@@ -584,7 +584,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function muli_e(es) {
-        return "_r[" + es.I_R1 + "] = (_r[" + es.I_R0 + "] * (" + (es.I_IMM16 << 16 >> 16) + ")) | 0;\n";
+        return "$r[" + es.I_R1 + "] = ($r[" + es.I_R0 + "] * (" + (es.I_IMM16 << 16 >> 16) + ")) | 0;\n";
     }
 
     function nor(cs) {
@@ -592,7 +592,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function nor_e(es) {
-        return "_r[" + es.I_R2 + "] = ~(_r[" + es.I_R0 + "] | _r[" + es.I_R1+ "]);\n";
+        return "$r[" + es.I_R2 + "] = ~($r[" + es.I_R0 + "] | $r[" + es.I_R1+ "]);\n";
     }
 
     function nori(cs) {
@@ -600,7 +600,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function nori_e(es) {
-        return "_r[" + es.I_R1 + "] = ~(_r[" + es.I_R0 + "] | " + es.I_IMM16 + ");\n";
+        return "$r[" + es.I_R1 + "] = ~($r[" + es.I_R0 + "] | " + es.I_IMM16 + ");\n";
     }
 
     function or(cs) {
@@ -608,7 +608,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function or_e(es) {
-        return "_r[" + es.I_R2 + "] = (_r[" + es.I_R0 + "] | _r[" + es.I_R1 + "]);\n";
+        return "$r[" + es.I_R2 + "] = ($r[" + es.I_R0 + "] | $r[" + es.I_R1 + "]);\n";
     }
 
     function ori(cs) {
@@ -616,7 +616,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function ori_e(es) {
-        return "_r[" + es.I_R1 + "] = (_r[" + es.I_R0 + "] | " + es.I_IMM16 + ");\n";
+        return "$r[" + es.I_R1 + "] = ($r[" + es.I_R0 + "] | " + es.I_IMM16 + ");\n";
     }
 
     function orhi(cs) {
@@ -624,7 +624,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function orhi_e(es) {
-        return "_r[" + es.I_R1 + "] = _r[" + es.I_R0 + "] | (" + es.I_IMM16 + " << 16);\n";
+        return "$r[" + es.I_R1 + "] = $r[" + es.I_R0 + "] | (" + es.I_IMM16 + " << 16);\n";
     }
 
     function sextb(cs) {
@@ -633,7 +633,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function sextb_e(es) {
-        return "_r[" + es.I_R2 + "] = (_r[" + es.I_R0 + "] << 24) >> 24;\n";
+        return "$r[" + es.I_R2 + "] = ($r[" + es.I_R0 + "] << 24) >> 24;\n";
     }
 
     function sexth(cs) {
@@ -642,7 +642,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function sexth_e(es) {
-       return "_r[" + es.I_R2 + "] = (_r[" + es.I_R0 + "] << 16) >> 16;\n";
+       return "$r[" + es.I_R2 + "] = ($r[" + es.I_R0 + "] << 16) >> 16;\n";
     }
 
     function sl(cs) {
@@ -650,7 +650,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function sl_e(es) {
-        return "_r[" + es.I_R2 + "] = _r[" + es.I_R0 + "] << (_r[" + es.I_R1 + "] & 0x1f);\n";
+        return "$r[" + es.I_R2 + "] = $r[" + es.I_R0 + "] << ($r[" + es.I_R1 + "] & 0x1f);\n";
     }
 
     function sli(cs) {
@@ -658,7 +658,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function sli_e(es) {
-        return "_r[" + es.I_R1 + "] = _r[" + es.I_R0 + "] << " + es.I_IMM5 + ";\n";
+        return "$r[" + es.I_R1 + "] = $r[" + es.I_R0 + "] << " + es.I_IMM5 + ";\n";
     }
 
     function sr(cs) {
@@ -666,7 +666,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function sr_e(es) {
-        return "_r[" + es.I_R2 + "] = _r[" + es.I_R0 + "] >> (_r[" + es.I_R1 + "] & 0x1f);\n";
+        return "$r[" + es.I_R2 + "] = $r[" + es.I_R0 + "] >> ($r[" + es.I_R1 + "] & 0x1f);\n";
     }
 
     function sri(cs) {
@@ -674,7 +674,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function sri_e(es) {
-        return "_r[" + es.I_R1 +"] = _r[" + es.I_R0 + "] >> " + es.I_IMM5 + ";\n";
+        return "$r[" + es.I_R1 +"] = $r[" + es.I_R0 + "] >> " + es.I_IMM5 + ";\n";
     }
 
     function sru(cs) {
@@ -682,7 +682,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function sru_e(es) {
-        return "_r[" + es.I_R2 + "] = _r[" + es.I_R0 + "] >>> (_r[" + es.I_R1 + "] & 0x1f);\n";
+        return "$r[" + es.I_R2 + "] = $r[" + es.I_R0 + "] >>> ($r[" + es.I_R1 + "] & 0x1f);\n";
     }
 
     function srui(cs) {
@@ -690,7 +690,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function srui_e(es) {
-        return "_r[" + es.I_R1 + "] = _r[" + es.I_R0 + "] >>> " + es.I_IMM5 + ";\n";
+        return "$r[" + es.I_R1 + "] = $r[" + es.I_R0 + "] >>> " + es.I_IMM5 + ";\n";
     }
 
     function sub(cs) {
@@ -698,7 +698,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function sub_e(es) {
-        return "_r[" + es.I_R2 + "] = (_r[" + es.I_R0 + "] - _r[" + es.I_R1 + "]) | 0;\n";
+        return "$r[" + es.I_R2 + "] = ($r[" + es.I_R0 + "] - $r[" + es.I_R1 + "]) | 0;\n";
     }
 
     function xnor(cs) {
@@ -706,7 +706,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function xnor_e(es) {
-        return "_r[" + es.I_R2 + "] = ~(_r[" + es.I_R0 + "] ^ _r[" + es.I_R1 + "]);\n";
+        return "$r[" + es.I_R2 + "] = ~($r[" + es.I_R0 + "] ^ $r[" + es.I_R1 + "]);\n";
     }
 
     function xnori(cs) {
@@ -714,7 +714,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function xnori_e(es) {
-        return "_r[" + es.I_R1 + "] = ~(_r[" + es.I_R0 + "] ^ " + es.I_IMM16 + ");\n";
+        return "$r[" + es.I_R1 + "] = ~($r[" + es.I_R0 + "] ^ " + es.I_IMM16 + ");\n";
     }
 
     function xor(cs) {
@@ -722,7 +722,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function xor_e(es) {
-        return "_r[" + es.I_R2 + "] = _r[" + es.I_R0 + "] ^ _r[" + es.I_R1 + "];\n";
+        return "$r[" + es.I_R2 + "] = $r[" + es.I_R0 + "] ^ $r[" + es.I_R1 + "];\n";
     }
 
     function xori(cs) {
@@ -730,7 +730,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function xori_e(es) {
-        return "_r[" + es.I_R1 + "] = _r[" + es.I_R0 + "] ^ " + es.I_IMM16 + ";\n";
+        return "$r[" + es.I_R1 + "] = $r[" + es.I_R0 + "] ^ " + es.I_IMM16 + ";\n";
     }
 
     // branch and call implementations
@@ -754,7 +754,7 @@ lm32.lm32Cpu = function (params) {
         } else if(es.I_R0 === REG_BA) {
             str+= "cs.ie.ie = cs.ie.bie;\n";
         }
-        str+= "cs.next_pc = (_r[" + es.I_R0 + "] >>> 0);\n";
+        str+= "$n = ($r[" + es.I_R0 + "] >>> 0);\n";
         return str;
     }
 
@@ -764,7 +764,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function bi_e(es) {
-        return "cs.next_pc = (" + es.I_PC + " + (" + ((es.I_IMM26 << 2) << 4 >> 4)  + " )) >>> 0;\n";
+        return "$n = (" + es.I_PC + " + (" + ((es.I_IMM26 << 2) << 4 >> 4)  + " )) >>> 0;\n";
     }
 
     function branch_conditional(cs, fcond) {
@@ -777,8 +777,8 @@ lm32.lm32Cpu = function (params) {
 
     function branch_conditional_e(es, cond, wrap) {
         return "" +
-            "if((_r[" + es.I_R0 + "] " + wrap + ") " + cond + "(_r[" + es.I_R1 + "] " + wrap + ")) {\n" +
-            "    cs.next_pc = (" + es.I_PC + " + (" + ((es.I_IMM16 << 2) << 14 >> 14) + ")) >>> 0;\n" +
+            "if(($r[" + es.I_R0 + "] " + wrap + ") " + cond + "($r[" + es.I_R1 + "] " + wrap + ")) {\n" +
+            "    $n = (" + es.I_PC + " + (" + ((es.I_IMM16 << 2) << 14 >> 14) + ")) >>> 0;\n" +
             "    break " + BLOCK_CHOICE + ";\n" +
             "}\n";
     }
@@ -838,8 +838,8 @@ lm32.lm32Cpu = function (params) {
 
     function call__e(es) {
         return "" +
-            "_r[" + REG_RA + "] = (" + es.I_PC + " + 4) | 0;\n" +
-            "cs.next_pc = (_r[" + es.I_R0 + "]) >>> 0;\n";
+            "$r[" + REG_RA + "] = (" + es.I_PC + " + 4) | 0;\n" +
+            "$n = ($r[" + es.I_R0 + "]) >>> 0;\n";
     }
 
     function calli(cs) {
@@ -850,8 +850,8 @@ lm32.lm32Cpu = function (params) {
 
     function calli_e(es) {
         return "" +
-            "_r["  + REG_RA + "] = (" + es.I_PC + " + 4) | 0;\n" +
-            "cs.next_pc = (" + es.I_PC + " + (" + ((es.I_IMM26 << 2) << 4 >> 4) + ")) >>> 0;\n";
+            "$r["  + REG_RA + "] = (" + es.I_PC + " + 4) | 0;\n" +
+            "$n = (" + es.I_PC + " + (" + ((es.I_IMM26 << 2) << 4 >> 4) + ")) >>> 0;\n";
     }
 
     function scall(cs) {
@@ -922,13 +922,13 @@ lm32.lm32Cpu = function (params) {
         var code = "";
         switch(width) {
             case 8:
-                code = "v8[ridx]";
+                code = "v8[$i]";
                 break;
             case 16:
-                code = "(v8[ridx] << 8) | v8[ridx + 1]";
+                code = "(v8[$i] << 8) | v8[$i + 1]";
                 break
             case 32:
-                code = "(v8[ridx] << 24) | (v8[ridx + 1] << 16) | (v8[ridx + 2] << 8) | v8[ridx + 3]";
+                code = "(v8[$i] << 24) | (v8[$i + 1] << 16) | (v8[$i + 2] << 8) | v8[$i + 3]";
                 break;
             default:
                 throw "Unknown ram width: " + width;
@@ -942,13 +942,13 @@ lm32.lm32Cpu = function (params) {
         // TODO test for invalid mmu reads if necessary
         var wrap = signed ? " << " + (32 - width) + " >> " + (32 - width) + "" : "";
         return "" +
-            "uaddr = (_r[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
-            "if((uaddr >= " + (cs.ram_base >>> 0) + ") && (uaddr < " + (cs.ram_max >>> 0) + ")) {\n" +
-            "    ridx = uaddr - " + cs.ram_base + ";\n" +
-            "    _r[" + es.I_R1 + "] = (" + ram_read_e(width) + ")" + wrap + ";\n" +
+            "$u = ($r[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
+            "if(($u >= " + (cs.ram_base >>> 0) + ") && ($u < " + (cs.ram_max >>> 0) + ")) {\n" +
+            "    $i = $u - " + cs.ram_base + ";\n" +
+            "    $r[" + es.I_R1 + "] = (" + ram_read_e(width) + ")" + wrap + ";\n" +
             "} else {\n" +
-            //"    _r[" + es.I_R1 + "] = cs.mmu.read_" + width + "(uaddr)" + wrap + ";\n" +
-            "    _r[" + es.I_R1 + "] = cs.mmu_r(uaddr, " + cs.mmu_mask[width] + ", 'read_" + width + "')" + wrap + ";\n" +
+            //"    $r[" + es.I_R1 + "] = cs.mmu.read_" + width + "($u)" + wrap + ";\n" +
+            "    $r[" + es.I_R1 + "] = cs.mmu_r($u, " + cs.mmu_mask[width] + ", 'read_" + width + "')" + wrap + ";\n" +
             "}\n";
     }
 
@@ -1044,17 +1044,17 @@ lm32.lm32Cpu = function (params) {
         var code = "";
         switch(width) {
             case 8:
-                code = "v8[ridx] = tmp & 0xff;\n";
+                code = "v8[$i] = $t & 0xff;\n";
                 break;
             case 16:
-                code = "v8[ridx] = (tmp >> 8) & 0xff;\n";
-                code+= "v8[ridx + 1] = tmp & 0xff;\n";
+                code = "v8[$i] = ($t >> 8) & 0xff;\n";
+                code+= "v8[$i + 1] = $t & 0xff;\n";
                 break;
             case 32:
-                code = "v8[ridx] = (tmp >>> 24) & 0xff;\n";
-                code+= "v8[ridx + 1] = (tmp >> 16) & 0xff;\n";
-                code+= "v8[ridx + 2] = (tmp >> 8) & 0xff;\n";
-                code+= "v8[ridx + 3] = tmp & 0xff;\n";
+                code = "v8[$i] = ($t >>> 24) & 0xff;\n";
+                code+= "v8[$i + 1] = ($t >> 16) & 0xff;\n";
+                code+= "v8[$i + 2] = ($t >> 8) & 0xff;\n";
+                code+= "v8[$i + 3] = $t & 0xff;\n";
                 break
             default:
                 throw "Invalid width for data: " + width;
@@ -1066,14 +1066,14 @@ lm32.lm32Cpu = function (params) {
     function store_e(es, width) {
         // TODO test for invalid mmu writes if necessary
         return "" +
-            "uaddr = (_r[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
-            "tmp = _r[" + es.I_R1 + "];\n" +
-            "if((uaddr >= " + (cs.ram_base >>> 0) + ") && (uaddr < " + (cs.ram_max >>> 0) + ")) {\n" +
-            "    ridx = uaddr - " + cs.ram_base + ";\n" +
+            "$u = ($r[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
+            "$t = $r[" + es.I_R1 + "];\n" +
+            "if(($u >= " + (cs.ram_base >>> 0) + ") && ($u < " + (cs.ram_max >>> 0) + ")) {\n" +
+            "    $i = $u - " + cs.ram_base + ";\n" +
             ram_write_e(width) +
             "} else {\n" +
-            //"    cs.mmu.write_" + width + "(uaddr, tmp);\n" +
-            "    cs.mmu_w(uaddr, tmp, " + cs.mmu_mask[width] + ", 'write_" + width + "');\n" +
+            //"    cs.mmu.write_" + width + "($u, $t);\n" +
+            "    cs.mmu_w($u, $t, " + cs.mmu_mask[width] + ", 'write_" + width + "');\n" +
             "}\n";
     }
 
@@ -1256,7 +1256,7 @@ lm32.lm32Cpu = function (params) {
                 throw ("No such CSR register: " + csr);
                 break;
         }
-        return "_r[" + es.I_R2+ "] = (" + val + ") | 0;\n";
+        return "$r[" + es.I_R2+ "] = (" + val + ") | 0;\n";
     }
 
     function wcsr(cs) {
@@ -1326,7 +1326,7 @@ lm32.lm32Cpu = function (params) {
 
     function wcsr_e(es) {
         var csr = es.I_R0;
-        var val = "_r[" + es.I_R1 + "]";
+        var val = "$r[" + es.I_R1 + "]";
         var code = "";
         switch(csr) {
             // these cannot be written to:
@@ -1393,7 +1393,7 @@ lm32.lm32Cpu = function (params) {
                 code = "cs.wp3 = " + val + ";\n";
                 break;
         }
-        return code + "cs.next_pc = " + (es.I_PC + 4) + ";\n";
+        return code + "$n = " + (es.I_PC + 4) + ";\n";
     }
 
     // reserved instruction
@@ -1746,18 +1746,26 @@ lm32.lm32Cpu = function (params) {
                 block = new Array(3); // block = [BLOCK_END, BLOCK_CODE, BLOCK_LENGTH];
                 block[0] = pc;
 
-                prologue.push("var ridx, uaddr, tmp;\n"); // variables for load_e and store_e
-                prologue.push("var _r = cs.regs;\n");
+                // This assures the generated code declares all its variables and,
+                // as crazy as it sounds, helps performance a little bit.
+                prologue.push("'use strict';\n");
+
+                // variables for load_e and store_e
+                // $i : index in ram
+                // $u : unsigned addr
+                // $t : tmp
+                prologue.push("var $i, $u, $t;\n");
+                prologue.push("var $r = cs.regs;\n");
                 prologue.push("var v8 = cs.v8;\n");
-                prologue.push("var count = 0;\n");
-                prologue.push("cs.next_pc = " + pc + ";\n");
+                prologue.push("var $c = 0;\n"); // loop counter
+                prologue.push("var $n = " + pc + ";\n");
 
                 body.push(BLOCK_LOOP);
-                body.push(": while(count < 3) {\n");
-                body.push("    count++;\n");
+                body.push(": while($c < 3) {\n");
+                body.push("    $c++;\n");
                 body.push("    ");
                 body.push(BLOCK_CHOICE);
-                body.push(": switch(cs.next_pc) {\n");
+                body.push(": switch($n) {\n");
                 block[2] = 0;
                 do {
                     // Instruction fetching:
@@ -1799,6 +1807,7 @@ lm32.lm32Cpu = function (params) {
                 body.push("    }\n"); // close switch
                 body.push("}\n");     //close while
 
+                epilogue.push('cs.next_pc = $n;\n');
                 block_text.push(prologue.join(''));
                 block_text.push(body.join(''));
                 block_text.push(epilogue.join(''));
