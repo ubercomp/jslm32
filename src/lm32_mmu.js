@@ -24,7 +24,7 @@ lm32.mmu = function() {
         has_typed_arrays = false;
     }
     
-    var get_handler_for = function(addr, name) {
+    var get_handler_for = function(addr) {
         if((last_handler != undefined)
             && (addr >= last_handler.base_addr)
             && (addr < last_handler.base_addr + last_handler.size)) {
@@ -39,9 +39,6 @@ lm32.mmu = function() {
                 handler = curr;
                 last_handler = handler;
             }
-        }
-        if(handler === undefined) {
-            //console.log("MMU get_handler_for (called by " + name + "): no handler found for address 0x" + addr.toString(16));
         }
         return handler;
     };
@@ -74,7 +71,7 @@ lm32.mmu = function() {
     };
 
     var read = function(addr, mask, name) {
-        var handler = get_handler_for(addr, name);
+        var handler = get_handler_for(addr);
         if(handler && (name in handler)) {
             var offset = addr - handler.base_addr;
             var val = (handler[name])(offset);
@@ -100,7 +97,7 @@ lm32.mmu = function() {
     };
 
     var write = function(addr, val, mask, name) {
-        var handler = get_handler_for(addr, name);
+        var handler = get_handler_for(addr);
         var ret = true;
         if(handler && (name in handler)) {
             var offset = addr - handler.base_addr;
@@ -217,9 +214,11 @@ lm32.mmu = function() {
         write_str: write_str,
         write_array_data: write_array_data,
         set_typed_arrays: set_typed_arrays,
+        read: read,
         read_8: read_8,
         read_16: read_16,
         read_32: read_32,
+        write: write,
         write_8: write_8,
         write_16: write_16,
         write_32: write_32

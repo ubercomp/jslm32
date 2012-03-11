@@ -37,21 +37,6 @@ lm32.lm32Cpu = function (params) {
     cs.I_R0    = 0;  // R0
     cs.I_R1    = 0;  // R1
     cs.I_R2    = 0;  // R2
-    
-    function irq_handler(level) {
-        //console.log('board cpu_irq_handler');
-        switch(level) {
-            case 0:
-                cs.interrupt = false;
-                break;
-            case 1:
-                cs.interrupt = true;
-                break;
-            default:
-                throw ("Unknown interruption level: " + level);
-                break;
-        }
-    }
 
     function reset(params) {
         cs.ram = params.ram;
@@ -60,6 +45,14 @@ lm32.lm32Cpu = function (params) {
         cs.ram_size = params.ram_size;
         cs.ram_max  = cs.ram_base + cs.ram_size;
         cs.mmu = params.mmu;
+
+        // To speed up mmu accesses
+        cs.mmu_w = cs.mmu.write;
+        cs.mmu_r = cs.mmu.read;
+        cs.mmu_mask = {};
+        cs.mmu_mask[8] = "0xff";
+        cs.mmu_mask[16] = "0xffff";
+        cs.mmu_mask[32] = "0xffffffff";
 
 
         cs.block_cache = {};
@@ -92,7 +85,7 @@ lm32.lm32Cpu = function (params) {
         cs.pc = params.bootstrap_pc;
         cs.next_pc = cs.pc + 4; // jumps write on next_pc
 
-        cs.pic = lm32.lm32Pic(irq_handler);
+        cs.pic = lm32.lm32Pic();
 
         // interrupt enable
         cs.ie = {
@@ -115,16 +108,13 @@ lm32.lm32Cpu = function (params) {
             cs.ie.bie = (val & 0x4) ? 1 : 0;
         };
 
-        // interrupt pending
-        cs.interrupt = false;
-
         cs.cc = 0;        // cycle counter
 
         // configuration:
         // revision: 3
         // watchpoints: 4
         // breakpoints: 4
-        // interruptions: 32
+        // interrupts: 32
         // REV                  WP       BP          INT               J  R  H  G  IC DC CC  X  U  S  D  M
         // 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00
         // 0  0  0  0  1  1  0  1  0  0  0  1  0  0  1  0  0  0  0  0  0  0  0  0  1  1  1  1  1  1  1  1
@@ -957,7 +947,8 @@ lm32.lm32Cpu = function (params) {
             "    ridx = uaddr - " + cs.ram_base + ";\n" +
             "    cs.regs[" + es.I_R1 + "] = (" + ram_read_e(width) + ")" + wrap + ";\n" +
             "} else {\n" +
-            "    cs.regs[" + es.I_R1 + "] = cs.mmu.read_" + width + "(uaddr)" + wrap + ";\n" +
+            //"    cs.regs[" + es.I_R1 + "] = cs.mmu.read_" + width + "(uaddr)" + wrap + ";\n" +
+            "    cs.regs[" + es.I_R1 + "] = cs.mmu_r(uaddr, " + cs.mmu_mask[width] + ", 'read_" + width + "')" + wrap + ";\n" +
             "}\n";
     }
 
@@ -1081,7 +1072,8 @@ lm32.lm32Cpu = function (params) {
             "    ridx = uaddr - " + cs.ram_base + ";\n" +
             ram_write_e(width) +
             "} else {\n" +
-            "    cs.mmu.write_" + width + "(uaddr, tmp);\n" +
+            //"    cs.mmu.write_" + width + "(uaddr, tmp);\n" +
+            "    cs.mmu_w(uaddr, tmp, " + cs.mmu_mask[width] + ", 'write_" + width + "');\n" +
             "}\n";
     }
 
@@ -1665,9 +1657,8 @@ lm32.lm32Cpu = function (params) {
         var v8 = ics.ram.v8;
 
         do {
-            if((ps.ip & ps.im) && ics.interrupt && ics.ie.ie == 1) {
+            if((ps.ip & ps.im) && ics.ie.ie == 1) {
                 // here is the correct place to treat exceptions
-                ics.interrupt = false;
                 raise_exception(ics, 6);
             }
 
@@ -1733,9 +1724,8 @@ lm32.lm32Cpu = function (params) {
         var v8 = ics.ram.v8;
 
         do {
-            if((ps.ip & ps.im) && ics.interrupt && ics.ie.ie == 1) {
+            if((ps.ip & ps.im) && ics.ie.ie == 1) {
                 // here is the correct place to treat exceptions
-                ics.interrupt = false;
                 raise_exception(ics, 6);
             }
 

@@ -4,7 +4,7 @@
  * Created: 08/12/11 02:24
  */
 "use strict";
-lm32.lm32Pic = function(cpu_irq_handler) {
+lm32.lm32Pic = function() {
     var state = {ip: 0, im: 0, irq_state: 0};
 
     function dump() {
@@ -13,8 +13,6 @@ lm32.lm32Pic = function(cpu_irq_handler) {
 
     function update_irq() {
         state.ip |= state.irq_state;
-        var val = state.ip & state.im ? 1: 0;
-        cpu_irq_handler(val);
     }
 
     function irq_handler (irq, level) {
