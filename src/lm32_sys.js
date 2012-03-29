@@ -38,8 +38,6 @@ lm32.start_uclinux = function(console_putchar_fn) {
     var UART1_BASE = 0x81000000;
     var UART1_IRQ = 2;
 
-    var JSLIBC_DEV_BASE = 0x82000000;
-
     var HWSETUP_BASE = 0x0bffe000;
     var CMDLINE_BASE = 0x0bfff000;
     var INITRD_BASE = 0x08400000;
@@ -100,15 +98,12 @@ lm32.start_uclinux = function(console_putchar_fn) {
         set_irq: set_irq
     });
 
-    var libc_dev = lm32.libc_dev(mmu, ram.v8, RAM_BASE, RAM_SIZE);
-
     var send_str = uart0.send_str;
 
     hw = null;
     
     // Gluing everything together
     mmu.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
-    mmu.add_memory(JSLIBC_DEV_BASE, libc_dev.iomem_size, libc_dev.get_mmio_handlers());
     mmu.add_memory(UART0_BASE, uart0.iomem_size, uart0.get_mmio_handlers());
     mmu.add_memory(UART1_BASE, uart1.iomem_size, uart1.get_mmio_handlers());
     mmu.add_memory(TIMER0_BASE, timer0.iomem_size, timer0.get_mmio_handlers());

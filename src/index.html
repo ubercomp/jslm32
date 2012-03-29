@@ -20,7 +20,6 @@
     <script src="lm32_cpu.js"></script>
     <script src="lm32_mmu.js"></script>
     <script src="lm32_ram.js"></script>
-    <script src="lm32_libc_dev.js"></script>
     <script src="lm32_hwsetup.js"></script>
     <script src="lm32_sys.js"></script>
     <script src="lm32_timer.js"></script>
@@ -30,6 +29,7 @@
 
     <script>
         var lm32_debug_mode = navigator.userAgent.indexOf('Chrome') == -1;
+        var lm32_is_ie = navigator.userAgent.indexOf('MSIE') !== -1;
         var key_handler = lm32.keyHandler();
         var terminal;
         var worker;
