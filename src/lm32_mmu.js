@@ -184,6 +184,22 @@ lm32.mmu = function() {
         return size;
     };
 
+    var load_binary_ie9 = function(file, addr) {
+        var req, response, size, i;
+        req = new XMLHttpRequest();
+        req.open('GET', file, false);
+        req.send(null);
+        if (req.status != 200 && req.status != 0) {
+            throw "Error while loading " + file;
+        }
+        response = new VBArray(req.responseBody).toArray();
+        size = response.length;
+        for (i = 0; i < size; i++) {
+            write_8(addr + i, response[i]);
+        }
+        return size;
+    };
+
     var read_str = function(addr, max_size) {
         var str = '';
         var ch;
