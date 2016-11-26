@@ -46,7 +46,7 @@ lm32.lm32_frame_buffer = function(container, mmu, ram, ram_base, ram_size) {
         }
         fb_div.innerHTML = '';
         canvas = document.createElement('canvas');
-        if(!canvas.hasOwnProperty('width')) {
+        if(!"function" === typeof(canvas.getContext)) {
             fb_div.innerHTML = '<h3>Your browser does not support canvas.</h3>';
             throw "Canvas not supported";
         }
@@ -106,7 +106,7 @@ lm32.lm32_frame_buffer = function(container, mmu, ram, ram_base, ram_size) {
             case R_MODE_WH:
                 width = canvas.width = (val >>> 16);
                 height = canvas.height = val & 0xffff;
-                c2d.setFillColor('00ff00');
+                c2d.fillStyle = 'rgb(0, 255, 0)';
                 c2d.fillRect(0, 0, width, height);
                 imgData = c2d.createImageData(width, height);
                 break;
