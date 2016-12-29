@@ -1,4 +1,0 @@
-* Make it fast (should boot in 20 seconds or less).
-* Finish Terminal (handle non-printable chars and '[' sequences).
-
-

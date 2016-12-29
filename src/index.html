@@ -2,15 +2,21 @@
 <html>
 <head>
     <title>Javascript LatticeMico32 Emulator (runs Linux)</title>
+    <style>
+    .term {
+        font-family: courier,fixed,swiss,monospace,sans-serif;
+        font-size: 14px;
+        color: #f0f0f0;
+        background: #000000;
+    }
+
+    .termReverse {
+        color: #000000;
+        background: #00ff00;
+    }
+    </style>
     <!-- third party -->
-    <!-- hterm -->
-    <script src='../third_party/hterm/js/hterm.js'></script>
-    <script src='../third_party/hterm/js/scrollport.js'></script>
-    <script src='../third_party/hterm/js/terminal.js'></script>
-    <script src='../third_party/hterm/js/options.js'></script>
-    <script src='../third_party/hterm/js/screen.js'></script>
-    <script src='../third_party/hterm/js/vt100.js'></script>
-    <script src='../third_party/hterm/js/pubsub.js'></script>
+    <script src='../third_party/term.js'></script>
     
     <!-- lm32 -->
     <script src="lm32_base.js"></script>
@@ -25,13 +31,11 @@
     <script src="lm32_timer.js"></script>
     <script src="lm32_timer_real.js"></script>
     <script src="lm32_uart.js"></script>
-    <script src="lm32_keyhandler.js"></script>
 
     <script>
-        var lm32_debug_mode = navigator.userAgent.indexOf('Chrome') == -1;
-        var lm32_is_ie = navigator.userAgent.indexOf('MSIE') !== -1;
-        var key_handler = lm32.keyHandler();
+        var lm32_debug_terminal = false;
         var terminal;
+        var sys;
         var worker;
         var worker_pending_str = false;
 
@@ -41,7 +45,7 @@
         }
 
         function terminal_putchar(c) {
-            if(lm32_debug_mode) {
+            if(lm32_debug_terminal) {
                 var ta = document.getElementById('text_mode');
                 if(c == 8) {
                     ta.textContent = ta.textContent.substring(0, ta.textContent.length - 1);
@@ -49,36 +53,22 @@
                     ta.textContent += String.fromCharCode(c);
                 }
                 ta.scrollTop = ta.scrollHeight;
-                return;
             }
-
-            // TODO figure out if there are other special keys and treat them
-            if(c == 8) {
-                // backspace
-                var col = terminal.getCursorColumn();
-                if(col > 0) {
-                    terminal.setCursorColumn(col - 1);
-                    terminal.eraseToRight(1);
-                }
-                return;
-            }
-            terminal.interpret(String.fromCharCode(c));
+            terminal.write(String.fromCharCode(c));
         }
 
         function lm32_start_evr(kernel_filename) {
-            var sys = lm32.start_evr(terminal_putchar, kernel_filename);
+            window.sys = lm32.start_evr(terminal_putchar, kernel_filename);
             window.cpu = sys.cpu;
             sys.cpu.cs.mips_log_function = inform_mips;
-            key_handler.set_send_fn(sys.console_send_str);
             setTimeout(sys.step_forever, 0);
         }
 
 
         function lm32_start_regular() {
-            var sys = lm32.start_uclinux(terminal_putchar);
+            window.sys = lm32.start_uclinux(terminal_putchar);
             window.cpu = sys.cpu;
             sys.cpu.cs.mips_log_function = inform_mips;
-            key_handler.set_send_fn(sys.console_send_str);
             setTimeout(sys.step_forever, 0);
         }
 
@@ -113,7 +103,7 @@
             }
         }
         function lm32_start_worker() {
-            worker = new Worker('lm32_worker.js');
+            window.worker = new Worker('lm32_worker.js');
             worker.onmessage = lm32_receive_worker_message;
 
             function terminal_send_str(str) {
@@ -122,40 +112,32 @@
                 }
                 worker_pending_str += str;
             }
-
-            key_handler.set_send_fn(terminal_send_str);
+            window.sys = {
+                console_send_str: terminal_send_str,
+            };
             worker.postMessage('lm32_start');
         }
 
         function start_terminal() {
-            if(lm32_debug_mode) {
+            function term_handler(s) {
+            if (typeof sys != 'undefined') {
+                    sys.console_send_str(s);
+                } else {
+                    console.log('Terminal started but no sys yet.');
+                }
+            }
+
+            if(lm32_debug_terminal) {
                 var ta = document.createElement('textarea');
                 ta.id ='text_mode';
                 ta.rows=25;
                 ta.cols=80;
                 document.body.appendChild(ta);
-                return;
             }
-            // hterm terminal for non-debug mode
 
-            var termConf = {
-                visibleColumnCount: 80,
-                visibleRowCount: 25,
-                fontSize: 15,
-                lineHeight: 17,
-                charWidth: 9,
-                scrollbarWidth: 16
-            };
-            var div = document.getElementById("vt100Div");
-            div.style.position = 'absolute';
-            div.style.height = termConf.lineHeight * termConf.visibleRowCount + 'px';
-            div.style.width = termConf.charWidth * termConf.visibleColumnCount +
-                    termConf.scrollbarWidth + 'px';
-            //document.body.appendChild(div);
-
-            terminal = new hterm.Terminal(termConf.fontSize, termConf.lineHeight);
-            terminal.decorate(div);
-            terminal.setCursorBlink(true);
+            terminal = new Term(80, 25, term_handler);
+            terminal.open();
+            terminal.write('Loading...');
         }
     </script>
 
