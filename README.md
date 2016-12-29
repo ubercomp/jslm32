@@ -1,9 +1,14 @@
+jslm32 is an emulator for the LatticeMico32 soft processor and supporting
+hardware.
+
+Copyright (c) 2011, 2012, 2016 Reginaldo Silva
+
+The sources are available and licensed under LGPL 2.1 unless otherwise noted.
+See COPYING for the full LGPL 2.1 license terms.
+
 There is a demo of the emulator running at:
 
 http://www.ubercomp.com/jslm32/src/
-
-It works much better on Chrome (using a nice terminal emulator that I borrowed
-from the chromium source tree), but works on Safari and Firefox too.
 
 To run jslm32 on your own machine:
 
