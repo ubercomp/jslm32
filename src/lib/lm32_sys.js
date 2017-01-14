@@ -17,7 +17,7 @@
  * <http://www.gnu.org/licenses/lgpl-2.1.html>
  */
 "use strict";
-lm32.start_uclinux = function(console_putchar_fn) {
+lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url) {
     var CPU_FREQ = 4000000; // TODO make it a parameter?
 
     var RAM_BASE = 0x08000000;
@@ -120,8 +120,8 @@ lm32.start_uclinux = function(console_putchar_fn) {
     hw.add_uart("uart1", UART1_BASE, UART1_IRQ);
     hw.add_trailer();
 
-    mmu.load_binary('../linux/vmlinux.bin', KERNEL_BASE);
-    var initrd_size = mmu.load_binary('../linux/romfs.ext2', INITRD_BASE);
+    mmu.load_binary(kernel_url, KERNEL_BASE);
+    var initrd_size = mmu.load_binary(romfs_url, INITRD_BASE);
 
     mmu.write_str(CMDLINE_BASE, "root=/dev/ram0 console=ttyS0,115200 ramdisk_size=16384");
 

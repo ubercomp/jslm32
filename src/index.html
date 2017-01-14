@@ -16,21 +16,21 @@
     }
     </style>
     <!-- third party -->
-    <script src='../third_party/term.js'></script>
+    <script src="third_party/term.js"></script>
     
     <!-- lm32 -->
-    <script src="lm32_base.js"></script>
-    <script src="lm32_bits.js"></script>
-    <script src="lm32_fb.js"></script>
-    <script src="lm32_pic.js"></script>
-    <script src="lm32_cpu.js"></script>
-    <script src="lm32_mmu.js"></script>
-    <script src="lm32_ram.js"></script>
-    <script src="lm32_hwsetup.js"></script>
-    <script src="lm32_sys.js"></script>
-    <script src="lm32_timer.js"></script>
-    <script src="lm32_timer_real.js"></script>
-    <script src="lm32_uart.js"></script>
+    <script src="lib/lm32_base.js"></script>
+    <script src="lib/lm32_bits.js"></script>
+    <script src="lib/lm32_fb.js"></script>
+    <script src="lib/lm32_pic.js"></script>
+    <script src="lib/lm32_cpu.js"></script>
+    <script src="lib/lm32_mmu.js"></script>
+    <script src="lib/lm32_ram.js"></script>
+    <script src="lib/lm32_hwsetup.js"></script>
+    <script src="lib/lm32_sys.js"></script>
+    <script src="lib/lm32_timer.js"></script>
+    <script src="lib/lm32_timer_real.js"></script>
+    <script src="lib/lm32_uart.js"></script>
 
     <script>
         var lm32_debug_terminal = false;
@@ -66,7 +66,11 @@
 
 
         function lm32_start_regular() {
-            window.sys = lm32.start_uclinux(terminal_putchar);
+            window.sys = lm32.start_uclinux(
+                terminal_putchar,
+                '../linux/vmlinux.bin',
+                '../linux/romfs.ext2'
+            );
             window.cpu = sys.cpu;
             sys.cpu.cs.mips_log_function = inform_mips;
             setTimeout(sys.step_forever, 0);
@@ -102,8 +106,9 @@
                     break;
             }
         }
+
         function lm32_start_worker() {
-            window.worker = new Worker('lm32_worker.js');
+            window.worker = new Worker('lib/lm32_worker.js');
             worker.onmessage = lm32_receive_worker_message;
 
             function terminal_send_str(str) {
@@ -115,7 +120,13 @@
             window.sys = {
                 console_send_str: terminal_send_str,
             };
-            worker.postMessage('lm32_start');
+            worker.postMessage(
+                {
+                    type: 'lm32_start',
+                    kernel_url: '../../linux/vmlinux.bin',
+                    romfs_url: '../../linux/romfs.ext2',
+                }
+            );
         }
 
         function start_terminal() {
