@@ -1,4 +1,7 @@
-do_not_commit
 *.nocommit
+*~
 .*
+\#*
+
+!.flowconfig
 !.gitignore
