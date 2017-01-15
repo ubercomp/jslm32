@@ -1,7 +1,7 @@
 /**
  * LM32 Kernel Parameters
  * Copyright (c) 2012 Reginaldo Silva (reginaldo@ubercomp.com)
- * Created: 29/01/12 20:48
+ *
  *
  * This Javascript code is free software; you can redistribute it
  * and/or modify it under the terms of the GNU Lesser General Public

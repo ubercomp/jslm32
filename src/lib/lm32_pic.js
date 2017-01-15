@@ -1,7 +1,7 @@
 /**
  * Javascript PIC Controller;
  * Copyright (c) 2011 Reginaldo Silva (reginaldo@ubercomp.com)
- * Created: 08/12/11 02:24
+ *
  *
  * This Javascript code is free software; you can redistribute it
  * and/or modify it under the terms of the GNU Lesser General Public

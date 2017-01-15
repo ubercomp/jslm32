@@ -2,7 +2,7 @@
  * Frame Buffer
  *
  * Copyright (c) 2012 Reginaldo Silva (reginaldo@ubercomp.com)
- * Created: 13/02/12 00:14
+ *
  *
  * This Javascript code is free software; you can redistribute it
  * and/or modify it under the terms of the GNU Lesser General Public

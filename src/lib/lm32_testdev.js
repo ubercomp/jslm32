@@ -1,7 +1,7 @@
 /**
  * Device for tests
  * Copyright (c) 2011 Reginaldo Silva (reginaldo@ubercomp.com)
- * Created: 30/11/11 22:43
+ *
  *
  * This Javascript code is free software; you can redistribute it
  * and/or modify it under the terms of the GNU Lesser General Public

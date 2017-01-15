@@ -2,7 +2,7 @@
  * RAM Memory
  *
  * Copyright (c) 2011-2012, 2016-2017 Reginaldo Silva (reginaldo@ubercomp.com)
- * Created: 11/09/11 21:30
+ *
  *
  * This Javascript code is free software; you can redistribute it
  * and/or modify it under the terms of the GNU Lesser General Public
