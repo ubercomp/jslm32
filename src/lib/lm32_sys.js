@@ -17,7 +17,7 @@
  * <http://www.gnu.org/licenses/lgpl-2.1.html>
  */
 "use strict";
-lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url) {
+lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url, cb) {
     var CPU_FREQ = 4000000; // TODO make it a parameter?
 
     var RAM_BASE = 0x08000000;
@@ -101,7 +101,7 @@ lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url) {
     var send_str = uart0.send_str;
 
     hw = null;
-    
+
     // Gluing everything together
     mmu.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
     mmu.add_memory(UART0_BASE, uart0.iomem_size, uart0.get_mmio_handlers());
@@ -120,30 +120,49 @@ lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url) {
     hw.add_uart("uart1", UART1_BASE, UART1_IRQ);
     hw.add_trailer();
 
-    mmu.load_binary(kernel_url, KERNEL_BASE);
-    var initrd_size = mmu.load_binary(romfs_url, INITRD_BASE);
+    var on_load_initrd = function(status) {
+        if(status.success) {
+            var initrd_size = status.size;
+            mmu.write_str(CMDLINE_BASE, "root=/dev/ram0 console=ttyS0,115200 ramdisk_size=16384");
 
-    mmu.write_str(CMDLINE_BASE, "root=/dev/ram0 console=ttyS0,115200 ramdisk_size=16384");
+            var hwsetup_data = hw.get_data();
+            mmu.write_array_data(HWSETUP_BASE, hwsetup_data, hwsetup_data.length);
 
-    var hwsetup_data = hw.get_data();
-    mmu.write_array_data(HWSETUP_BASE, hwsetup_data, hwsetup_data.length);
+            cpu.cs.pc = KERNEL_BASE;
+            cpu.cs.regs[1] = HWSETUP_BASE;
+            cpu.cs.regs[2] = CMDLINE_BASE;
+            cpu.cs.regs[3] = INITRD_BASE;
+            cpu.cs.regs[4] = INITRD_BASE + initrd_size;
 
-    cpu.cs.pc = KERNEL_BASE;
-    cpu.cs.regs[1] = HWSETUP_BASE;
-    cpu.cs.regs[2] = CMDLINE_BASE;
-    cpu.cs.regs[3] = INITRD_BASE;
-    cpu.cs.regs[4] = INITRD_BASE + initrd_size;
+            cpu.set_timers([timer0]);//, timer1, timer2]);
+            cb(
+                {
+                    success: true,
+                    system: {
+                        cpu: cpu,
+                        step: cpu.step,
+                        step_forever: cpu.step_forever,
+                        console_send_str: send_str
+                    }
+                }
+            );
+        } else {
+            cb({ success: false});
+        }
+    }
 
-    cpu.set_timers([timer0]);//, timer1, timer2]);
-    return {
-        cpu: cpu,
-        step: cpu.step,
-        step_forever: cpu.step_forever,
-        console_send_str: send_str
-    };
+    var on_load_kernel = function(status) {
+        if(status.success) {
+            mmu.load_binary(romfs_url, INITRD_BASE, on_load_initrd);
+        } else {
+            cb({success: false});
+        }
+    }
+
+    mmu.load_binary(kernel_url, KERNEL_BASE, on_load_kernel);
 };
 
-lm32.start_evr = function(console_putchar_fn, kernel_file_name) {
+lm32.start_evr = function(console_putchar_fn, kernel_file_name, cb) {
     var CPU_FREQ = 75000000;
     var RAM_BASE = 0x08000000;
     var RAM_SIZE = 64 * 1024 * 1024;
@@ -204,23 +223,28 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name) {
 
     var fb0 = lm32.lm32_frame_buffer('frameBuffer', mmu, ram, RAM_BASE, RAM_SIZE);
 
-
-
     mmu.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
     mmu.add_memory(UART0_BASE, uart0.iomem_size, uart0.get_mmio_handlers());
     mmu.add_memory(TIMER0_BASE, timer0.iomem_size, timer0.get_mmio_handlers());
     mmu.add_memory(TIMER1_BASE, timer1.iomem_size, timer1.get_mmio_handlers());
     mmu.add_memory(FB_BASE, fb0.iomem_size, fb0.get_mmio_handlers());
 
-    mmu.load_binary(kernel_file_name, KERNEL_BASE);
+    var on_load_binary_result = function(result) {
+        var cb_result = {success: false, system: undefined};
+        if(result.success) {
+            cpu.cs.pc = KERNEL_BASE;
+            cpu.set_timers([timer0, timer1]);
+            cb_result.success = true;
+            cb_result.system = {
+                cpu: cpu,
+                step: cpu.step,
+                step_forever: cpu.step_forever,
+                console_send_str: send_str
+            };
+        }
+        cb(cb_result);
+    }
+    mmu.load_binary(kernel_file_name, KERNEL_BASE, on_load_binary_result);
 
-    cpu.cs.pc = KERNEL_BASE;
-    cpu.set_timers([timer0, timer1]);
 
-    return {
-        cpu: cpu,
-        step: cpu.step,
-        step_forever: cpu.step_forever,
-        console_send_str: send_str
-    };
 };

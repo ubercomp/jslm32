@@ -17,7 +17,7 @@
     </style>
     <!-- third party -->
     <script src="third_party/term.js"></script>
-    
+
     <!-- lm32 -->
     <script src="lib/lm32_base.js"></script>
     <script src="lib/lm32_bits.js"></script>
@@ -58,22 +58,47 @@
         }
 
         function lm32_start_evr(kernel_filename) {
-            window.sys = lm32.start_evr(terminal_putchar, kernel_filename);
-            window.cpu = sys.cpu;
-            sys.cpu.cs.mips_log_function = inform_mips;
-            setTimeout(sys.step_forever, 0);
+            var on_start_evr_result = function(result) {
+                if(result.success) {
+                    window.sys = result.system;
+                    window.cpu = sys.cpu;
+                    sys.cpu.cs.mips_log_function = inform_mips;
+                    setTimeout(sys.step_forever, 0);
+                } else {
+                    terminal.write(
+                        "ERROR: can't start " +
+                        kernel_filename +
+                        "\r\n"
+                    );
+                }
+            }
+            lm32.start_evr(
+                terminal_putchar,
+                kernel_filename,
+                on_start_evr_result
+            );
         }
 
 
         function lm32_start_regular() {
-            window.sys = lm32.start_uclinux(
+            terminal.write("Loading...\r\n");
+            var on_start_uclinux_result = function(result) {
+                if(result.success) {
+                    window.sys = result.system;
+                    window.cpu = sys.cpu;
+                    window.sys.cpu.cs.mips_log_function = inform_mips;
+                    setTimeout(sys.step_forever, 0);
+                } else {
+                    terminal.write("ERROR: Can't load uClinux.\r\n")
+                }
+            }
+            lm32.start_uclinux(
                 terminal_putchar,
                 '../linux/vmlinux.bin',
-                '../linux/romfs.ext2'
+                '../linux/romfs.ext2',
+                on_start_uclinux_result
             );
-            window.cpu = sys.cpu;
-            sys.cpu.cs.mips_log_function = inform_mips;
-            setTimeout(sys.step_forever, 0);
+
         }
 
         function lm32_receive_worker_message(e) {
@@ -108,6 +133,7 @@
         }
 
         function lm32_start_worker() {
+            terminal.write("Loading with Web Worker...\r\n")
             window.worker = new Worker('lib/lm32_worker.js');
             worker.onmessage = lm32_receive_worker_message;
 
@@ -148,7 +174,7 @@
 
             terminal = new Term(80, 25, term_handler);
             terminal.open();
-            terminal.write('Loading...');
+            terminal.write('Click above to load.\r\n');
         }
     </script>
 
@@ -156,7 +182,7 @@
 <body>
 <p> Copyright (C) 2011, 2012 Reginaldo Silva </p>
 <p> Contact: reginaldo at ubercomp </p>
-<button onclick="lm32_start_regular()">Start!</button> 
+<button onclick="lm32_start_regular()">Start!</button>
 <button onclick="lm32_start_worker()">Start with web workers!</button>
 <p>Login: root ; Password: lattice</p>
 <div>Processor real time speed: <span id="mips">0.00</span> MIPS</div>

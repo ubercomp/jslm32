@@ -63,12 +63,30 @@ function worker_start(e) {
     var msg = e.data
     var type = msg.type
     if(type === 'lm32_start') {
-        sys = lm32.start_uclinux(worker_terminal_putchar, msg.kernel_url, msg.romfs_url);
-        step = sys.cpu.step;
-        sys.cpu.cs.mips_log_function = worker_inform_mips;
-        console_send_str = sys.console_send_str;
-        self.onmessage = worker_on_message;
-        self.postMessage({type: 'worker_started'});
+        var on_start_uclinux_result = function(result) {
+            if(result.success) {
+                sys = result.system;
+                step = sys.cpu.step;
+                sys.cpu.cs.mips_log_function = worker_inform_mips;
+                console_send_str = sys.console_send_str;
+                self.onmessage = worker_on_message;
+                self.postMessage({type: 'worker_started'});
+            } else {
+                self.postMessage(
+                    {
+                        type: 'error',
+                        msg: 'lm32_start_uclinux failed'
+                    }
+                );
+            }
+        }
+        lm32.start_uclinux(
+            worker_terminal_putchar,
+            msg.kernel_url,
+            msg.romfs_url,
+            on_start_uclinux_result
+        );
+
     } else {
         self.postMessage({type: 'error', msg: 'Unexpected mesage type ' + type });
     }

@@ -35,7 +35,7 @@ lm32.mmu = function() {
     } catch(e) {
         has_typed_arrays = false;
     }
-    
+
     var get_handler_for = function(addr) {
         if((last_handler != undefined)
             && (addr >= last_handler.base_addr)
@@ -142,62 +142,54 @@ lm32.mmu = function() {
         }
     };
 
-    var load_binary = function (file, addr) {
-        var req, response, size, i, buff, has_typed_arrays;
-        if (typeof ActiveXObject == "function") return load_binary_ie9(file, addr);
+    var on_load_binary_result = function(addr, cb) {
+        return function(e) {
+            var req = e.currentTarget;
+            var buff, response, size;
+            var status = {success: false, size: 0};
+            if (req.status === 200) {
+                if ('mozResponse' in req) {
+                    response = req.mozResponse;
+                } else if (req.mozResponseArrayBuffer) {
+                    response = req.mozResponseArrayBuffer;
+                } else if ('responseType' in req) {
+                    response = req.response;
+                } else {
+                    response = req.responseText;
+                }
+                if (response instanceof ArrayBuffer) {
+                    size = response.byteLength;
+                    buff = new Uint8Array(response, 0, size);
+                    for (i = 0; i < size; i++) {
+                        write_8(addr + i, buff[i]);
+                      }
+                } else {
+                    size = response.length;
+                    for (var i = 0; i < size; i++) {
+                          write_8(addr + i, response.charCodeAt(i));
+                      }
+                  }
+                status.size = size;
+                status.success = true;
+            }
+            cb(status);
+        }
+    }
+
+    var load_binary = function (file, addr, cb) {
+        var req;
         req = new XMLHttpRequest();
-        req.open('GET', file, false);
-        if (has_typed_arrays && 'mozResponseType' in req) {
+        req.open('GET', file);
+        if ('mozResponseType' in req) {
             req.mozResponseType = 'arraybuffer';
-        } else if (has_typed_arrays && 'responseType' in req) {
+        } else if ('responseType' in req) {
             req.responseType = 'arraybuffer';
         } else {
             req.overrideMimeType('text/plain; charset=x-user-defined');
-            has_typed_arrays = false;
         }
-        req.send(null);
-        if (req.status != 200 && req.status != 0) {
-            throw "Error while loading " + file;
-        }
-        if (has_typed_arrays && 'mozResponse' in req) {
-            response = req.mozResponse;
-        } else if (has_typed_arrays && req.mozResponseArrayBuffer) {
-            response = req.mozResponseArrayBuffer;
-        } else if ('responseType' in req) {
-            response = req.response;
-        } else {
-            response = req.responseText;
-            has_typed_arrays = false;
-        }
-        if (has_typed_arrays) {
-            size = response.byteLength;
-            buff = new Uint8Array(response, 0, size);
-            for (i = 0; i < size; i++) {
-                write_8(addr + i, buff[i]);
-            }
-        } else {
-            size = response.length;
-            for (i = 0; i < size; i++) {
-                write_8(addr + i, response.charCodeAt(i));
-            }
-        }
-        return size;
-    };
 
-    var load_binary_ie9 = function(file, addr) {
-        var req, response, size, i;
-        req = new XMLHttpRequest();
-        req.open('GET', file, false);
+        req.addEventListener('load', on_load_binary_result(addr, cb));
         req.send(null);
-        if (req.status != 200 && req.status != 0) {
-            throw "Error while loading " + file;
-        }
-        response = new VBArray(req.responseBody).toArray();
-        size = response.length;
-        for (i = 0; i < size; i++) {
-            write_8(addr + i, response[i]);
-        }
-        return size;
     };
 
     var read_str = function(addr, max_size) {
@@ -252,4 +244,3 @@ lm32.mmu = function() {
         write_32: write_32
     };
 };
-

@@ -160,7 +160,7 @@ lm32.start_sys = function(terminal_div) {
         }
     };
     var timer = dummyTimer();
-    
+
     mmu.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
     mmu.add_memory(TESTDEV_BASE, testdev.iomem_size, testdev.get_mmio_handlers());
 
@@ -172,16 +172,19 @@ lm32.start_sys = function(terminal_div) {
         terminal.write(str);
         console.log(str);
         mmu.log = false;
-        mmu.load_binary("../test/" + test_name, BOOT_PC);
-        mmu.log = true;
-        var steps = 0;
-        while(shutdown.value == false && steps < MAX_STEPS) {
-            cpu.step(1);
-            steps++;
+        var on_load_binary_result = function(result) {
+            mmu.log = true;
+            var steps = 0;
+            while(shutdown.value == false && steps < MAX_STEPS) {
+                cpu.step(1);
+                steps++;
+            }
+            if(shutdown.value == false) {
+                terminal.write("Shutdown was never requested. Test FAILED\n");
+            }
+
         }
-        if(shutdown.value == false) {
-            terminal.write("Shutdown was never requested. Test FAILED\n");
-        }
+        mmu.load_binary("../test/" + test_name, BOOT_PC,on_load_binary_result);
     }
 
     var ret = {
