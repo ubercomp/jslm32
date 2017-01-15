@@ -28,12 +28,12 @@
 
 lm32.lm32UART = function(params) {
     var echo       = false; // echo when receive a char?
-    
+
     // parameters
     var set_irq    = params.set_irq;   // function(irq_line, irq_value)
     var irq_line   = params.irq_line; // my irq number
     var putchar    = params.putchar;  // function(int) -> writes a char
-    
+
     // constants
     var R_RXTX = 0;
     var R_IER  = 1;
@@ -83,7 +83,7 @@ lm32.lm32UART = function(params) {
     var MSR_DCD  = (1<<7);
 
     // state
-    var regs = new Array(R_MAX);
+    var regs = new Int32Array(R_MAX);
     var str_processing = '';
     var is_processing = false;
 

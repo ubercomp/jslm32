@@ -26,15 +26,6 @@
 lm32.mmu = function() {
     var handlers = [];
     var last_handler = undefined;
-    var has_typed_arrays;
-    try {
-        var buf = new ArrayBuffer(4);
-        var uint = new Uint8Array(buf);
-        uint[0] = 1;
-        has_typed_arrays = true;
-    } catch(e) {
-        has_typed_arrays = false;
-    }
 
     var get_handler_for = function(addr) {
         if((last_handler != undefined)
@@ -145,30 +136,23 @@ lm32.mmu = function() {
     var on_load_binary_result = function(addr, cb) {
         return function(e) {
             var req = e.currentTarget;
-            var buff, response, size;
+            var buff, size, text, v8;
             var status = {success: false, size: 0};
             if (req.status === 200) {
-                if ('mozResponse' in req) {
-                    response = req.mozResponse;
-                } else if (req.mozResponseArrayBuffer) {
-                    response = req.mozResponseArrayBuffer;
-                } else if ('responseType' in req) {
-                    response = req.response;
-                } else {
-                    response = req.responseText;
-                }
-                if (response instanceof ArrayBuffer) {
-                    size = response.byteLength;
-                    buff = new Uint8Array(response, 0, size);
+                if ('responseType' in req) {
+                    buff = req.response;
+                    size = buff.byteLength;
+                    v8 = new Uint8Array(buff);
                     for (i = 0; i < size; i++) {
-                        write_8(addr + i, buff[i]);
-                      }
+                        write_8(addr + i, v8[i]);
+                    }
                 } else {
-                    size = response.length;
+                    text = req.responseText;
+                    size = text.length;
                     for (var i = 0; i < size; i++) {
-                          write_8(addr + i, response.charCodeAt(i));
+                          write_8(addr + i, text.charCodeAt(i));
                       }
-                  }
+                 }
                 status.size = size;
                 status.success = true;
             }
@@ -180,14 +164,11 @@ lm32.mmu = function() {
         var req;
         req = new XMLHttpRequest();
         req.open('GET', file);
-        if ('mozResponseType' in req) {
-            req.mozResponseType = 'arraybuffer';
-        } else if ('responseType' in req) {
+        if('responseType' in req) {
             req.responseType = 'arraybuffer';
         } else {
             req.overrideMimeType('text/plain; charset=x-user-defined');
         }
-
         req.addEventListener('load', on_load_binary_result(addr, cb));
         req.send(null);
     };
@@ -222,10 +203,6 @@ lm32.mmu = function() {
         }
     };
 
-    var set_typed_arrays = function(val) {
-        has_typed_arrays = !!val;
-    };
-
     return {
         add_memory: add_memory,
         copy_region: copy_region,
@@ -233,7 +210,6 @@ lm32.mmu = function() {
         read_str: read_str,
         write_str: write_str,
         write_array_data: write_array_data,
-        set_typed_arrays: set_typed_arrays,
         read: read,
         read_8: read_8,
         read_16: read_16,

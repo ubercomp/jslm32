@@ -49,7 +49,7 @@ lm32.lm32Timer = function(params) {
     var CR_STOP  = (1 << 3); // stop?
 
     // state
-    var regs = new Array(R_MAX);
+    var regs = new Int32Array(R_MAX);
 
     function update_irq() {
         // the line below works only because ITO is the LSB
@@ -168,4 +168,3 @@ lm32.lm32Timer = function(params) {
         update_irq: update_irq
     };
 };
-

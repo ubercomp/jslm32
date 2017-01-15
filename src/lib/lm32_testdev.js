@@ -36,7 +36,7 @@ lm32.testDev = function(params) {
     var regs;
     var testname;
 
-    
+
     function copy_testname() {
         var addr = regs[R_TESTNAME];
         for(var i = 0; i < MAX_TESTNAME_LEN; i++) {
@@ -46,7 +46,7 @@ lm32.testDev = function(params) {
                 break;
             }
         }
-        testname[MAX_TESTNAME_LEN - 1] = '\0';
+        testname[MAX_TESTNAME_LEN - 1] = 0;
     }
 
     function testname_charr_to_str() {
@@ -68,13 +68,13 @@ lm32.testDev = function(params) {
 
     function reset() {
         // registers
-        regs = new Array(R_MAX);
+        regs = new Int32Array(R_MAX);
         for(var i = 0; i < R_MAX; i++) {
             regs[i] = 0;
         }
 
         // array of characters forming testname
-        testname = new Array(MAX_TESTNAME_LEN);
+        testname = new Int8Array(MAX_TESTNAME_LEN);
         for(var i = 0; i < MAX_TESTNAME_LEN; i++) {
             testname[i] = 0;
         }

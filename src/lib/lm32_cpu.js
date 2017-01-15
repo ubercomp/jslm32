@@ -86,7 +86,7 @@ lm32.lm32Cpu = function (params) {
         bex[0x3e] = v; // calli
 
         // general purpose registers
-        cs.regs = new Array(32);
+        cs.regs = new Int32Array(32);
         for (var i = 0; i < 32; i++) {
             cs.regs[i] = 0;
         }
@@ -223,7 +223,7 @@ lm32.lm32Cpu = function (params) {
     var CSR_WP1  = 0x19; // watchpoint address 1
     var CSR_WP2  = 0x1a; // watchpoint address 2
     var CSR_WP3  = 0x1b; // watchpoint address 3
-    
+
     // Helpers:
 
     // comparison helpers (I think google closure compiler will inline these)
@@ -393,12 +393,12 @@ lm32.lm32Cpu = function (params) {
     }
 
     function compare_rr_e(es, cond, wrap) {
-        return "$r[" + es.I_R2 + "] = (($r[" + es.I_R0 + "]" + wrap + ") " + 
+        return "$r[" + es.I_R2 + "] = (($r[" + es.I_R0 + "]" + wrap + ") " +
                    cond  + "($r[" + es.I_R1 + "]" + wrap + ")) ? 1 : 0;\n";
     }
 
     function compare_ri_e(es, cond, wrap) {
-        return "$r[" + es.I_R1 + "] = (($r[" + es.I_R0 + "]" + wrap + ") " + 
+        return "$r[" + es.I_R1 + "] = (($r[" + es.I_R0 + "]" + wrap + ") " +
            cond  + "((" + (es.I_IMM16 << 16 >> 16) + ")" + wrap + ")) ? 1 : 0;\n";
     }
 
@@ -1645,7 +1645,7 @@ lm32.lm32Cpu = function (params) {
             ics.I_R0   = (op & 0x03e00000) >> 21;
             ics.I_R1    = (op & 0x001f0000) >> 16;
             ics.I_R2    = (op & 0x0000f800) >> 11;
-    
+
     }
 
     function step_interpreter(instructions) {

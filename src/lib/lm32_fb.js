@@ -63,7 +63,7 @@ lm32.lm32_frame_buffer = function(container, mmu, ram, ram_base, ram_size) {
 
 
     function reset() {
-        regs = new Array(R_MAX);
+        regs = new Int32Array(R_MAX);
         for(var i = 0; i < R_MAX; i++) {
             regs[i] = 0;
         }

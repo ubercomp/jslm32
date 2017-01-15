@@ -52,7 +52,7 @@ lm32.lm32TimerReal = function(params) {
     var CR_STOP  = (1 << 3); // stop?
 
     // state
-    var regs = new Array(R_MAX);
+    var regs = new Int32Array(R_MAX);
     var timeout = false;
     var timeout_started = (new Date()).getTime();
 
@@ -190,4 +190,3 @@ lm32.lm32TimerReal = function(params) {
         update_irq: update_irq
     };
 };
-

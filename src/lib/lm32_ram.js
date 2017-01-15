@@ -17,28 +17,15 @@
  * License along with this code; if not, see
  * <http://www.gnu.org/licenses/lgpl-2.1.html>
  */
-"use strict";
 
+"use strict";
 /**
  *
  * @param size the memory size in bytes
- * @param be is it big endian?
  */
-lm32.ram = function(size, be) {
-    var v8;
-    if("function" === typeof Uint8Array) {
-        v8 = new Uint8Array(size);
-    } else {
-        v8 = new Array(size);
-    }
-    // var i;
-    // for(i = 0; i < size; i++) {
-    //    v8[i] = 0;
-    // }
-    if(!be) {
-        // TODO implement little endian
-        throw ("Little Endian is not supported for now");
-    }
+lm32.ram = function(size) {
+    var buff = new ArrayBuffer(size);
+    var v8 = new Uint8Array(buff);
 
     var read_8 = function(offset) {
         return v8[offset];
@@ -81,7 +68,6 @@ lm32.ram = function(size, be) {
     };
 
     var get_mmio_handlers = function() {
-        // TODO little endian version
         var handlers = {
             read_8  : read_8,
             read_16 : read_16,
@@ -103,4 +89,4 @@ lm32.ram = function(size, be) {
         write_32: write_32,
         get_mmio_handlers: get_mmio_handlers
     }
-};
+}
