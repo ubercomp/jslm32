@@ -117,12 +117,12 @@ lm32.start_sys = function(terminal_div) {
     var MAX_STEPS = 200;
     var BOOT_PC = RAM_BASE;
 
-    var mmu = lm32.mmu();
+    var bus = lm32.bus();
 
     var ram = lm32.ram(RAM_SIZE, true);
 
     var cpu_params = {
-        mmu: mmu,
+        bus: bus,
         ram: ram,
         ram_base: RAM_BASE,
         ram_size: RAM_SIZE,
@@ -149,7 +149,7 @@ lm32.start_sys = function(terminal_div) {
     }
 
     var testdev_params = {
-        mmu: mmu,
+        bus: bus,
         shutdown: shutdown_f,
         terminal: terminal
     };
@@ -161,8 +161,8 @@ lm32.start_sys = function(terminal_div) {
     };
     var timer = dummyTimer();
 
-    mmu.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
-    mmu.add_memory(TESTDEV_BASE, testdev.iomem_size, testdev.get_mmio_handlers());
+    bus.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
+    bus.add_memory(TESTDEV_BASE, testdev.iomem_size, testdev.get_mmio_handlers());
 
     function run_test(test_name, idx, shutdown) {
         var cpu = lm32.lm32Cpu(cpu_params);
@@ -171,9 +171,9 @@ lm32.start_sys = function(terminal_div) {
         var str = "\nRunning Test " + test_name + " (" + idx + ")\n";
         terminal.write(str);
         console.log(str);
-        mmu.log = false;
+        bus.log = false;
         var on_load_binary_result = function(result) {
-            mmu.log = true;
+            bus.log = true;
             var steps = 0;
             while(shutdown.value == false && steps < MAX_STEPS) {
                 cpu.step(1);
@@ -184,7 +184,7 @@ lm32.start_sys = function(terminal_div) {
             }
 
         }
-        mmu.load_binary("../test/" + test_name, BOOT_PC,on_load_binary_result);
+        bus.load_binary("../test/" + test_name, BOOT_PC,on_load_binary_result);
     }
 
     var ret = {

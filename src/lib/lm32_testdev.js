@@ -20,7 +20,7 @@
 
 lm32.testDev = function(params) {
     // dependencies:
-    var mmu = params.mmu;
+    var bus = params.bus;
     var shutdown = params.shutdown;
     var terminal = params.terminal;
 
@@ -40,7 +40,7 @@ lm32.testDev = function(params) {
     function copy_testname() {
         var addr = regs[R_TESTNAME];
         for(var i = 0; i < MAX_TESTNAME_LEN; i++) {
-            var val = mmu.read_8(addr + i);
+            var val = bus.read_8(addr + i);
             testname[i] = val;
             if(val == 0) {
                 break;

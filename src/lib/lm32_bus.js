@@ -19,11 +19,11 @@
  */
 "use strict";
 /**
- * MMU
+ * system bus
  * read functions return undefined when cannot read
  * write functions return true when write is possible, false otherwise
  */
-lm32.mmu = function() {
+lm32.bus = function() {
     var handlers = [];
     var last_handler = undefined;
 

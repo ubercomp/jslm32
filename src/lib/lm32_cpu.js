@@ -56,15 +56,15 @@ lm32.lm32Cpu = function (params) {
         cs.ram_base = params.ram_base;
         cs.ram_size = params.ram_size;
         cs.ram_max  = cs.ram_base + cs.ram_size;
-        cs.mmu = params.mmu;
+        cs.bus = params.bus;
 
-        // To speed up mmu accesses
-        cs.mmu_w = cs.mmu.write;
-        cs.mmu_r = cs.mmu.read;
-        cs.mmu_mask = {};
-        cs.mmu_mask[8] = "0xff";
-        cs.mmu_mask[16] = "0xffff";
-        cs.mmu_mask[32] = "0xffffffff";
+        // To speed up bus accesses
+        cs.bus_w = cs.bus.write;
+        cs.bus_r = cs.bus.read;
+        cs.bus_mask = {};
+        cs.bus_mask[8] = "0xff";
+        cs.bus_mask[16] = "0xffff";
+        cs.bus_mask[32] = "0xffffffff";
 
 
         cs.block_cache = {};
@@ -904,13 +904,13 @@ lm32.lm32Cpu = function (params) {
         var val = undefined;
         switch(width) {
             case 8:
-                val = cs.mmu.read_8(uaddr);
+                val = cs.bus.read_8(uaddr);
                 break;
             case 16:
-                val = cs.mmu.read_16(uaddr);
+                val = cs.bus.read_16(uaddr);
                 break;
             case 32:
-                val = cs.mmu.read_32(uaddr);
+                val = cs.bus.read_32(uaddr);
                 break;
             default:
                 throw ("invalid width - should never happen");
@@ -952,7 +952,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function load_e(es, width, signed) {
-        // TODO test for invalid mmu reads if necessary
+        // TODO test for invalid bus reads if necessary
         var wrap = signed ? " << " + (32 - width) + " >> " + (32 - width) + "" : "";
         return "" +
             "$u = ($r[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
@@ -960,8 +960,8 @@ lm32.lm32Cpu = function (params) {
             "    $i = $u - " + cs.ram_base + ";\n" +
             "    $r[" + es.I_R1 + "] = (" + ram_read_e(width) + ")" + wrap + ";\n" +
             "} else {\n" +
-            //"    $r[" + es.I_R1 + "] = cs.mmu.read_" + width + "($u)" + wrap + ";\n" +
-            "    $r[" + es.I_R1 + "] = cs.mmu_r($u, " + cs.mmu_mask[width] + ", 'read_" + width + "')" + wrap + ";\n" +
+            //"    $r[" + es.I_R1 + "] = cs.bus.read_" + width + "($u)" + wrap + ";\n" +
+            "    $r[" + es.I_R1 + "] = cs.bus_r($u, " + cs.bus_mask[width] + ", 'read_" + width + "')" + wrap + ";\n" +
             "}\n";
     }
 
@@ -1035,13 +1035,13 @@ lm32.lm32Cpu = function (params) {
         var ok;
         switch(width) {
             case 8:
-                ok = cs.mmu.write_8(uaddr, cs.regs[cs.I_R1]);
+                ok = cs.bus.write_8(uaddr, cs.regs[cs.I_R1]);
                 break;
             case 16:
-                ok = cs.mmu.write_16(uaddr, cs.regs[cs.I_R1]);
+                ok = cs.bus.write_16(uaddr, cs.regs[cs.I_R1]);
                 break;
             case 32:
-                ok = cs.mmu.write_32(uaddr, cs.regs[cs.I_R1]);
+                ok = cs.bus.write_32(uaddr, cs.regs[cs.I_R1]);
                 break;
             default:
                 break;
@@ -1076,7 +1076,7 @@ lm32.lm32Cpu = function (params) {
     }
 
     function store_e(es, width) {
-        // TODO test for invalid mmu writes if necessary
+        // TODO test for invalid bus writes if necessary
         return "" +
             "$u = ($r[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
             "$t = $r[" + es.I_R1 + "];\n" +
@@ -1084,8 +1084,8 @@ lm32.lm32Cpu = function (params) {
             "    $i = $u - " + cs.ram_base + ";\n" +
             ram_write_e(width) +
             "} else {\n" +
-            //"    cs.mmu.write_" + width + "($u, $t);\n" +
-            "    cs.mmu_w($u, $t, " + cs.mmu_mask[width] + ", 'write_" + width + "');\n" +
+            //"    cs.bus.write_" + width + "($u, $t);\n" +
+            "    cs.bus_w($u, $t, " + cs.bus_mask[width] + ", 'write_" + width + "');\n" +
             "}\n";
     }
 
@@ -1673,7 +1673,7 @@ lm32.lm32Cpu = function (params) {
             op = (v8[rpc] << 24) | (v8[rpc + 1] << 16) | (v8[rpc + 2] << 8) | (v8[rpc + 3]);
 
             // supports code outside ram
-            // op = immu.read_32(pc);
+            // op = ibus.read_32(pc);
 
             // Instruction decoding:
             decode_instr(ics, op);
@@ -1776,7 +1776,7 @@ lm32.lm32Cpu = function (params) {
                     rpc = block[0] - ram_base;
                     op = (v8[rpc] << 24) | (v8[rpc + 1] << 16) | (v8[rpc + 2] << 8) | (v8[rpc + 3]);
                     // supports code outside ram
-                    // op = immu.read_32(block[0]);
+                    // op = ibus.read_32(block[0]);
 
                     es = {};
                     decode_instr(es, op);

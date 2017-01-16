@@ -47,11 +47,11 @@ lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url, cb) {
     var BOOT_PC = RAM_BASE;
     var KERNEL_BASE = RAM_BASE;
 
-    var mmu = lm32.mmu();
+    var bus = lm32.bus();
     var ram = lm32.ram(RAM_SIZE, true);
 
     var cpu_params = {
-        mmu: mmu,
+        bus: bus,
         ram: ram,
         ram_base: RAM_BASE,
         ram_size: RAM_SIZE,
@@ -103,12 +103,12 @@ lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url, cb) {
     hw = null;
 
     // Gluing everything together
-    mmu.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
-    mmu.add_memory(UART0_BASE, uart0.iomem_size, uart0.get_mmio_handlers());
-    mmu.add_memory(UART1_BASE, uart1.iomem_size, uart1.get_mmio_handlers());
-    mmu.add_memory(TIMER0_BASE, timer0.iomem_size, timer0.get_mmio_handlers());
-    //mmu.add_memory(TIMER1_BASE, timer1.iomem_size, timer1.get_mmio_handlers());
-    //mmu.add_memory(TIMER2_BASE, timer2.iomem_size, timer2.get_mmio_handlers());
+    bus.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
+    bus.add_memory(UART0_BASE, uart0.iomem_size, uart0.get_mmio_handlers());
+    bus.add_memory(UART1_BASE, uart1.iomem_size, uart1.get_mmio_handlers());
+    bus.add_memory(TIMER0_BASE, timer0.iomem_size, timer0.get_mmio_handlers());
+    //bus.add_memory(TIMER1_BASE, timer1.iomem_size, timer1.get_mmio_handlers());
+    //bus.add_memory(TIMER2_BASE, timer2.iomem_size, timer2.get_mmio_handlers());
 
     var hw = lm32.lm32_hwsetup();
     hw.add_cpu("LM32", CPU_FREQ);
@@ -123,10 +123,10 @@ lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url, cb) {
     var on_load_initrd = function(status) {
         if(status.success) {
             var initrd_size = status.size;
-            mmu.write_str(CMDLINE_BASE, "root=/dev/ram0 console=ttyS0,115200 ramdisk_size=16384");
+            bus.write_str(CMDLINE_BASE, "root=/dev/ram0 console=ttyS0,115200 ramdisk_size=16384");
 
             var hwsetup_data = hw.get_data();
-            mmu.write_array_data(HWSETUP_BASE, hwsetup_data, hwsetup_data.length);
+            bus.write_array_data(HWSETUP_BASE, hwsetup_data, hwsetup_data.length);
 
             cpu.cs.pc = KERNEL_BASE;
             cpu.cs.regs[1] = HWSETUP_BASE;
@@ -153,13 +153,13 @@ lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url, cb) {
 
     var on_load_kernel = function(status) {
         if(status.success) {
-            mmu.load_binary(romfs_url, INITRD_BASE, on_load_initrd);
+            bus.load_binary(romfs_url, INITRD_BASE, on_load_initrd);
         } else {
             cb({success: false});
         }
     }
 
-    mmu.load_binary(kernel_url, KERNEL_BASE, on_load_kernel);
+    bus.load_binary(kernel_url, KERNEL_BASE, on_load_kernel);
 };
 
 lm32.start_evr = function(console_putchar_fn, kernel_file_name, cb) {
@@ -182,11 +182,11 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name, cb) {
     EBA_BASE = DEBA_BASE = BOOT_PC = RAM_BASE;
     KERNEL_BASE = RAM_BASE;
 
-    var mmu = lm32.mmu();
+    var bus = lm32.bus();
     var ram = lm32.ram(RAM_SIZE, true);
 
     var cpu_params = {
-        mmu: mmu,
+        bus: bus,
         ram: ram,
         ram_base: RAM_BASE,
         ram_size: RAM_SIZE,
@@ -221,13 +221,13 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name, cb) {
     uart0.set_echo(true);
     var send_str = uart0.send_str;
 
-    var fb0 = lm32.lm32_frame_buffer('frameBuffer', mmu, ram, RAM_BASE, RAM_SIZE);
+    var fb0 = lm32.lm32_frame_buffer('frameBuffer', bus, ram, RAM_BASE, RAM_SIZE);
 
-    mmu.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
-    mmu.add_memory(UART0_BASE, uart0.iomem_size, uart0.get_mmio_handlers());
-    mmu.add_memory(TIMER0_BASE, timer0.iomem_size, timer0.get_mmio_handlers());
-    mmu.add_memory(TIMER1_BASE, timer1.iomem_size, timer1.get_mmio_handlers());
-    mmu.add_memory(FB_BASE, fb0.iomem_size, fb0.get_mmio_handlers());
+    bus.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
+    bus.add_memory(UART0_BASE, uart0.iomem_size, uart0.get_mmio_handlers());
+    bus.add_memory(TIMER0_BASE, timer0.iomem_size, timer0.get_mmio_handlers());
+    bus.add_memory(TIMER1_BASE, timer1.iomem_size, timer1.get_mmio_handlers());
+    bus.add_memory(FB_BASE, fb0.iomem_size, fb0.get_mmio_handlers());
 
     var on_load_binary_result = function(result) {
         var cb_result = {success: false, system: undefined};
@@ -244,7 +244,7 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name, cb) {
         }
         cb(cb_result);
     }
-    mmu.load_binary(kernel_file_name, KERNEL_BASE, on_load_binary_result);
+    bus.load_binary(kernel_file_name, KERNEL_BASE, on_load_binary_result);
 
 
 };

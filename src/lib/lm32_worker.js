@@ -19,7 +19,7 @@
 importScripts('lm32_base.js',
     'lm32_pic.js',
     'lm32_cpu.js',
-    'lm32_mmu.js',
+    'lm32_bus.js',
     'lm32_ram.js',
     'lm32_hwsetup.js',
     'lm32_sys.js',
