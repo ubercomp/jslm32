@@ -1,7 +1,8 @@
 /**
+ *
  * Emulation of LatticeMico32 UART block.
  *
- * Copyright (c) 2011 Reginaldo Silva (reginaldo@ubercomp.com)
+ * Copyright (c) 2011-2012, 2016-2017 Reginaldo Silva (reginaldo@ubercomp.com)
  *
  *
  *

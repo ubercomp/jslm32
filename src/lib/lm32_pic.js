@@ -1,6 +1,7 @@
 /**
  * Javascript PIC Controller;
- * Copyright (c) 2011 Reginaldo Silva (reginaldo@ubercomp.com)
+ *
+ * Copyright (c) 2011-2012, 2016-2017 Reginaldo Silva (reginaldo@ubercomp.com)
  *
  *
  * This Javascript code is free software; you can redistribute it
@@ -59,7 +60,7 @@ lm32.lm32Pic = function() {
     function get_im() {
         return state.im;
     }
-    
+
     function get_ip() {
         return state.ip;
     }

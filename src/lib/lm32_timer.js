@@ -1,13 +1,12 @@
 /**
+ *
  * LatticeMico32 timer emulation.
  *
- * Copyright (c) 2011 Reginaldo Silva (reginaldo@ubercomp.com)
+ * Copyright (c) 2011-2012, 2016-2017 Reginaldo Silva (reginaldo@ubercomp.com)
  *
  *
  * With strong inspiration from QEMU's hw/lm32_timer.c
  *
- * Specification available at:
- *   http://www.latticesemi.com/documents/mico32timer.pdf
  *
  * This Javascript code is free software; you can redistribute it
  * and/or modify it under the terms of the GNU Lesser General Public

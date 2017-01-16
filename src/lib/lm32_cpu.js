@@ -1,14 +1,11 @@
 /**
+ *
  * LatticeMico32 emulation by interpretation and dynamic recompilation.
  *
  * Copyright (c) 2011-2012, 2016-2017 Reginaldo Silva (reginaldo@ubercomp.com)
  *
+ * Specification available at http://www.latticesemi.com/
  *
- * Specification available at:
- *   http://milkymist.org/socdoc/lm32_archman.pdf
- *
- * NOTES:
- *   Contrary to what the manual says, branch instructions are in the xyimm16 format
  *
  * This Javascript code is free software; you can redistribute it
  * and/or modify it under the terms of the GNU Lesser General Public

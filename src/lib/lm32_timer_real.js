@@ -1,7 +1,8 @@
 /**
+ *
  * LatticeMico32 timer emulation.
  *
- * Copyright (c) 2011 Reginaldo Silva (reginaldo@ubercomp.com)
+ * Copyright (c) 2011-2012, 2016-2017 Reginaldo Silva (reginaldo@ubercomp.com)
  *
  *
  * With strong inspiration from QEMU's hw/lm32_timer.c
