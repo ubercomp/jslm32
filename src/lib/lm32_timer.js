@@ -26,7 +26,7 @@
 
 lm32.lm32Timer = function(params) {
     // dependencies
-    var bits = lm32.bits;
+    var bits = lm32.util;
 
     // parameters
     var id = params.id;

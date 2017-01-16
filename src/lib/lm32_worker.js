@@ -17,7 +17,6 @@
  * <http://www.gnu.org/licenses/lgpl-2.1.html>
  */
 importScripts('lm32_base.js',
-    'lm32_bits.js',
     'lm32_pic.js',
     'lm32_cpu.js',
     'lm32_mmu.js',

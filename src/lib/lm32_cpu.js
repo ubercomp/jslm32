@@ -926,7 +926,7 @@ lm32.lm32Cpu = function (params) {
         }
 
         if(!ok) {
-            console.log("Error reading at address " + lm32.bits.format(uaddr) + " with width " + width);
+            console.log("Error reading at address " + lm32.util.format(uaddr) + " with width " + width);
             raise_exception(cs, EXCEPT_DATA_BUS_ERROR);
         }
     }
@@ -1044,11 +1044,11 @@ lm32.lm32Cpu = function (params) {
                 ok = cs.mmu.write_32(uaddr, cs.regs[cs.I_R1]);
                 break;
             default:
-                //console.log("Error writing to address " + lm32.bits.format(uaddr) + " with width " + width);
+                //console.log("Error writing to address " + lm32.util.format(uaddr) + " with width " + width);
                 break;
         }
         if(!ok) {
-            console.log('Error writing to address ' + lm32.bits.format(uaddr));
+            console.log('Error writing to address ' + lm32.util.format(uaddr));
             raise_exception(cs, EXCEPT_DATA_BUS_ERROR);
         }
     }
@@ -1870,13 +1870,13 @@ lm32.lm32Cpu = function (params) {
     }
 
     function dump_ie() {
-        var fmt = lm32.bits.format;
+        var fmt = lm32.util.format;
         console.log('ie=' + fmt(cs.ie_val()) + '(IE=' + cs.ie.ie + ' EIE=' + cs.ie.eie + ' BIE=' + cs.ie.bie + ')');
     }
 
     function dump() {
         var i;
-        var fmt = lm32.bits.format;
+        var fmt = lm32.util.format;
         console.log("DUMP:");
         console.log('');
         console.log('IN: PC=' + fmt(cs.pc));
@@ -1886,7 +1886,7 @@ lm32.lm32Cpu = function (params) {
 
         for(i = 0; i < 32; i++) {
             if(cs.regs[i] != 0) {
-                console.log("r" + i + " = " + lm32.bits.format(cs.regs[i]));
+                console.log("r" + i + " = " + lm32.util.format(cs.regs[i]));
             }
         }
     }

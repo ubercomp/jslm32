@@ -54,8 +54,8 @@ lm32.mmu = function() {
         for(var i = 0; i < len; i++) {
             var curr = handlers[i];
             if(lm32.util.overlaps(base, base + size - 1, curr.base_addr, curr.base_addr + curr.size - 1)) {
-                var ctext = "(base_addr = " + lm32.bits.format(curr.base_addr) + ", size = " + lm32.bits.format(curr.size) + ")";
-                var ttext = "(base_addr = " + lm32.bits.format(base) + ", size = " + lm32.bits.format(size) + ")";
+                var ctext = "(base_addr = " + lm32.util.format(curr.base_addr) + ", size = " + lm32.util.format(curr.size) + ")";
+                var ttext = "(base_addr = " + lm32.util.format(base) + ", size = " + lm32.util.format(size) + ")";
                 throw("ERROR: Bank at " + ttext + " overlaps with " + ctext + ".");
             }
         }
@@ -79,11 +79,11 @@ lm32.mmu = function() {
             var offset = addr - handler.base_addr;
             var val = (handler[name])(offset);
             if(val == undefined) {
-                //console.log("reading undefined at addr " + lm32.bits.format(addr));
+                //console.log("reading undefined at addr " + lm32.util.format(addr));
             }
             return (val & mask);
         } else {
-            //console.log("MMU ERROR: Cannot " + name + " at address: 0x" + lm32.bits.format(addr));
+            //console.log("MMU ERROR: Cannot " + name + " at address: 0x" + lm32.util.format(addr));
         }
     }
 
@@ -193,7 +193,7 @@ lm32.mmu = function() {
             write_8(addr + i, str.charCodeAt(i));
         }
         write_8(addr + len, 0);
-        //console.log('Wrote to ' + lm32.bits.format(addr) + ': ' + read_str(addr, 4096));
+        //console.log('Wrote to ' + lm32.util.format(addr) + ': ' + read_str(addr, 4096));
     };
 
     var write_array_data = function(addr, data, len) {

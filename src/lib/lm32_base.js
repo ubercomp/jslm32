@@ -21,10 +21,11 @@ var lm32 = {};
 
 lm32.util = {};
 
-lm32.util.beget = function(obj) {
-    var F = function() { };
-    F.prototype = obj;
-    return new F();
+lm32.util.format = function(n) {
+    var u32 = n>>>0;
+    var u32s = u32.toString(16);
+    var pad = (new Array(8 - u32s.length + 1)).join('0');
+    return "0x" + pad + u32s;
 };
 
 lm32.util.overlaps = function(a, b, c, d) {
@@ -33,5 +34,3 @@ lm32.util.overlaps = function(a, b, c, d) {
     var after = (a > d) && (b > d);
     return !(before || after);
 };
-
-    
