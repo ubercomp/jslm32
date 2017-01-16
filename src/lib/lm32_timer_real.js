@@ -77,7 +77,6 @@ lm32.lm32TimerReal = function(params) {
                 break;
             default:
                 r = 0;
-                //console.log("lm32_timer: read access to unknown register 0x" + (addr << 2).toString(16));
                 break;
         }
         return r;
@@ -115,10 +114,7 @@ lm32.lm32TimerReal = function(params) {
                 }
                 break;
             case R_SNAPSHOT:
-                //console.log("lm32_timer: write access to read only register 0x" + (addr << 2).toString(16));
-                break;
             default:
-                //console.log("lm32_timer: write access to unknown register 0x" + (addr << 2).toString(16));
                 break;
         }
         update_irq();

@@ -70,7 +70,6 @@ lm32.mmu = function() {
         if(funcs.write_16) { h.write_16 = funcs.write_16; };
         if(funcs.write_32) { h.write_32 = funcs.write_32; };
         handlers.push(h);
-        //console.log("Adding handlers at address 0x", base.toString(16), " with size", size, "->", h, "n = ", handlers.length);
     };
 
     var read = function(addr, mask, name) {
@@ -78,12 +77,7 @@ lm32.mmu = function() {
         if(handler && (name in handler)) {
             var offset = addr - handler.base_addr;
             var val = (handler[name])(offset);
-            if(val == undefined) {
-                //console.log("reading undefined at addr " + lm32.util.format(addr));
-            }
             return (val & mask);
-        } else {
-            //console.log("MMU ERROR: Cannot " + name + " at address: 0x" + lm32.util.format(addr));
         }
     }
 
@@ -193,7 +187,6 @@ lm32.mmu = function() {
             write_8(addr + i, str.charCodeAt(i));
         }
         write_8(addr + len, 0);
-        //console.log('Wrote to ' + lm32.util.format(addr) + ': ' + read_str(addr, 4096));
     };
 
     var write_array_data = function(addr, data, len) {

@@ -1044,7 +1044,6 @@ lm32.lm32Cpu = function (params) {
                 ok = cs.mmu.write_32(uaddr, cs.regs[cs.I_R1]);
                 break;
             default:
-                //console.log("Error writing to address " + lm32.util.format(uaddr) + " with width " + width);
                 break;
         }
         if(!ok) {
@@ -1149,7 +1148,6 @@ lm32.lm32Cpu = function (params) {
             case CSR_WP2:
             case CSR_WP3:
                 read = false;
-                //console.log("Invalid read on csr 0x" + csr.toString(16));
                 break;
 
             case CSR_DC:
@@ -1193,8 +1191,6 @@ lm32.lm32Cpu = function (params) {
         }
         if(read) {
             cs.regs[r2] = (val) | 0;
-        } else {
-            //console.log("Reading from invalid CSR: 0x" + csr.toString(16));
         }
     }
 
@@ -1280,7 +1276,6 @@ lm32.lm32Cpu = function (params) {
             // these cannot be written to:
             case CSR_CC:
             case CSR_CFG:
-                //console.log("Cannot write to csr number " + csr);
                 break;
 
             case CSR_IP:
@@ -1308,12 +1303,10 @@ lm32.lm32Cpu = function (params) {
                 break;
 
             case CSR_JTX:
-                //console.log("Writing CSR_JTX at PC: 0x" + (cs.pc).toString(16));
                 cs.jtx = val;
                 break;
 
             case CSR_JRX:
-                //console.log("Writing CSR_JRX at PC: 0x" + (cs.pc).toString(16));
                 cs.jrx = val;
                 break;
 
@@ -1345,7 +1338,6 @@ lm32.lm32Cpu = function (params) {
             // these cannot be written to:
             case CSR_CC:
             case CSR_CFG:
-                //console.log("Cannot write to csr number " + csr);
                 break;
 
             case CSR_IP:
@@ -1376,7 +1368,6 @@ lm32.lm32Cpu = function (params) {
                 break;
 
             case CSR_JRX:
-                //console.log("Writing CSR_JRX at PC: 0x" + (cs.pc).toString(16));
                 code = "cs.jrx = " + val + ";\n";
                 break;
 
@@ -1411,7 +1402,6 @@ lm32.lm32Cpu = function (params) {
 
     // reserved instruction
     function reserved() {
-        //console.log("Someone called the reserved instruction. Not cool!");
         throw "This should never be  called";
     }
 
