@@ -16,9 +16,10 @@
  * License along with this code; if not, see
  * <http://www.gnu.org/licenses/lgpl-2.1.html>
  */
+ (function() {
 "use strict";
 
-lm32.run_tests = function(wait_time, first_test, last_test) {
+function run_tests(wait_time, first_test, last_test) {
     if(! wait_time) {
         wait_time = 500;
     }
@@ -94,7 +95,7 @@ lm32.run_tests = function(wait_time, first_test, last_test) {
         last_test = tests.length - 1;
     }
     console.log("Running tests " + first_test + " through " + last_test);
-    var sys = lm32.start_sys(term_element);
+    var sys = start_sys(term_element);
     var i = first_test;
     var f = function() {
         sys.shutdown.value = false;
@@ -107,7 +108,7 @@ lm32.run_tests = function(wait_time, first_test, last_test) {
     f();
 };
 
-lm32.start_sys = function(terminal_div) {
+function start_sys(terminal_div) {
     var RAM_BASE = 0x08000000;
     var RAM_SIZE = 1*1024*1024;
     var EBA_BASE = 0;
@@ -162,7 +163,11 @@ lm32.start_sys = function(terminal_div) {
     var timer = dummyTimer();
 
     bus.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
-    bus.add_memory(TESTDEV_BASE, testdev.iomem_size, testdev.get_mmio_handlers());
+    bus.add_memory(
+        TESTDEV_BASE,
+        testdev.iomem_size,
+        testdev.get_mmio_handlers()
+    );
 
     function run_test(test_name, idx, shutdown) {
         var cpu = lm32.lm32Cpu(cpu_params);
@@ -175,11 +180,11 @@ lm32.start_sys = function(terminal_div) {
         var on_load_binary_result = function(result) {
             bus.log = true;
             var steps = 0;
-            while(shutdown.value == false && steps < MAX_STEPS) {
+            while(shutdown.value === false && steps < MAX_STEPS) {
                 cpu.step(1);
                 steps++;
             }
-            if(shutdown.value == false) {
+            if(shutdown.value === false) {
                 terminal.write("Shutdown was never requested. Test FAILED\n");
             }
 
@@ -187,9 +192,26 @@ lm32.start_sys = function(terminal_div) {
         bus.load_binary("../test/" + test_name, BOOT_PC,on_load_binary_result);
     }
 
-    var ret = {
-      run_test: run_test,
-      shutdown: shutdown
+    return {
+        run_test: run_test,
+        shutdown: shutdown
     };
-    return ret;
 };
+
+function start_tests(_event) {
+    run_tests(0);
+}
+
+function main() {
+    var div = document.getElementById('lm32_tests_container');
+    var button = document.createElement('button');
+    button.textContent = 'Run Tests!';
+    button.onclick = start_tests;
+    var terminal = document.createElement('pre');
+    terminal.id = 'terminal';
+    div.appendChild(button);
+    div.appendChild(terminal);
+}
+
+document.addEventListener("DOMContentLoaded", function(_event) { main(); });
+})();
