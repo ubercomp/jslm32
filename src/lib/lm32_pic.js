@@ -19,7 +19,7 @@
 
  */
 "use strict";
-lm32.lm32Pic = function() {
+lm32.pic = function() {
     var state = {ip: 0, im: 0, irq_state: 0};
 
     function dump() {

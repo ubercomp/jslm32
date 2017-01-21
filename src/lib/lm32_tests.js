@@ -156,7 +156,7 @@ function start_sys(terminal_div) {
         shutdown: shutdown_f,
         terminal: terminal
     };
-    var testdev = lm32.testDev(testdev_params);
+    var testdev = lm32.test_dev(testdev_params);
     var dummyTimer = function() {
         return {
             on_tick: function() {}
@@ -172,7 +172,7 @@ function start_sys(terminal_div) {
     );
 
     function run_test(test_name, idx, shutdown) {
-        var cpu = lm32.lm32Cpu(cpu_params);
+        var cpu = lm32.cpu(cpu_params);
         cpu.set_timers([timer]);
         // testdev.reset();
         var str = "\nRunning Test " + test_name + " (" + idx + ")\n";

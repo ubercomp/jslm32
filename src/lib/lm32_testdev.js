@@ -20,7 +20,7 @@
  */
 "use strict";
 
-lm32.testDev = function(params) {
+lm32.test_dev = function(params) {
     // dependencies:
     var bus = params.bus;
     var shutdown = params.shutdown;

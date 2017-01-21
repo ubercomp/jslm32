@@ -27,7 +27,7 @@
  */
 "use strict";
 
-lm32.lm32UART = function(params) {
+lm32.uart = function(params) {
     var echo       = false; // echo when receive a char?
 
     // parameters

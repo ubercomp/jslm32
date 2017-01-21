@@ -62,24 +62,24 @@ lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url, cb) {
         bootstrap_deba: DEBA_BASE
     };
 
-    var cpu = lm32.lm32Cpu(cpu_params);
+    var cpu = lm32.cpu(cpu_params);
     var set_irq = cpu.cs.pic.irq_handler;
 
-    var timer0 = lm32.lm32Timer({
+    var timer0 = lm32.timer({
         id: 0,
         irq_line: TIMER0_IRQ,
         set_irq: set_irq,
         frequency: CPU_FREQ
     });
 
-    //var timer1 = lm32.lm32Timer({
+    //var timer1 = lm32.timer({
     //    id: 1,
     //    irq_line: TIMER1_IRQ,
     //    set_irq: set_irq,
     //    frequency: CPU_FREQ
     //});
 
-    //var timer2 = lm32.lm32Timer({
+    //var timer2 = lm32.timer({
     //    id: 2,
     //    irq_line: TIMER2_IRQ,
     //    set_irq: set_irq,
@@ -88,13 +88,13 @@ lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url, cb) {
 
     // UART and Terminal
 
-    var uart0 = lm32.lm32UART({
+    var uart0 = lm32.uart({
         putchar: console_putchar_fn,
         irq_line: UART0_IRQ,
         set_irq: set_irq
     });
 
-    var uart1 = lm32.lm32UART({
+    var uart1 = lm32.uart({
         putchar: function(c) { /*console.log('uart1 putchar: ' + String.fromCharCode(c));*/ },
         irq_line: UART1_IRQ,
         set_irq: set_irq
@@ -112,7 +112,7 @@ lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url, cb) {
     //bus.add_memory(TIMER1_BASE, timer1.iomem_size, timer1.get_mmio_handlers());
     //bus.add_memory(TIMER2_BASE, timer2.iomem_size, timer2.get_mmio_handlers());
 
-    var hw = lm32.lm32_hwsetup();
+    var hw = lm32.uclinux_hwsetup();
     hw.add_cpu("LM32", CPU_FREQ);
     hw.add_ddr_sdram("ddr_sdram", RAM_BASE, RAM_SIZE);
     hw.add_timer("timer0", TIMER0_BASE, TIMER0_IRQ);
@@ -197,24 +197,24 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name, cb) {
         bootstrap_deba: DEBA_BASE
     };
 
-    var cpu = lm32.lm32Cpu(cpu_params);
+    var cpu = lm32.cpu(cpu_params);
     var set_irq = cpu.cs.pic.irq_handler;
 
-    var timer0 = lm32.lm32Timer({
+    var timer0 = lm32.timer({
         id: 0,
         irq_line: TIMER0_IRQ,
         set_irq: set_irq,
         frequency: CPU_FREQ
     });
 
-    var timer1 = lm32.lm32Timer({
+    var timer1 = lm32.timer({
         id: 1,
         irq_line: TIMER1_IRQ,
         set_irq: set_irq,
         frequency: CPU_FREQ
     });
 
-    var uart0 = lm32.lm32UART({
+    var uart0 = lm32.uart({
         putchar: console_putchar_fn,
         irq_line: UART0_IRQ,
         set_irq: set_irq,
@@ -223,7 +223,7 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name, cb) {
     uart0.set_echo(true);
     var send_str = uart0.send_str;
 
-    var fb0 = lm32.lm32_frame_buffer('frameBuffer', bus, ram, RAM_BASE, RAM_SIZE);
+    var fb0 = lm32.frame_buffer('frameBuffer', bus, ram, RAM_BASE, RAM_SIZE);
 
     bus.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
     bus.add_memory(UART0_BASE, uart0.iomem_size, uart0.get_mmio_handlers());

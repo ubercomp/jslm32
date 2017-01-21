@@ -20,7 +20,7 @@
  */
 "use strict";
 
-lm32.lm32_frame_buffer = function(container, bus, ram, ram_base, ram_size) {
+lm32.frame_buffer = function(container, bus, ram, ram_base, ram_size) {
     var DEFAULT_WIDTH = 10;
     var DEFAULT_HEIGHT = 10;
     var width = DEFAULT_WIDTH;

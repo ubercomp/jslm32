@@ -20,7 +20,7 @@
  */
 "use strict";
 
-lm32.lm32_hwsetup = function() {
+lm32.uclinux_hwsetup = function() {
     // constants
     var HWSETUP_TAG_EOL         = 0;
     var HWSETUP_TAG_CPU         = 1;

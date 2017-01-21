@@ -29,7 +29,7 @@
 // sign_extend(128, 8) -> 128 << 24 >> 24 -> -128
 
 
-lm32.lm32Cpu = function (params) {
+lm32.cpu = function (params) {
     // dependencies
     var cs = {}; // cpu state
 
@@ -93,7 +93,7 @@ lm32.lm32Cpu = function (params) {
         cs.pc = params.bootstrap_pc;
         cs.next_pc = cs.pc + 4; // jumps write on next_pc
 
-        cs.pic = lm32.lm32Pic();
+        cs.pic = lm32.pic();
 
         // interrupt enable
         cs.ie = {
