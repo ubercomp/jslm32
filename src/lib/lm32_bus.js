@@ -28,7 +28,7 @@ lm32.bus = function() {
     var last_handler = undefined;
 
     var get_handler_for = function(addr) {
-        if((last_handler != undefined)
+        if ((last_handler != undefined)
             && (addr >= last_handler.base_addr)
             && (addr < last_handler.base_addr + last_handler.size)) {
             return last_handler;
@@ -36,9 +36,9 @@ lm32.bus = function() {
 
         var handler = undefined;
         var len = handlers.length;
-        for(var i = 0; i < len; i++) {
+        for (var i = 0; i < len; i++) {
             var curr = handlers[i];
-            if((addr >= curr.base_addr) && (addr < curr.base_addr + curr.size)) {
+            if ((addr >= curr.base_addr) && (addr < curr.base_addr + curr.size)) {
                 handler = curr;
                 last_handler = handler;
             }
@@ -47,13 +47,13 @@ lm32.bus = function() {
     };
 
     var add_memory = function(base, size, funcs) {
-        if( (base < 0) || (size < 1) || ((base + size) > 0xffffffff) ) {
+        if ((base < 0) || (size < 1) || ((base + size) > 0xffffffff)) {
             throw ("ERROR: Invalid base and size parameters")
         }
         var len = handlers.length;
-        for(var i = 0; i < len; i++) {
+        for (var i = 0; i < len; i++) {
             var curr = handlers[i];
-            if(lm32.util.overlaps(base, base + size - 1, curr.base_addr, curr.base_addr + curr.size - 1)) {
+            if (lm32.util.overlaps(base, base + size - 1, curr.base_addr, curr.base_addr + curr.size - 1)) {
                 var ctext = "(base_addr = " + lm32.util.format(curr.base_addr) + ", size = " + lm32.util.format(curr.size) + ")";
                 var ttext = "(base_addr = " + lm32.util.format(base) + ", size = " + lm32.util.format(size) + ")";
                 throw("ERROR: Bank at " + ttext + " overlaps with " + ctext + ".");
@@ -63,18 +63,18 @@ lm32.bus = function() {
         var h = {};
         h.base_addr = base;
         h.size = size;
-        if(funcs.read_8)   { h.read_8   = funcs.read_8;   };
-        if(funcs.read_16)  { h.read_16  = funcs.read_16;  };
-        if(funcs.read_32)  { h.read_32  = funcs.read_32;  };
-        if(funcs.write_8)  { h.write_8  = funcs.write_8;  };
-        if(funcs.write_16) { h.write_16 = funcs.write_16; };
-        if(funcs.write_32) { h.write_32 = funcs.write_32; };
+        if (funcs.read_8)   { h.read_8   = funcs.read_8;   };
+        if (funcs.read_16)  { h.read_16  = funcs.read_16;  };
+        if (funcs.read_32)  { h.read_32  = funcs.read_32;  };
+        if (funcs.write_8)  { h.write_8  = funcs.write_8;  };
+        if (funcs.write_16) { h.write_16 = funcs.write_16; };
+        if (funcs.write_32) { h.write_32 = funcs.write_32; };
         handlers.push(h);
     };
 
     var read = function(addr, mask, name) {
-        var handler = get_handler_for(addr);
-        if(handler && (name in handler)) {
+        var handler = get_handler_for (addr);
+        if (handler && (name in handler)) {
             var offset = addr - handler.base_addr;
             var val = (handler[name])(offset);
             return (val & mask);
@@ -94,9 +94,9 @@ lm32.bus = function() {
     };
 
     var write = function(addr, val, mask, name) {
-        var handler = get_handler_for(addr);
+        var handler = get_handler_for (addr);
         var ret = true;
-        if(handler && (name in handler)) {
+        if (handler && (name in handler)) {
             var offset = addr - handler.base_addr;
             var sval = val & mask; //safe
             (handler[name])(offset, sval);
@@ -119,10 +119,10 @@ lm32.bus = function() {
     };
 
     var copy_region = function(from, to, size) {
-        if(size <= 0) {
+        if (size <= 0) {
             return;
         }
-        for(var i = 0; i < size; i++) {
+        for (var i = 0; i < size; i++) {
             write_8(to + i, read_8(from + i));
         }
     };
@@ -158,7 +158,7 @@ lm32.bus = function() {
         var req;
         req = new XMLHttpRequest();
         req.open('GET', file);
-        if('responseType' in req) {
+        if ('responseType' in req) {
             req.responseType = 'arraybuffer';
         } else {
             req.overrideMimeType('text/plain; charset=x-user-defined');
@@ -170,9 +170,9 @@ lm32.bus = function() {
     var read_str = function(addr, max_size) {
         var str = '';
         var ch;
-        for(var i = 0; i < max_size; i++) {
+        for (var i = 0; i < max_size; i++) {
             ch = read_8(addr + i);
-            if(ch == 0) {
+            if (ch == 0) {
                 break;
             }
             str += String.fromCharCode(ch);
@@ -183,7 +183,7 @@ lm32.bus = function() {
     var write_str = function(addr, str) {
         var i;
         var len = str.length;
-        for(i = 0; i < len; i++) {
+        for (i = 0; i < len; i++) {
             write_8(addr + i, str.charCodeAt(i));
         }
         write_8(addr + len, 0);
@@ -191,7 +191,7 @@ lm32.bus = function() {
 
     var write_array_data = function(addr, data, len) {
         var i;
-        for(i = 0; i < len; i++) {
+        for (i = 0; i < len; i++) {
             write_8(addr + i, data[i]);
         }
     };

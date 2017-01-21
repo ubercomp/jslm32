@@ -163,15 +163,15 @@ lm32.lm32UART = function(params) {
     }
 
     function do_rx(value) {
-        if(regs[R_LSR] & LSR_DR) {
+        if (regs[R_LSR] & LSR_DR) {
             regs[R_LSR] = regs[R_LSR] | LSR_OE;
         }
 
         regs[R_LSR]  = regs[R_LSR] | LSR_DR;
         value &= 0xff;
         regs[R_RXTX] = value
-        if(echo && putchar) {
-            if(value == ('\n').charCodeAt(0)) {
+        if (echo && putchar) {
+            if (value == ('\n').charCodeAt(0)) {
                 putchar(('\r').charCodeAt(0));
             }
             putchar(regs[R_RXTX] >>> 0);
@@ -180,7 +180,7 @@ lm32.lm32UART = function(params) {
     }
 
     function reset() {
-        for(var i = 0; i < R_MAX; i++) {
+        for (var i = 0; i < R_MAX; i++) {
             regs[i] = 0;
         }
         regs[R_LSR] = LSR_THRE | LSR_TEMT;
@@ -200,12 +200,12 @@ lm32.lm32UART = function(params) {
     function process_str() {
         var f = function() {
             var charCode;
-            if(str_processing.length == 0) {
+            if (str_processing.length == 0) {
                 is_processing = false;
             } else {
                 // take one char
                 charCode = str_processing.charCodeAt(0);
-                if(can_rx()) {
+                if (can_rx()) {
                     do_rx(charCode);
                     str_processing = str_processing.substr(1, str_processing.length - 1);
                 }
@@ -217,7 +217,7 @@ lm32.lm32UART = function(params) {
 
     function send_str(str) {
         str_processing += str;
-        if(!is_processing) {
+        if (!is_processing) {
             is_processing = true;
             process_str();
         }

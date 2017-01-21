@@ -80,7 +80,7 @@ lm32.lm32Timer = function(params) {
         value = value | 0;
         switch (addr) {
             case R_SR:
-                if(value & SR_TO) {
+                if (value & SR_TO) {
                     regs[R_SR] |= SR_TO;
                 } else {
                     regs[R_SR] &= ~SR_TO;
@@ -88,15 +88,15 @@ lm32.lm32Timer = function(params) {
                 break;
             case R_CR:
                 regs[R_CR] = value;
-                if((value & CR_START) != 0) {
+                if ((value & CR_START) != 0) {
                     regs[R_SR] |= SR_RUN;
                 }
-                if((value & CR_STOP) != 0) {
+                if ((value & CR_STOP) != 0) {
                     regs[R_SR] &= ~SR_RUN;
                 }
                 break;
             case R_PERIOD:
-                if(value < 0) {
+                if (value < 0) {
                     throw ('timer' + id + 'bad period ' + value);
                 } else {
                     regs[addr] = value;
@@ -111,9 +111,9 @@ lm32.lm32Timer = function(params) {
     }
 
     function on_tick(ticks) {
-        if((regs[R_SR] & SR_RUN)) {
+        if ((regs[R_SR] & SR_RUN)) {
             regs[R_SNAPSHOT] -= ticks;
-            if(regs[R_SNAPSHOT] <= 0) {
+            if (regs[R_SNAPSHOT] <= 0) {
                 hit(-regs[R_SNAPSHOT]);
             }
         }
@@ -127,7 +127,7 @@ lm32.lm32Timer = function(params) {
         // when counter is zero, snapshot is updated, regardless of CR_CONT
         regs[R_SNAPSHOT] = regs[R_PERIOD];
 
-        if((regs[R_CR] & CR_CONT) == 0) {
+        if ((regs[R_CR] & CR_CONT) == 0) {
             // not continuous, stop running
             regs[R_SR] &= ~SR_RUN;
         }
@@ -135,7 +135,7 @@ lm32.lm32Timer = function(params) {
     }
 
     function reset() {
-        for(var i = 0; i < R_MAX; i++) {
+        for (var i = 0; i < R_MAX; i++) {
             regs[i] = 0;
         }
     }

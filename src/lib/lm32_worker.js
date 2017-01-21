@@ -61,9 +61,9 @@ function worker_on_message(e) {
 function worker_start(e) {
     var msg = e.data
     var type = msg.type
-    if(type === 'lm32_start') {
+    if (type === 'lm32_start') {
         var on_start_uclinux_result = function(result) {
-            if(result.success) {
+            if (result.success) {
                 sys = result.system;
                 step = sys.cpu.step;
                 sys.cpu.cs.mips_log_function = worker_inform_mips;

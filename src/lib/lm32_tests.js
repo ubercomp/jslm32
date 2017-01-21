@@ -22,7 +22,7 @@
 "use strict";
 
 function run_tests(wait_time, first_test, last_test) {
-    if(! wait_time) {
+    if (! wait_time) {
         wait_time = 500;
     }
     var term_element = 'terminal';
@@ -90,10 +90,10 @@ function run_tests(wait_time, first_test, last_test) {
         'test_xor.tst.bin',
         'test_xori.tst.bin'
     ];
-    if(first_test === undefined) {
+    if (first_test === undefined) {
         first_test = 0;
     }
-    if(last_test === undefined) {
+    if (last_test === undefined) {
         last_test = tests.length - 1;
     }
     console.log("Running tests " + first_test + " through " + last_test);
@@ -103,7 +103,7 @@ function run_tests(wait_time, first_test, last_test) {
         sys.shutdown.value = false;
         sys.run_test(tests[i], i, sys.shutdown);
         i++;
-        if(i <= last_test) {
+        if (i <= last_test) {
             setTimeout(f, wait_time);
         }
     }
@@ -182,11 +182,11 @@ function start_sys(terminal_div) {
         var on_load_binary_result = function(result) {
             bus.log = true;
             var steps = 0;
-            while(shutdown.value === false && steps < MAX_STEPS) {
+            while (shutdown.value === false && steps < MAX_STEPS) {
                 cpu.step(1);
                 steps++;
             }
-            if(shutdown.value === false) {
+            if (shutdown.value === false) {
                 terminal.write("Shutdown was never requested. Test FAILED\n");
             }
 

@@ -42,12 +42,12 @@ lm32.lm32_frame_buffer = function(container, bus, ram, ram_base, ram_size) {
 
     function init() {
         var fb_div = document.getElementById(container);
-        if(!fb_div) {
+        if (!fb_div) {
             throw('No element with id: ' + container);
         }
         fb_div.innerHTML = '';
         canvas = document.createElement('canvas');
-        if(!"function" === typeof(canvas.getContext)) {
+        if (!"function" === typeof(canvas.getContext)) {
             fb_div.innerHTML = '<h3>Your browser does not support canvas.</h3>';
             throw "Canvas not supported";
         }
@@ -55,7 +55,7 @@ lm32.lm32_frame_buffer = function(container, bus, ram, ram_base, ram_size) {
         canvas.height = DEFAULT_HEIGHT;
         c2d = canvas.getContext('2d');
         imgData = c2d.createImageData(width, height);
-        if(!c2d) {
+        if (!c2d) {
             fb_div.innerHTML = "<h3>Can't get canvas 2d context</h3>";
             throw "Can't get 2d context from canvas";
         }
@@ -65,14 +65,14 @@ lm32.lm32_frame_buffer = function(container, bus, ram, ram_base, ram_size) {
 
     function reset() {
         regs = new Int32Array(R_MAX);
-        for(var i = 0; i < R_MAX; i++) {
+        for (var i = 0; i < R_MAX; i++) {
             regs[i] = 0;
         }
     }
 
     function read_32(addr) {
         addr >>= 2;
-        if(addr < 0 || addr >= R_MAX) {
+        if (addr < 0 || addr >= R_MAX) {
             throw("lm32_frame_buffer: unknown register: " + addr);
         }
         switch(addr) {
@@ -88,7 +88,7 @@ lm32.lm32_frame_buffer = function(container, bus, ram, ram_base, ram_size) {
 
     function fmt(color) {
       var str = color.toString(16);
-      if(str.length == 1) {
+      if (str.length == 1) {
           str = '0' + str;
       }
       return str;
@@ -97,7 +97,7 @@ lm32.lm32_frame_buffer = function(container, bus, ram, ram_base, ram_size) {
 
     function write_32(addr, val) {
         addr >>= 2;
-        if(addr < 0 || addr >= R_MAX) {
+        if (addr < 0 || addr >= R_MAX) {
             throw("lm32_frame_buffer: unknown register: " + addr);
         }
         switch(addr) {
@@ -115,7 +115,7 @@ lm32.lm32_frame_buffer = function(container, bus, ram, ram_base, ram_size) {
                 var pix = (val >>> 0) - ram_base;
                 var iImgData = imgData; // internal img data
                 var end = 4 * width * height;
-                for(var i = 0; i < end; i++) {
+                for (var i = 0; i < end; i++) {
                     iImgData.data[i] = v8[pix+i];
                 }
                 c2d.putImageData(iImgData, 0, 0);

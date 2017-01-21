@@ -41,10 +41,10 @@ lm32.testDev = function(params) {
 
     function copy_testname() {
         var addr = regs[R_TESTNAME];
-        for(var i = 0; i < MAX_TESTNAME_LEN; i++) {
+        for (var i = 0; i < MAX_TESTNAME_LEN; i++) {
             var val = bus.read_8(addr + i);
             testname[i] = val;
-            if(val == 0) {
+            if (val == 0) {
                 break;
             }
         }
@@ -54,14 +54,14 @@ lm32.testDev = function(params) {
     function testname_charr_to_str() {
         var  s = '';
         var i;
-        for(i = 0; i < MAX_TESTNAME_LEN; i ++) {
+        for (i = 0; i < MAX_TESTNAME_LEN; i ++) {
             var val = testname[i];
-            if(val == 0) {
+            if (val == 0) {
                 break;
             }
             s += String.fromCharCode(val);
         }
-        while(i < MAX_TESTNAME_LEN) {
+        while (i < MAX_TESTNAME_LEN) {
             s = s + ' ';
             i++;
         }
@@ -71,13 +71,13 @@ lm32.testDev = function(params) {
     function reset() {
         // registers
         regs = new Int32Array(R_MAX);
-        for(var i = 0; i < R_MAX; i++) {
+        for (var i = 0; i < R_MAX; i++) {
             regs[i] = 0;
         }
 
         // array of characters forming testname
         testname = new Int8Array(MAX_TESTNAME_LEN);
-        for(var i = 0; i < MAX_TESTNAME_LEN; i++) {
+        for (var i = 0; i < MAX_TESTNAME_LEN; i++) {
             testname[i] = 0;
         }
     }

@@ -123,7 +123,7 @@ lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url, cb) {
     hw.add_trailer();
 
     var on_load_initrd = function(status) {
-        if(status.success) {
+        if (status.success) {
             var initrd_size = status.size;
             bus.write_str(CMDLINE_BASE, "root=/dev/ram0 console=ttyS0,115200 ramdisk_size=16384");
 
@@ -154,7 +154,7 @@ lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url, cb) {
     }
 
     var on_load_kernel = function(status) {
-        if(status.success) {
+        if (status.success) {
             bus.load_binary(romfs_url, INITRD_BASE, on_load_initrd);
         } else {
             cb({success: false});
@@ -233,7 +233,7 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name, cb) {
 
     var on_load_binary_result = function(result) {
         var cb_result = {success: false, system: undefined};
-        if(result.success) {
+        if (result.success) {
             cpu.cs.pc = KERNEL_BASE;
             cpu.set_timers([timer0, timer1]);
             cb_result.success = true;

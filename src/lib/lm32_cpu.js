@@ -382,7 +382,7 @@ lm32.lm32Cpu = function (params) {
         var a = cs.regs[ry];
         var b = reg_p ? cs.regs[rz] : (cs.I_IMM16 << 16 >> 16);
 
-        if(fcond(a, b)) {
+        if (fcond(a, b)) {
             cs.regs[rx] = 1;
         } else {
             cs.regs[rx] = 0;
@@ -499,7 +499,7 @@ lm32.lm32Cpu = function (params) {
     function div(cs) {
         var vr0 = cs.regs[cs.I_R0];
         var vr1 = cs.regs[cs.I_R1];
-        if(vr1 === 0) {
+        if (vr1 === 0) {
             raise_exception(cs, EXCEPT_DIVIDE_BY_ZERO);
         } else {
             cs.regs[cs.I_R2] = (Math.floor(vr0/vr1)) | 0;
@@ -510,7 +510,7 @@ lm32.lm32Cpu = function (params) {
         // returns from block when exception is thrown
         // see raise_exception_e
         return "" +
-            "if($r[" + es.I_R1 + "] === 0) {\n" +
+            "if ($r[" + es.I_R1 + "] === 0) {\n" +
             raise_exception_e(es, EXCEPT_DIVIDE_BY_ZERO) +
             "} else {\n" +
             "    $r[" + es.I_R2 + "] = (Math.floor($r[" + es.I_R0 + "]/$r[" + es.I_R1 + "])) | 0;\n" +
@@ -532,7 +532,7 @@ lm32.lm32Cpu = function (params) {
         // returns from block when exception is thrown
         // see raise_exception_e
         return "" +
-            "if($r[" + es.I_R1 + "] === 0) {\n" +
+            "if ($r[" + es.I_R1 + "] === 0) {\n" +
             raise_exception_e(es, EXCEPT_DIVIDE_BY_ZERO) +
             "} else {\n" +
             "    $r[" + es.I_R2 + "] = (Math.floor(($r[" + es.I_R0 + "] >>> 0)/($r[" + es.I_R1 + "] >>> 0))) | 0;\n" +
@@ -553,7 +553,7 @@ lm32.lm32Cpu = function (params) {
         // returns from block when exception is thrown
         // see raise_exception_e
         return "" +
-            "if($r[" + es.I_R1 + "] === 0) {\n" +
+            "if ($r[" + es.I_R1 + "] === 0) {\n" +
             raise_exception_e(es, EXCEPT_DIVIDE_BY_ZERO) +
             "} else {\n" +
             "    $r[" + es.I_R2 + "] = ($r[" + es.I_R0 + "] % $r[" + es.I_R1 + "]) | 0;\n" +
@@ -574,7 +574,7 @@ lm32.lm32Cpu = function (params) {
         // returns from block when exception is thrown
         // see raise_exception_e
         return "" +
-            "if($r[" + es.I_R1 + "] === 0) {\n" +
+            "if ($r[" + es.I_R1 + "] === 0) {\n" +
             raise_exception_e(es, EXCEPT_DIVIDE_BY_ZERO) +
             "} else {\n" +
             "    $r[" + es.I_R2 + "] = (($r[" + es.I_R0 + "] >>> 0) % ($r[" + es.I_R1 + "] >>> 0)) | 0;\n" +
@@ -746,10 +746,10 @@ lm32.lm32Cpu = function (params) {
     // branch and call implementations
     function b(cs) {
         var r0 = cs.I_R0;
-        if(r0 == REG_EA) {
+        if (r0 == REG_EA) {
             // eret -> restore eie
             cs.ie.ie = cs.ie.eie;
-        } else if(r0 == REG_BA) {
+        } else if (r0 == REG_BA) {
             // bret -> restore bie
             cs.ie.ie = cs.ie.bie;
         }
@@ -759,9 +759,9 @@ lm32.lm32Cpu = function (params) {
     function b_e(es) {
         var str;
         str = "";
-        if(es.I_R0 === REG_EA) {
+        if (es.I_R0 === REG_EA) {
             str+= "cs.ie.ie = cs.ie.eie;\n";
-        } else if(es.I_R0 === REG_BA) {
+        } else if (es.I_R0 === REG_BA) {
             str+= "cs.ie.ie = cs.ie.bie;\n";
         }
         str+= "$n = ($r[" + es.I_R0 + "] >>> 0);\n";
@@ -780,14 +780,14 @@ lm32.lm32Cpu = function (params) {
     function branch_conditional(cs, fcond) {
         var a = cs.regs[cs.I_R0];
         var b = cs.regs[cs.I_R1];
-        if(fcond(a, b)) {
+        if (fcond(a, b)) {
             cs.next_pc = (cs.pc + ((cs.I_IMM16 << 2) << 14 >> 14)) >>> 0;
         }
     }
 
     function branch_conditional_e(es, cond, wrap) {
         return "" +
-            "if(($r[" + es.I_R0 + "] " + wrap + ") " + cond + "($r[" + es.I_R1 + "] " + wrap + ")) {\n" +
+            "if (($r[" + es.I_R0 + "] " + wrap + ") " + cond + "($r[" + es.I_R1 + "] " + wrap + ")) {\n" +
             "    $n = (" + es.I_PC + " + (" + ((es.I_IMM16 << 2) << 14 >> 14) + ")) >>> 0;\n" +
             "    break " + BLOCK_CHOICE + ";\n" +
             "}\n";
@@ -866,9 +866,9 @@ lm32.lm32Cpu = function (params) {
 
     function scall(cs) {
         var imm5 = cs.I_IMM5;
-        if(imm5 == 7) {
+        if (imm5 == 7) {
             raise_exception(cs, EXCEPT_SYSTEM_CALL);
-        } else if(imm5 == 2) {
+        } else if (imm5 == 2) {
             raise_exception(cs, EXCEPT_BREAKPOINT);
         } else {
             throw "Invalid opcode";
@@ -914,15 +914,15 @@ lm32.lm32Cpu = function (params) {
                 break;
         }
 
-        if(val !== undefined) {
+        if (val !== undefined) {
             ok = true;
-            if(aft != 0) {
+            if (aft != 0) {
                 val = val << aft >> aft;
             }
             cs.regs[cs.I_R1] = val;
         }
 
-        if(!ok) {
+        if (!ok) {
             console.log("Error reading at address " + lm32.util.format(uaddr) + " with width " + width);
             raise_exception(cs, EXCEPT_DATA_BUS_ERROR);
         }
@@ -953,7 +953,7 @@ lm32.lm32Cpu = function (params) {
         var wrap = signed ? " << " + (32 - width) + " >> " + (32 - width) + "" : "";
         return "" +
             "$u = ($r[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
-            "if(($u >= " + (cs.ram_base >>> 0) + ") && ($u < " + (cs.ram_max >>> 0) + ")) {\n" +
+            "if (($u >= " + (cs.ram_base >>> 0) + ") && ($u < " + (cs.ram_max >>> 0) + ")) {\n" +
             "    $i = $u - " + cs.ram_base + ";\n" +
             "    $r[" + es.I_R1 + "] = (" + ram_read_e(width) + ")" + wrap + ";\n" +
             "} else {\n" +
@@ -965,7 +965,7 @@ lm32.lm32Cpu = function (params) {
 
     function lb(cs) {
         var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
-        if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
+        if ((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.regs[cs.I_R1] = (cs.ram.read_8(uaddr - cs.ram_base) << 24 >> 24);
         } else {
             load(cs, uaddr, 8, 24);
@@ -978,7 +978,7 @@ lm32.lm32Cpu = function (params) {
 
     function lbu(cs) {
         var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
-        if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
+        if ((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.regs[cs.I_R1] = cs.ram.read_8(uaddr - cs.ram_base);
         } else {
             load(cs, uaddr, 8, 0);
@@ -991,7 +991,7 @@ lm32.lm32Cpu = function (params) {
 
     function lh(cs) {
         var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
-        if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
+        if ((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.regs[cs.I_R1] = (cs.ram.read_16(uaddr - cs.ram_base) << 16 >> 16);
         } else {
             load(cs, uaddr, 16, 16);
@@ -1004,7 +1004,7 @@ lm32.lm32Cpu = function (params) {
 
     function lhu(cs) {
         var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
-        if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
+        if ((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.regs[cs.I_R1] = cs.ram.read_16(uaddr - cs.ram_base);
         } else {
             load(cs, uaddr, 16, 0);
@@ -1017,7 +1017,7 @@ lm32.lm32Cpu = function (params) {
 
     function lw(cs) {
         var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
-        if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
+        if ((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.regs[cs.I_R1] = cs.ram.read_32(uaddr - cs.ram_base);
         } else {
             load(cs, uaddr, 32, 0);
@@ -1043,7 +1043,7 @@ lm32.lm32Cpu = function (params) {
             default:
                 break;
         }
-        if(!ok) {
+        if (!ok) {
             console.log('Error writing to address ' + lm32.util.format(uaddr));
             raise_exception(cs, EXCEPT_DATA_BUS_ERROR);
         }
@@ -1077,7 +1077,7 @@ lm32.lm32Cpu = function (params) {
         return "" +
             "$u = ($r[" + es.I_R0 + "] + (" + (es.I_IMM16 << 16 >> 16) + ")) >>> 0;\n" +
             "$t = $r[" + es.I_R1 + "];\n" +
-            "if(($u >= " + (cs.ram_base >>> 0) + ") && ($u < " + (cs.ram_max >>> 0) + ")) {\n" +
+            "if (($u >= " + (cs.ram_base >>> 0) + ") && ($u < " + (cs.ram_max >>> 0) + ")) {\n" +
             "    $i = $u - " + cs.ram_base + ";\n" +
             ram_write_e(width) +
             "} else {\n" +
@@ -1088,7 +1088,7 @@ lm32.lm32Cpu = function (params) {
 
     function sb(cs) {
         var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
-        if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
+        if ((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.ram.v8[uaddr - cs.ram_base] = cs.regs[cs.I_R1] & 0xff;
             //cs.ram.write_8(uaddr - cs.ram_base, cs.regs[cs.I_R1] & 0xff);
         } else {
@@ -1102,7 +1102,7 @@ lm32.lm32Cpu = function (params) {
 
     function sh(cs) {
         var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
-        if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
+        if ((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.ram.write_16(uaddr - cs.ram_base, cs.regs[cs.I_R1] & 0xffff);
         } else {
             store(cs, uaddr, 16);
@@ -1115,7 +1115,7 @@ lm32.lm32Cpu = function (params) {
 
     function sw(cs) {
         var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
-        if((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
+        if ((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
             cs.ram.write_32(uaddr - cs.ram_base, cs.regs[cs.I_R1] | 0);
         } else {
             store(cs, uaddr, 32);
@@ -1186,7 +1186,7 @@ lm32.lm32Cpu = function (params) {
                 throw ("No such CSR register: " + csr);
                 break;
         }
-        if(read) {
+        if (read) {
             cs.regs[r2] = (val) | 0;
         }
     }
@@ -1619,7 +1619,7 @@ lm32.lm32Cpu = function (params) {
 
     function tick(ticks) {
         var len = cs.timers.length;
-        for(var i = 0; i < len; i++) {
+        for (var i = 0; i < len; i++) {
             (cs.timers[i])(ticks);
         }
     }
@@ -1646,7 +1646,7 @@ lm32.lm32Cpu = function (params) {
         var ticks = 0; // ticks to inform
         var tick_f; // function to be called for ticks
         var ioptable = optable;
-        if(ics.orig_timers.length == 1) {
+        if (ics.orig_timers.length == 1) {
             // optimize when there's only one timer
             tick_f = ics.orig_timers[0].on_tick;
         } else {
@@ -1656,7 +1656,7 @@ lm32.lm32Cpu = function (params) {
         var v8 = ics.ram.v8;
 
         do {
-            if((ps.ip & ps.im) && ics.ie.ie == 1) {
+            if ((ps.ip & ps.im) && ics.ie.ie == 1) {
                 // here is the correct place to treat exceptions
                 raise_exception(ics, 6);
             }
@@ -1681,15 +1681,15 @@ lm32.lm32Cpu = function (params) {
 
             inc = 1;
             ticks += inc;
-            if(ticks >= max_ticks) {
+            if (ticks >= max_ticks) {
                 tick_f(max_ticks);
                 ticks -= max_ticks;
             }
             ics.cc = (ics.cc + inc) | 0;
             ics.pc = ics.next_pc;
-        } while(++i < instructions);
+        } while (++i < instructions);
         ics.instr_count += i;
-        if(ics.instr_count >= 10000000) {
+        if (ics.instr_count >= 10000000) {
             var time = (new Date()).getTime();
             var delta = time - ics.instr_count_start;
             ics.instr_count_start = time;
@@ -1713,7 +1713,7 @@ lm32.lm32Cpu = function (params) {
         var max_ticks = 1000; // max_ticks without informing timer
         var ticks = 0; // ticks to inform
         var tick_f; // function to be called for ticks
-        if(ics.orig_timers.length == 1) {
+        if (ics.orig_timers.length == 1) {
             // optimize when there's only one timer
             tick_f = ics.orig_timers[0].on_tick;
         } else {
@@ -1729,13 +1729,13 @@ lm32.lm32Cpu = function (params) {
 
 
         do {
-            if((ps.ip & ps.im) && ics.ie.ie == 1) {
+            if ((ps.ip & ps.im) && ics.ie.ie == 1) {
                 // here is the correct place to treat exceptions
                 raise_exception(ics, 6);
             }
 
             pc = ics.pc;
-            if(!bc[pc]) {
+            if (!bc[pc]) {
                 // emmit a block
 
                 prologue = [];
@@ -1761,7 +1761,7 @@ lm32.lm32Cpu = function (params) {
                 prologue.push("var $n = " + pc + ";\n");
 
                 body.push(BLOCK_LOOP);
-                body.push(": while($c < 3) {\n");
+                body.push(": while ($c < 3) {\n");
                 body.push("    $c++;\n");
                 body.push("    ");
                 body.push(BLOCK_CHOICE);
@@ -1787,7 +1787,7 @@ lm32.lm32Cpu = function (params) {
                     body.push((emmiters[opcode])(es));
                     block[2] += 1;
 
-                    if(ics.block_exit[opcode]) {
+                    if (ics.block_exit[opcode]) {
                         // block exit falls through default
                         body.push("default: break ");
                         body.push(BLOCK_LOOP);
@@ -1796,14 +1796,14 @@ lm32.lm32Cpu = function (params) {
                         // statistics
                         ics.n_blocks += 1;
                         ics.size_blocks += block[2];
-                        if(block[2] > ics.max_block) {
+                        if (block[2] > ics.max_block) {
                             ics.max_block = block[2];
                         }
                         break;
                     } else {
                         block[0] = (block[0] + 4) >>> 0;
                     }
-                } while(true);
+                } while (true);
                 body.push("    }\n"); // close switch
                 body.push("}\n");     //close while
 
@@ -1819,15 +1819,15 @@ lm32.lm32Cpu = function (params) {
             inc = block[2];
             i += inc;
             ticks += inc;
-            if(ticks >= max_ticks) {
+            if (ticks >= max_ticks) {
                 tick_f(max_ticks);
                 ticks -= max_ticks;
             }
             ics.cc = (ics.cc + inc) | 0;
             ics.pc = ics.next_pc;
-        } while(i < instructions);
+        } while (i < instructions);
         ics.instr_count += i;
-        if(ics.instr_count >= 10000000) {
+        if (ics.instr_count >= 10000000) {
             var time = (new Date()).getTime();
             var delta = time - ics.instr_count_start;
             ics.instr_count_start = time;
@@ -1850,7 +1850,7 @@ lm32.lm32Cpu = function (params) {
         var len = timers.length;
         cs.timers = new Array(len);
         cs.orig_timers = timers;
-        for(var i = 0; i < len; i++) {
+        for (var i = 0; i < len; i++) {
             var cur = timers[i];
             (cs.timers)[i] = cur.on_tick;
         }
@@ -1871,8 +1871,8 @@ lm32.lm32Cpu = function (params) {
         console.log('im='+ fmt(cs.pic.get_im()) + ' ip=' + fmt(cs.pic.get_ip()));
         console.log('eba=' + fmt(cs.eba) + ' deba=' + fmt(cs.deba));
 
-        for(i = 0; i < 32; i++) {
-            if(cs.regs[i] != 0) {
+        for (i = 0; i < 32; i++) {
+            if (cs.regs[i] != 0) {
                 console.log("r" + i + " = " + lm32.util.format(cs.regs[i]));
             }
         }

@@ -45,7 +45,7 @@ lm32.lm32_hwsetup = function() {
     var ptr = 0;
 
     function get_data() {
-        if(data.length != ptr) {
+        if (data.length != ptr) {
             throw "There are bugs in the programming...";
         }
         return data;
@@ -71,10 +71,10 @@ lm32.lm32_hwsetup = function() {
     function add_str(str) {
         var len = str.length;
         var nz = 32 - len;
-        for(var i = 0; i < len; i++) {
+        for (var i = 0; i < len; i++) {
             data.push(str.charCodeAt(i));
         }
-        for(var i = 0; i < nz; i++) {
+        for (var i = 0; i < nz; i++) {
             data.push(0);
         }
         ptr += 32;
