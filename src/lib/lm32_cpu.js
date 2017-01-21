@@ -582,11 +582,11 @@ lm32.lm32Cpu = function (params) {
     }
 
     function mul(cs) {
-        cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] * cs.regs[cs.I_R1]) | 0;
+        cs.regs[cs.I_R2] = Math.imul(cs.regs[cs.I_R0], cs.regs[cs.I_R1]);
     }
 
     function mul_e(es) {
-        return "$r[" + es.I_R2 + "] = ($r[" + es.I_R0 + "] * $r[" + es.I_R1 + "]) | 0;\n";
+        return "$r[" + es.I_R2 + "] = Math.imul($r[" + es.I_R0 + "], $r[" + es.I_R1 + "]);\n";
     }
 
     function muli(cs) {
