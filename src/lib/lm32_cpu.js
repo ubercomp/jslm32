@@ -33,11 +33,6 @@ lm32.cpu = function (params) {
     // dependencies
     var cs = {}; // cpu state
 
-    // performance counting:
-    cs.mips_log_function = function(mips) {};
-    cs.instr_count_start = (new Date()).getTime();
-    cs.instr_count = 0;
-
     // current instruction
     cs.I_OPC   = 0;  // opcode
     cs.I_IMM5  = 0;  // immediate (5 bits)
@@ -62,7 +57,6 @@ lm32.cpu = function (params) {
         cs.bus_mask[8] = "0xff";
         cs.bus_mask[16] = "0xffff";
         cs.bus_mask[32] = "0xffffffff";
-
 
         cs.block_cache = {};
         cs.n_blocks = 0;
@@ -92,7 +86,6 @@ lm32.cpu = function (params) {
         // program counter: unsigned, two lower bits should always be 0
         cs.pc = params.bootstrap_pc;
         cs.next_pc = cs.pc + 4; // jumps write on next_pc
-
         cs.pic = lm32.pic();
 
         // interrupt enable
@@ -1688,15 +1681,8 @@ lm32.cpu = function (params) {
             ics.cc = (ics.cc + inc) | 0;
             ics.pc = ics.next_pc;
         } while (++i < instructions);
-        ics.instr_count += i;
-        if (ics.instr_count >= 10000000) {
-            var time = (new Date()).getTime();
-            var delta = time - ics.instr_count_start;
-            ics.instr_count_start = time;
-            ics.instr_count = 0;
-            ics.mips_log_function(10000.0/delta);
-        }
         tick_f(ticks);
+        return i;
     }
 
     function step_dynrec(instructions) {
@@ -1826,25 +1812,12 @@ lm32.cpu = function (params) {
             ics.cc = (ics.cc + inc) | 0;
             ics.pc = ics.next_pc;
         } while (i < instructions);
-        ics.instr_count += i;
-        if (ics.instr_count >= 10000000) {
-            var time = (new Date()).getTime();
-            var delta = time - ics.instr_count_start;
-            ics.instr_count_start = time;
-            ics.instr_count = 0;
-            ics.mips_log_function(10000.0/delta);
-        }
+
         tick_f(ticks);
+        return i;
     }
 
     var step = step_dynrec;
-
-
-
-    function step_forever() {
-        step(50000);
-        setTimeout(step_forever, 0);
-    }
 
     function set_timers(timers) {
         var len = timers.length;
@@ -1883,8 +1856,6 @@ lm32.cpu = function (params) {
 
     return {
         cs: cs,
-        reset: reset,
-        step_forever: step_forever,
         step: step,
         dump: dump,
         set_timers: set_timers

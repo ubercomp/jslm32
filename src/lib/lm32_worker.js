@@ -30,13 +30,10 @@ importScripts('lm32_base.js',
 var sys;
 var console_send_str;
 var step;
+var stepped;
 
 function worker_terminal_putchar(c) {
     self.postMessage({type: 'terminal_putchar', payload: c});
-}
-
-function worker_inform_mips(mips) {
-    self.postMessage({type: 'inform_mips', payload: mips});
 }
 
 function worker_on_message(e) {
@@ -44,8 +41,8 @@ function worker_on_message(e) {
     var type = msg.type;
     switch(type) {
         case 'work':
-            step(10000);
-            self.postMessage({type: 'work_done'});
+            stepped = step(10000);
+            self.postMessage({type: 'work_done', instructions: stepped});
             break;
 
         case 'terminal_send_str':
@@ -65,8 +62,7 @@ function worker_start(e) {
         var on_start_uclinux_result = function(result) {
             if (result.success) {
                 sys = result.system;
-                step = sys.cpu.step;
-                sys.cpu.cs.mips_log_function = worker_inform_mips;
+                step = sys.step;
                 console_send_str = sys.console_send_str;
                 self.onmessage = worker_on_message;
                 self.postMessage({type: 'worker_started'});

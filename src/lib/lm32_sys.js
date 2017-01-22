@@ -141,9 +141,7 @@ lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url, cb) {
                 {
                     success: true,
                     system: {
-                        cpu: cpu,
                         step: cpu.step,
-                        step_forever: cpu.step_forever,
                         console_send_str: send_str
                     }
                 }
@@ -238,9 +236,7 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name, cb) {
             cpu.set_timers([timer0, timer1]);
             cb_result.success = true;
             cb_result.system = {
-                cpu: cpu,
                 step: cpu.step,
-                step_forever: cpu.step_forever,
                 console_send_str: send_str
             };
         }

@@ -31,15 +31,42 @@
     <script src="lib/lm32_uart.js"></script>
 
     <script>
+        "use strict";
         var lm32_debug_terminal = false;
         var terminal;
         var sys;
         var worker;
         var worker_pending_str = false;
+        var ics; // instruction count state
 
-        function inform_mips(mips) {
+
+        function update_mips(mips) {
             var mspan = document.getElementById('mips');
             mspan.textContent = mips.toFixed(2).toString();
+        }
+
+        function ics_init() {
+            ics = {};
+            ics.instr_count = 0;
+            ics.instr_count_start = (new Date()).getTime();
+        }
+
+        function ics_update(steps) {
+            ics.instr_count += steps;
+            if (ics.instr_count >= 10000000) {
+                var time = (new Date()).getTime();
+                var delta = time - ics.instr_count_start;
+                ics.instr_count_start = time;
+                ics.instr_count = 0;
+                update_mips(10000.0/delta);
+            }
+        }
+
+        function step_forever() {
+            var requested = 50000;
+            var stepped = sys.step(requested);
+            ics_update(stepped);
+            setTimeout(step_forever, 0);
         }
 
         function terminal_putchar(c) {
@@ -58,10 +85,9 @@
         function lm32_start_evr(kernel_filename) {
             var on_start_evr_result = function(result) {
                 if(result.success) {
-                    window.sys = result.system;
-                    window.cpu = sys.cpu;
-                    sys.cpu.cs.mips_log_function = inform_mips;
-                    setTimeout(sys.step_forever, 0);
+                    sys = result.system;
+                    ics_init();
+                    setTimeout(step_forever, 0);
                 } else {
                     terminal.write(
                         "ERROR: can't start " +
@@ -82,10 +108,9 @@
             terminal.write("Loading...\r\n");
             var on_start_uclinux_result = function(result) {
                 if(result.success) {
-                    window.sys = result.system;
-                    window.cpu = sys.cpu;
-                    window.sys.cpu.cs.mips_log_function = inform_mips;
-                    setTimeout(sys.step_forever, 0);
+                    sys = result.system;
+                    ics_init();
+                    setTimeout(step_forever, 0);
                 } else {
                     terminal.write("ERROR: Can't load uClinux.\r\n")
                 }
@@ -104,6 +129,7 @@
             var type = msg.type;
             switch(type) {
                 case 'worker_started':
+                    ics_init();
                     worker.postMessage({type: 'work'});
                     break;
 
@@ -111,9 +137,18 @@
                     if(worker_pending_str !== false) {
                         var payload = worker_pending_str;
                         worker_pending_str = false;
-                        worker.postMessage({type: 'terminal_send_str', payload: payload});
+                        worker.postMessage(
+                            {
+                                type: 'terminal_send_str',
+                                payload: payload
+                            }
+                        );
                     }
                     worker.postMessage({type: 'work'});
+
+                    // keep ics_update after postMessage so cpu can work
+                    // while DOM is being updated
+                    ics_update(msg.instructions);
                     break;
 
                 case 'terminal_putchar':
