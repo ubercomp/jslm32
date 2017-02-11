@@ -619,6 +619,7 @@ lm32.cpu_interp = function(params) {
                 break;
             case 0x1d: // cmpgui
                 ics.regs[I_R1] = ((ics.regs[I_R0] >>> 0) > I_IMM16) | 0;
+
                 break;
             case 0x1e: // orhi
                 ics.regs[I_R1] = ics.regs[I_R0] | (I_IMM16 << 16);
