@@ -208,7 +208,7 @@ lm32.cpu_interp = function(params) {
                 cs.next_pc = cs.pc;
                 break;
             default:
-                throw ("Unhandled exception with id " + id);
+                // console.log("Unhandled exception with id " + id);
                 break;
         }
     }
@@ -232,7 +232,7 @@ lm32.cpu_interp = function(params) {
                 val = cs.bus.read_32(uaddr);
                 break;
             default:
-                throw ("invalid width - should never happen");
+                // console.log("invalid width - should never happen");
                 break;
         }
 
@@ -307,7 +307,7 @@ lm32.cpu_interp = function(params) {
 
             default:
                 read = false;
-                throw ("No such CSR register: " + csr);
+                // console.log("No such CSR register: " + csr);
                 break;
         }
         if (read) {
@@ -653,16 +653,10 @@ lm32.cpu_interp = function(params) {
                 ics.regs[I_R2] = ~(ics.regs[I_R0] ^ ics.regs[I_R1]);
                 break;
             case 0x2a: // reserved
-                throw "reserved called";
+                // empty
                 break;
             case 0x2b: // scall
-                if (I_IMM5 == 7) {
-                    raise_exception(ics, EXCEPT_SYSTEM_CALL);
-                } else if (I_IMM5 == 2) {
-                    raise_exception(ics, EXCEPT_BREAKPOINT);
-                } else {
-                    throw "scall: invalid";
-                }
+                raise_exception(ics, EXCEPT_SYSTEM_CALL);
                 break;
             case 0x2c: // sextb
                 // sign extend byte to word
@@ -700,7 +694,7 @@ lm32.cpu_interp = function(params) {
                 ics.regs[I_R2] = (ics.regs[I_R0] - ics.regs[I_R1]) | 0;
                 break;
             case 0x33: // reserved
-                throw "reserved 0x33 called"
+                // empty
                 break;
             case 0x34: // wcsr
                 wcsr(ics);
