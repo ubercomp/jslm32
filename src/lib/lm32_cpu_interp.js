@@ -250,27 +250,6 @@ lm32.cpu_interp = function(params) {
         }
     }
 
-    function store(cs, uaddr, width) {
-        var ok;
-        switch(width) {
-            case 8:
-                ok = cs.bus.write_8(uaddr, cs.regs[cs.I_R1]);
-                break;
-            case 16:
-                ok = cs.bus.write_16(uaddr, cs.regs[cs.I_R1]);
-                break;
-            case 32:
-                ok = cs.bus.write_32(uaddr, cs.regs[cs.I_R1]);
-                break;
-            default:
-                break;
-        }
-        if (!ok) {
-            console.log('Error writing to address ' + lm32.util.format(uaddr));
-            raise_exception(cs, EXCEPT_DATA_BUS_ERROR);
-        }
-    }
-
     // csr instructions
     function rcsr(cs) {
         var csr = cs.I_R0;
@@ -476,7 +455,7 @@ lm32.cpu_interp = function(params) {
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
                     ram.write_16(uaddr - ics.ram_base, ics.regs[I_R1] & 0xffff);
                 } else {
-                    store(ics, uaddr, 16);
+                    ics.bus.write_16(uaddr, ics.regs[I_R1]);
                 }
                 break;
             case 0x04: // lb
@@ -528,7 +507,7 @@ lm32.cpu_interp = function(params) {
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
                     ram.v8[uaddr - ics.ram_base] = ics.regs[I_R1] & 0xff;
                 } else {
-                    store(ics, uaddr, 8);
+                    ics.bus.write_8(uaddr, ics.regs[I_R1]);
                 }
                 break;
             case 0x0d: // addi
@@ -578,7 +557,7 @@ lm32.cpu_interp = function(params) {
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
                     ram.write_32(uaddr - ics.ram_base, ics.regs[I_R1] | 0);
                 } else {
-                    store(ics, uaddr, 32);
+                    ics.bus.write_32(uaddr, ics.regs[I_R1]);
                 }
                 break;
             case 0x17: // bne
