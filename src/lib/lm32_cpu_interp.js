@@ -179,31 +179,6 @@ lm32.cpu_interp = function(params) {
 
     // Helpers:
 
-    // comparison helpers (I think google closure compiler will inline these)
-    function fcond_eq(a, b) {
-        return (a == b);
-    }
-
-    function fcond_g(a, b) {
-        return (a > b);
-    }
-
-    function fcond_ge(a, b) {
-        return (a >= b);
-    }
-
-    function fcond_geu(a, b) {
-        return (a >>> 0) >= (b >>> 0);
-    }
-
-    function fcond_gu(a, b) {
-        return (a >>> 0) > (b >>> 0);
-    }
-
-    function fcond_ne(a, b) {
-        return (a != b);
-    }
-
     // non-debug exception
     function raise_exception(cs, id) {
         switch(id) {
@@ -235,15 +210,6 @@ lm32.cpu_interp = function(params) {
             default:
                 throw ("Unhandled exception with id " + id);
                 break;
-        }
-    }
-
-    // Instrunction implementation helpers
-    function branch_conditional(cs, fcond) {
-        var a = cs.regs[cs.I_R0];
-        var b = cs.regs[cs.I_R1];
-        if (fcond(a, b)) {
-            cs.next_pc = (cs.pc + ((cs.I_IMM16 << 2) << 14 >> 14)) >>> 0;
         }
     }
 
@@ -583,19 +549,29 @@ lm32.cpu_interp = function(params) {
                 }
                 break;
             case 0x11: // be
-                branch_conditional(ics, fcond_eq);
+                if (ics.regs[I_R0] == ics.regs[I_R1]) {
+                  ics.next_pc = (ics.pc + ((I_IMM16 << 16) >> 14)) >>> 0;
+                }
                 break;
             case 0x12: // bg
-                branch_conditional(ics, fcond_g);
+                if (ics.regs[I_R0] > ics.regs[I_R1]) {
+                    ics.next_pc = (ics.pc + ((I_IMM16 << 16) >> 14)) >>> 0;
+                }
                 break;
             case 0x13: // bge
-                branch_conditional(ics, fcond_ge);
+                if (ics.regs[I_R0] >= ics.regs[I_R1]) {
+                    ics.next_pc = (ics.pc + ((I_IMM16 << 16) >> 14)) >>> 0;
+                }
                 break;
             case 0x14: // bgeu
-                branch_conditional(ics, fcond_geu);
+                if ((ics.regs[I_R0] >>> 0) >= (ics.regs[I_R1] >>> 0)) {
+                  ics.next_pc = (ics.pc + ((I_IMM16 << 16) >> 14)) >>> 0;
+                }
                 break;
             case 0x15: // bgu
-                branch_conditional(ics, fcond_gu);
+                if ((ics.regs[I_R0] >>> 0) > (ics.regs[I_R1] >>> 0)) {
+                    ics.next_pc = (ics.pc + ((I_IMM16 << 16) >> 14)) >>> 0;
+                }
                 break;
             case 0x16: // sw
                 uaddr = (ics.regs[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
@@ -606,7 +582,9 @@ lm32.cpu_interp = function(params) {
                 }
                 break;
             case 0x17: // bne
-                branch_conditional(ics, fcond_ne);
+                if (ics.regs[I_R0] != ics.regs[I_R1]) {
+                    ics.next_pc = (ics.pc + ((I_IMM16 << 16) >> 14)) >>> 0;
+                }
                 break;
             case 0x18: // andhi
                 ics.regs[I_R1] = ics.regs[I_R0] & (I_IMM16 << 16);
