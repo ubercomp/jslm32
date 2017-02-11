@@ -239,26 +239,6 @@ lm32.cpu_interp = function(params) {
     }
 
     // Instrunction implementation helpers
-
-    /**
-     * @param reg_p is it a register to register compare?
-     * @param fcond function to compare two values;
-     */
-    function compare(cs, reg_p, fcond) {
-        var rx = reg_p ? cs.I_R2 : cs.I_R1;
-        var ry = reg_p ? cs.I_R0 : cs.I_R0;
-        var rz = reg_p ? cs.I_R1 : -1;
-
-        var a = cs.regs[ry];
-        var b = reg_p ? cs.regs[rz] : (cs.I_IMM16 << 16 >> 16);
-
-        if (fcond(a, b)) {
-            cs.regs[rx] = 1;
-        } else {
-            cs.regs[rx] = 0;
-        }
-    }
-
     function branch_conditional(cs, fcond) {
         var a = cs.regs[cs.I_R0];
         var b = cs.regs[cs.I_R1];
@@ -505,13 +485,13 @@ lm32.cpu_interp = function(params) {
             // op = ibus.read_32(pc);
 
             // Instruction decoding:
-            ics.I_OPC = I_OPC   = (op & 0xfc000000) >>> 26;
-            ics.I_IMM5 = I_IMM5  = op & 0x1f;
+            ics.I_OPC = I_OPC = (op & 0xfc000000) >>> 26;
+            ics.I_IMM5 = I_IMM5 = op & 0x1f;
             ics.I_IMM16 = I_IMM16 = op & 0xffff;
             ics.I_IMM26 = I_IMM26 = op & 0x3ffffff;
-            ics.I_R0 = I_R0   = (op & 0x03e00000) >> 21;
-            ics.I_R1 = I_R1    = (op & 0x001f0000) >> 16;
-            ics.I_R2 = I_R2    = (op & 0x0000f800) >> 11;
+            ics.I_R0 = I_R0 = (op & 0x03e00000) >> 21;
+            ics.I_R1 = I_R1 = (op & 0x001f0000) >> 16;
+            ics.I_R2 = I_R2 = (op & 0x0000f800) >> 11;
 
 
             // Instruction execution:
@@ -632,25 +612,45 @@ lm32.cpu_interp = function(params) {
                 ics.regs[I_R1] = ics.regs[I_R0] & (I_IMM16 << 16);
                 break;
             case 0x19: // cmpei
-                compare(ics, false, fcond_eq);
+                if (ics.regs[I_R0] == ((I_IMM16 << 16) >> 16)) {
+                    ics.regs[I_R1] = 1;
+                } else {
+                    ics.regs[I_R1] = 0;
+                }
                 break;
             case 0x1a: // cmpgi
-                compare(ics, false, fcond_g);
+                if (ics.regs[I_R0] > ((I_IMM16 << 16) >> 16)) {
+                    ics.regs[I_R1] = 1;
+                } else {
+                    ics.regs[I_R1] = 0;
+                }
                 break;
             case 0x1b: // cmpgei
-                compare(ics, false, fcond_ge);
+                if (ics.regs[I_R0] >= ((I_IMM16 << 16) >> 16)) {
+                    ics.regs[I_R1] = 1;
+                } else {
+                    ics.regs[I_R1] = 0;
+                }
                 break;
             case 0x1c: // cmpgeui
-                compare(ics, false, fcond_geu)
+                if ((ics.regs[I_R0] >>> 0) >= I_IMM16) {
+                    ics.regs[I_R1] = 1;
+                } else {
+                    ics.regs[I_R1] = 0;
+                }
                 break;
             case 0x1d: // cmpgui
-                compare(ics, false, fcond_gu);
+                ics.regs[I_R1] = ((ics.regs[I_R0] >>> 0) > I_IMM16) | 0;
                 break;
             case 0x1e: // orhi
                 ics.regs[I_R1] = ics.regs[I_R0] | (I_IMM16 << 16);
                 break;
             case 0x1f: // cmpnei
-                compare(ics, false, fcond_ne);
+                if (ics.regs[I_R0] != ((I_IMM16 << 16) >> 16)) {
+                    ics.regs[I_R1] = 1;
+                } else {
+                    ics.regs[I_R1] = 0;
+                }
                 break;
             case 0x20: // sru
                 ics.regs[I_R2] = ics.regs[I_R0] >>> (ics.regs[I_R1] & 0x1f);
@@ -768,26 +768,50 @@ lm32.cpu_interp = function(params) {
                 ics.next_pc = (ics.pc + ((I_IMM26 << 2) << 4 >> 4)) >>> 0;
                 break;
             case 0x39: // cmpe
-                compare(ics, true, fcond_eq);
+                if (ics.regs[I_R0] == ics.regs[I_R1]) {
+                    ics.regs[I_R2] = 1;
+                } else {
+                    ics.regs[I_R2] = 0;
+                }
                 break;
             case 0x3a: // cmpg
-                compare(ics, true, fcond_g);
+                if (ics.regs[I_R0] > ics.regs[I_R1]) {
+                    ics.regs[I_R2] = 1;
+                } else {
+                    ics.regs[I_R2] = 0;
+                }
                 break;
             case 0x3b: // cmpge
-                compare(ics, true, fcond_ge);
+                if (ics.regs[I_R0] >= ics.regs[I_R1]) {
+                    ics.regs[I_R2] = 1;
+                }  else {
+                    ics.regs[I_R2] = 0;
+                }
                 break;
             case 0x3c: // cmpgeu
-                compare(ics, true, fcond_geu);
+                if ((ics.regs[I_R0] >>> 0) >= (ics.regs[I_R1] >>> 0)) {
+                    ics.regs[I_R2] = 1;
+                }  else {
+                    ics.regs[I_R2] = 0;
+                }
                 break;
             case 0x3d: // cmpgu
-                compare(ics, true, fcond_gu);
+                if ((ics.regs[I_R0] >>> 0) > (ics.regs[I_R1] >>> 0)) {
+                    ics.regs[I_R2] = 1;
+                }  else {
+                    ics.regs[I_R2] = 0;
+                }
                 break;
             case 0x3e: // calli
                 ics.regs[REG_RA] = (ics.pc + 4) | 0;
                 ics.next_pc = (ics.pc + ((I_IMM26 << 2) << 4 >> 4)) >>> 0;
                 break;
             case 0x3f: // cmpne
-                compare(ics, true, fcond_ne);
+                if (ics.regs[I_R0] != ics.regs[I_R1]) {
+                    ics.regs[I_R2] = 1;
+                }  else {
+                    ics.regs[I_R2] = 0;
+                }
                 break;
             }
 
