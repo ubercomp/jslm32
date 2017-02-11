@@ -875,17 +875,6 @@ lm32.cpu_interp = function(params) {
         }
     }
 
-    function decode_instr(ics, op) {
-            ics.I_OPC   = (op & 0xfc000000) >>> 26;
-            ics.I_IMM5  = op & 0x1f;
-            ics.I_IMM16 = op & 0xffff;
-            ics.I_IMM26 = op & 0x3ffffff;
-            ics.I_R0   = (op & 0x03e00000) >> 21;
-            ics.I_R1    = (op & 0x001f0000) >> 16;
-            ics.I_R2    = (op & 0x0000f800) >> 11;
-
-    }
-
     function step(instructions) {
         var i = 0;
         var ics = cs; // internal cs -> speeds things up
@@ -924,7 +913,14 @@ lm32.cpu_interp = function(params) {
             // op = ibus.read_32(pc);
 
             // Instruction decoding:
-            decode_instr(ics, op);
+            ics.I_OPC   = (op & 0xfc000000) >>> 26;
+            ics.I_IMM5  = op & 0x1f;
+            ics.I_IMM16 = op & 0xffff;
+            ics.I_IMM26 = op & 0x3ffffff;
+            ics.I_R0   = (op & 0x03e00000) >> 21;
+            ics.I_R1    = (op & 0x001f0000) >> 16;
+            ics.I_R2    = (op & 0x0000f800) >> 11;
+
 
             // Instruction execution:
             opcode = ics.I_OPC;
