@@ -17,9 +17,11 @@
  * License along with this code; if not, see
  * <http://www.gnu.org/licenses/lgpl-2.1.html>
  */
-importScripts('lm32_base.js',
+importScripts(
+    'lm32_base.js',
     'lm32_pic.js',
-    'lm32_cpu.js',
+    'lm32_cpu_dynrec.js',
+    'lm32_cpu_interp.js',
     'lm32_bus.js',
     'lm32_ram.js',
     'lm32_hwsetup.js',

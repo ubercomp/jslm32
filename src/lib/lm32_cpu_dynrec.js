@@ -1,6 +1,6 @@
 /**
  *
- * LatticeMico32 emulation by interpretation and dynamic recompilation.
+ * LatticeMico32 CPU emulation: dynamic recompilation
  *
  * Copyright (c) 2011-2012, 2016-2017 Reginaldo Silva (reginaldo@ubercomp.com)
  *
@@ -27,9 +27,7 @@
 // sign_extend(n, size) -> n << (32 - size) >> (32-size)
 // e.g.
 // sign_extend(128, 8) -> 128 << 24 >> 24 -> -128
-
-
-lm32.cpu = function (params) {
+lm32.cpu_dynrec = function(params) {
     // dependencies
     var cs = {}; // cpu state
 
@@ -216,31 +214,6 @@ lm32.cpu = function (params) {
 
     // Helpers:
 
-    // comparison helpers (I think google closure compiler will inline these)
-    function fcond_eq(a, b) {
-        return (a == b);
-    }
-
-    function fcond_g(a, b) {
-        return (a > b);
-    }
-
-    function fcond_ge(a, b) {
-        return (a >= b);
-    }
-
-    function fcond_geu(a, b) {
-        return (a >>> 0) >= (b >>> 0);
-    }
-
-    function fcond_gu(a, b) {
-        return (a >>> 0) > (b >>> 0);
-    }
-
-    function fcond_ne(a, b) {
-        return (a != b);
-    }
-
     // non-debug exception
     function raise_exception(cs, id) {
         switch(id) {
@@ -321,65 +294,24 @@ lm32.cpu = function (params) {
 
     // arithmetic and comparison instructions
 
-    function add(cs) {
-        cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] + cs.regs[cs.I_R1]) | 0;
-    }
-
     function add_e(es) {
         return "$r[" + es.I_R2 + "] = ($r[" + es.I_R0 + "] + $r[" + es.I_R1 + "]) | 0;\n";
-    }
-
-    function addi(cs) {
-        cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) | 0;
     }
 
     function addi_e(es) {
         return "$r[" + es.I_R1 + "] = ($r[" + es.I_R0 + "] + " + (es.I_IMM16 << 16 >> 16) + ") | 0;\n";
     }
 
-
-    function and(cs) {
-        // logical ops don't need to or the result with 0;
-        cs.regs[cs.I_R2] = cs.regs[cs.I_R0] & cs.regs[cs.I_R1];
-    }
-
     function and_e(es) {
         return "$r[" + es.I_R2 + "] = $r[" + es.I_R0 + "] & $r[" + es.I_R1 + "];\n";
-    }
-
-    function andhi(cs) {
-        cs.regs[cs.I_R1] = cs.regs[cs.I_R0] & (cs.I_IMM16 << 16);
     }
 
     function andhi_e(es) {
         return "$r[" + es.I_R1 + "] = $r[" + es.I_R0 + "] & (" + es.I_IMM16 + " << 16);\n";
     }
 
-    function andi(cs) {
-        cs.regs[cs.I_R1] = cs.regs[cs.I_R0] & cs.I_IMM16;
-    }
-
     function andi_e(es) {
         return "$r[" + es.I_R1+ "] = $r[" + es.I_R0 + "] & " + es.I_IMM16 + ";\n";
-    }
-
-    /**
-     * @param reg_p is it a register to register compare?
-     * @param fcond function to compare two values;
-     */
-    function compare(cs, reg_p, fcond) {
-        var rx = reg_p ? cs.I_R2 : cs.I_R1;
-        var ry = reg_p ? cs.I_R0 : cs.I_R0;
-        var rz = reg_p ? cs.I_R1 : -1;
-
-        var a = cs.regs[ry];
-        var b = reg_p ? cs.regs[rz] : (cs.I_IMM16 << 16 >> 16);
-
-        if (fcond(a, b)) {
-            cs.regs[rx] = 1;
-        } else {
-            cs.regs[rx] = 0;
-        }
     }
 
     function compare_rr_e(es, cond, wrap) {
@@ -392,24 +324,12 @@ lm32.cpu = function (params) {
            cond  + "((" + (es.I_IMM16 << 16 >> 16) + ")" + wrap + ")) ? 1 : 0;\n";
     }
 
-    function cmpe(cs) {
-        compare(cs, true, fcond_eq);
-    }
-
     function cmpe_e(es) {
         return compare_rr_e(es, "===", "");
     }
 
-    function cmpei(cs) {
-        compare(cs, false, fcond_eq);
-    }
-
     function cmpei_e(es) {
         return compare_ri_e(es, "===", "");
-    }
-
-    function cmpg(cs) {
-        compare(cs, true, fcond_g);
     }
 
     function cmpg_e(es) {
@@ -417,86 +337,40 @@ lm32.cpu = function (params) {
     }
 
 
-    function cmpgi(cs) {
-        compare(cs, false, fcond_g);
-    }
-
     function cmpgi_e(es) {
         return compare_ri_e(es, ">", "");
-    }
-
-    function cmpge(cs) {
-        compare(cs, true, fcond_ge);
     }
 
     function cmpge_e(es) {
         return compare_rr_e(es, ">=", "");
     }
 
-    function cmpgei(cs) {
-        compare(cs, false, fcond_ge);
-    }
-
     function cmpgei_e(es) {
         return compare_ri_e(es, ">=", "");
-    }
-
-    function cmpgeu(cs) {
-        compare(cs, true, fcond_geu);
     }
 
     function cmpgeu_e(es) {
         return compare_rr_e(es, ">=", " >>> 0 ");
     }
 
-    function cmpgeui(cs) {
-        compare(cs, false, fcond_geu)
-    }
-
     function cmpgeui_e(es) {
         return compare_ri_e(es, ">=", " >>> 0");
-    }
-
-    function cmpgu(cs) {
-        compare(cs, true, fcond_gu);
     }
 
     function cmpgu_e(es) {
         return compare_rr_e(es, ">", " >>> 0");
     }
 
-    function cmpgui(cs) {
-        compare(cs, false, fcond_gu);
-    }
-
     function cmpgui_e(es) {
         return compare_ri_e(es, ">", " >>> 0");
-    }
-
-    function cmpne(cs) {
-        compare(cs, true, fcond_ne);
     }
 
     function cmpne_e(es) {
         return compare_rr_e(es, "!==", "");
     }
 
-    function cmpnei(cs) {
-        compare(cs, false, fcond_ne);
-    }
-
     function cmpnei_e(es) {
         return compare_ri_e(es, "!==", "");
-    }
-
-    function div(cs) {
-        var vr0 = cs.regs[cs.I_R0];
-        var vr1 = cs.regs[cs.I_R1];
-        if (vr1 === 0) {
-            raise_exception(cs, EXCEPT_DIVIDE_BY_ZERO);
-        } else {
-            cs.regs[cs.I_R2] = (Math.floor(vr0/vr1)) | 0;
-        }
     }
 
     function div_e(es) {
@@ -510,17 +384,6 @@ lm32.cpu = function (params) {
             "}\n";
     }
 
-    function divu(cs) {
-        var vr0 = cs.regs[cs.I_R0];
-        var vr1 = cs.regs[cs.I_R1];
-
-        if (vr1 === 0) {
-            raise_exception(cs, EXCEPT_DIVIDE_BY_ZERO);
-        } else {
-            cs.regs[cs.I_R2] = (Math.floor((vr0 >>> 0) / (vr1 >>> 0))) | 0;
-        }
-    }
-
     function divu_e(es) {
         // returns from block when exception is thrown
         // see raise_exception_e
@@ -530,16 +393,6 @@ lm32.cpu = function (params) {
             "} else {\n" +
             "    $r[" + es.I_R2 + "] = (Math.floor(($r[" + es.I_R0 + "] >>> 0)/($r[" + es.I_R1 + "] >>> 0))) | 0;\n" +
             "}\n";
-    }
-
-    function mod(cs) {
-        var vr0 = cs.regs[cs.I_R0];
-        var vr1 = cs.regs[cs.I_R1];
-        if (vr1 === 0) {
-            raise_exception(cs, EXCEPT_DIVIDE_BY_ZERO);
-        } else {
-            cs.regs[cs.I_R2] = (vr0 % vr1) | 0;
-        }
     }
 
     function mod_e(es) {
@@ -553,16 +406,6 @@ lm32.cpu = function (params) {
             "}\n";
     }
 
-    function modu(cs) {
-        var vr0 = cs.regs[cs.I_R0];
-        var vr1 = cs.regs[cs.I_R1];
-        if (vr1 === 0) {
-            raise_exception(cs, EXCEPT_DIVIDE_BY_ZERO);
-        } else {
-            cs.regs[cs.I_R2] = ((vr0 >>> 0) % (vr1 >>> 0)) | 0;
-        }
-    }
-
     function modu_e(es) {
         // returns from block when exception is thrown
         // see raise_exception_e
@@ -574,179 +417,84 @@ lm32.cpu = function (params) {
             "}\n";
     }
 
-    function mul(cs) {
-        cs.regs[cs.I_R2] = Math.imul(cs.regs[cs.I_R0], cs.regs[cs.I_R1]);
-    }
-
     function mul_e(es) {
         return "$r[" + es.I_R2 + "] = Math.imul($r[" + es.I_R0 + "], $r[" + es.I_R1 + "]);\n";
-    }
-
-    function muli(cs) {
-        cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] * (cs.I_IMM16 << 16 >> 16)) | 0;
     }
 
     function muli_e(es) {
         return "$r[" + es.I_R1 + "] = ($r[" + es.I_R0 + "] * (" + (es.I_IMM16 << 16 >> 16) + ")) | 0;\n";
     }
 
-    function nor(cs) {
-        cs.regs[cs.I_R2] = ~(cs.regs[cs.I_R0] | cs.regs[cs.I_R1]);
-    }
-
     function nor_e(es) {
         return "$r[" + es.I_R2 + "] = ~($r[" + es.I_R0 + "] | $r[" + es.I_R1+ "]);\n";
-    }
-
-    function nori(cs) {
-        cs.regs[cs.I_R1] = ~(cs.regs[cs.I_R0] | cs.I_IMM16);
     }
 
     function nori_e(es) {
         return "$r[" + es.I_R1 + "] = ~($r[" + es.I_R0 + "] | " + es.I_IMM16 + ");\n";
     }
 
-    function or(cs) {
-        cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] | cs.regs[cs.I_R1]);
-    }
-
     function or_e(es) {
         return "$r[" + es.I_R2 + "] = ($r[" + es.I_R0 + "] | $r[" + es.I_R1 + "]);\n";
-    }
-
-    function ori(cs) {
-        cs.regs[cs.I_R1] = (cs.regs[cs.I_R0] | cs.I_IMM16);
     }
 
     function ori_e(es) {
         return "$r[" + es.I_R1 + "] = ($r[" + es.I_R0 + "] | " + es.I_IMM16 + ");\n";
     }
 
-    function orhi(cs) {
-        cs.regs[cs.I_R1] = cs.regs[cs.I_R0] | (cs.I_IMM16 << 16);
-    }
-
     function orhi_e(es) {
         return "$r[" + es.I_R1 + "] = $r[" + es.I_R0 + "] | (" + es.I_IMM16 + " << 16);\n";
-    }
-
-    function sextb(cs) {
-        // sign extend byte to word
-        cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] << 24) >> 24;
     }
 
     function sextb_e(es) {
         return "$r[" + es.I_R2 + "] = ($r[" + es.I_R0 + "] << 24) >> 24;\n";
     }
 
-    function sexth(cs) {
-        // sign extend half-word to word
-        cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] << 16) >> 16;
-    }
-
     function sexth_e(es) {
        return "$r[" + es.I_R2 + "] = ($r[" + es.I_R0 + "] << 16) >> 16;\n";
-    }
-
-    function sl(cs) {
-        cs.regs[cs.I_R2] = cs.regs[cs.I_R0] << (cs.regs[cs.I_R1] & 0x1f);
     }
 
     function sl_e(es) {
         return "$r[" + es.I_R2 + "] = $r[" + es.I_R0 + "] << ($r[" + es.I_R1 + "] & 0x1f);\n";
     }
 
-    function sli(cs) {
-        cs.regs[cs.I_R1] = cs.regs[cs.I_R0] << cs.I_IMM5;
-    }
-
     function sli_e(es) {
         return "$r[" + es.I_R1 + "] = $r[" + es.I_R0 + "] << " + es.I_IMM5 + ";\n";
-    }
-
-    function sr(cs) {
-        cs.regs[cs.I_R2] = cs.regs[cs.I_R0] >> (cs.regs[cs.I_R1] & 0x1f);
     }
 
     function sr_e(es) {
         return "$r[" + es.I_R2 + "] = $r[" + es.I_R0 + "] >> ($r[" + es.I_R1 + "] & 0x1f);\n";
     }
 
-    function sri(cs) {
-        cs.regs[cs.I_R1] = cs.regs[cs.I_R0] >> cs.I_IMM5;
-    }
-
     function sri_e(es) {
         return "$r[" + es.I_R1 +"] = $r[" + es.I_R0 + "] >> " + es.I_IMM5 + ";\n";
-    }
-
-    function sru(cs) {
-        cs.regs[cs.I_R2] = cs.regs[cs.I_R0] >>> (cs.regs[cs.I_R1] & 0x1f);
     }
 
     function sru_e(es) {
         return "$r[" + es.I_R2 + "] = $r[" + es.I_R0 + "] >>> ($r[" + es.I_R1 + "] & 0x1f);\n";
     }
 
-    function srui(cs) {
-        cs.regs[cs.I_R1] = cs.regs[cs.I_R0] >>> cs.I_IMM5;
-    }
-
     function srui_e(es) {
         return "$r[" + es.I_R1 + "] = $r[" + es.I_R0 + "] >>> " + es.I_IMM5 + ";\n";
-    }
-
-    function sub(cs) {
-        cs.regs[cs.I_R2] = (cs.regs[cs.I_R0] - cs.regs[cs.I_R1]) | 0;
     }
 
     function sub_e(es) {
         return "$r[" + es.I_R2 + "] = ($r[" + es.I_R0 + "] - $r[" + es.I_R1 + "]) | 0;\n";
     }
 
-    function xnor(cs) {
-        cs.regs[cs.I_R2] = ~(cs.regs[cs.I_R0] ^ cs.regs[cs.I_R1]);
-    }
-
     function xnor_e(es) {
         return "$r[" + es.I_R2 + "] = ~($r[" + es.I_R0 + "] ^ $r[" + es.I_R1 + "]);\n";
-    }
-
-    function xnori(cs) {
-        cs.regs[cs.I_R1] = ~(cs.regs[cs.I_R0] ^ cs.I_IMM16);
     }
 
     function xnori_e(es) {
         return "$r[" + es.I_R1 + "] = ~($r[" + es.I_R0 + "] ^ " + es.I_IMM16 + ");\n";
     }
 
-    function xor(cs) {
-        cs.regs[cs.I_R2] = cs.regs[cs.I_R0] ^ cs.regs[cs.I_R1];
-    }
-
     function xor_e(es) {
         return "$r[" + es.I_R2 + "] = $r[" + es.I_R0 + "] ^ $r[" + es.I_R1 + "];\n";
     }
 
-    function xori(cs) {
-        cs.regs[cs.I_R1] = cs.regs[cs.I_R0] ^ cs.I_IMM16;
-    }
-
     function xori_e(es) {
         return "$r[" + es.I_R1 + "] = $r[" + es.I_R0 + "] ^ " + es.I_IMM16 + ";\n";
-    }
-
-    // branch and call implementations
-    function b(cs) {
-        var r0 = cs.I_R0;
-        if (r0 == REG_EA) {
-            // eret -> restore eie
-            cs.ie.ie = cs.ie.eie;
-        } else if (r0 == REG_BA) {
-            // bret -> restore bie
-            cs.ie.ie = cs.ie.bie;
-        }
-        cs.next_pc = cs.regs[r0] >>> 0;
     }
 
     function b_e(es) {
@@ -761,21 +509,8 @@ lm32.cpu = function (params) {
         return str;
     }
 
-    function bi(cs) {
-        var imm26 = cs.I_IMM26;
-        cs.next_pc = (cs.pc + ((imm26 << 2) << 4 >> 4)) >>> 0;
-    }
-
     function bi_e(es) {
         return "$n = (" + es.I_PC + " + (" + ((es.I_IMM26 << 2) << 4 >> 4)  + " )) >>> 0;\n";
-    }
-
-    function branch_conditional(cs, fcond) {
-        var a = cs.regs[cs.I_R0];
-        var b = cs.regs[cs.I_R1];
-        if (fcond(a, b)) {
-            cs.next_pc = (cs.pc + ((cs.I_IMM16 << 2) << 14 >> 14)) >>> 0;
-        }
     }
 
     function branch_conditional_e(es, cond, wrap) {
@@ -786,57 +521,28 @@ lm32.cpu = function (params) {
             "}\n";
     }
 
-    function be(cs) {
-        branch_conditional(cs, fcond_eq);
-    }
-
     function be_e(es) {
         return branch_conditional_e(es, "===", "");
-    }
-
-    function bg(cs) {
-        branch_conditional(cs, fcond_g);
     }
 
     function bg_e(es) {
         return branch_conditional_e(es, ">", "");
     }
 
-    function bge(cs) {
-        branch_conditional(cs, fcond_ge);
-    }
-
     function bge_e(es) {
         return branch_conditional_e(es, ">=", "");
-    }
-
-    function bgeu(cs) {
-        branch_conditional(cs, fcond_geu);
     }
 
     function bgeu_e(es) {
         return branch_conditional_e(es, ">=", " >>> 0");
     }
 
-    function bgu(cs) {
-        branch_conditional(cs, fcond_gu);
-    }
-
     function bgu_e(es) {
         return branch_conditional_e(es, ">", " >>> 0");
     }
 
-    function bne(cs) {
-        branch_conditional(cs, fcond_ne);
-    }
-
     function bne_e(es) {
         return branch_conditional_e(es, "!==", "");
-    }
-
-    function call_(cs) {
-        cs.regs[REG_RA] = (cs.pc + 4) | 0;
-        cs.next_pc = (cs.regs[cs.I_R0]) >>> 0;
     }
 
     function call__e(es) {
@@ -845,27 +551,10 @@ lm32.cpu = function (params) {
             "$n = ($r[" + es.I_R0 + "]) >>> 0;\n";
     }
 
-    function calli(cs) {
-        var imm26 = cs.I_IMM26;
-        cs.regs[REG_RA] = (cs.pc + 4) | 0;
-        cs.next_pc = (cs.pc + ((imm26 << 2) << 4 >> 4)) >>> 0;
-    }
-
     function calli_e(es) {
         return "" +
             "$r["  + REG_RA + "] = (" + es.I_PC + " + 4) | 0;\n" +
             "$n = (" + es.I_PC + " + (" + ((es.I_IMM26 << 2) << 4 >> 4) + ")) >>> 0;\n";
-    }
-
-    function scall(cs) {
-        var imm5 = cs.I_IMM5;
-        if (imm5 == 7) {
-            raise_exception(cs, EXCEPT_SYSTEM_CALL);
-        } else if (imm5 == 2) {
-            raise_exception(cs, EXCEPT_BREAKPOINT);
-        } else {
-            throw "Invalid opcode";
-        }
     }
 
     function scall_e(es) {
@@ -882,43 +571,6 @@ lm32.cpu = function (params) {
                 break;
         }
         return str;
-    }
-
-    /**
-     *
-     * @param width the width to read (8, 16 or 32)
-     * @param aft the function or mask to apply before assigning the result to a register
-     */
-    function load(cs, uaddr, width, aft) {
-        var ok = false;
-        var val = undefined;
-        switch(width) {
-            case 8:
-                val = cs.bus.read_8(uaddr);
-                break;
-            case 16:
-                val = cs.bus.read_16(uaddr);
-                break;
-            case 32:
-                val = cs.bus.read_32(uaddr);
-                break;
-            default:
-                throw ("invalid width - should never happen");
-                break;
-        }
-
-        if (val !== undefined) {
-            ok = true;
-            if (aft != 0) {
-                val = val << aft >> aft;
-            }
-            cs.regs[cs.I_R1] = val;
-        }
-
-        if (!ok) {
-            console.log("Error reading at address " + lm32.util.format(uaddr) + " with width " + width);
-            raise_exception(cs, EXCEPT_DATA_BUS_ERROR);
-        }
     }
 
     function ram_read_e(width) {
@@ -955,91 +607,24 @@ lm32.cpu = function (params) {
             "}\n";
     }
 
-
-    function lb(cs) {
-        var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
-        if ((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
-            cs.regs[cs.I_R1] = (cs.ram.read_8(uaddr - cs.ram_base) << 24 >> 24);
-        } else {
-            load(cs, uaddr, 8, 24);
-        }
-    }
-
     function lb_e(es) {
         return load_e(es, 8, true);
-    }
-
-    function lbu(cs) {
-        var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
-        if ((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
-            cs.regs[cs.I_R1] = cs.ram.read_8(uaddr - cs.ram_base);
-        } else {
-            load(cs, uaddr, 8, 0);
-        }
     }
 
     function lbu_e(es) {
         return load_e(es, 8, false);
     }
 
-    function lh(cs) {
-        var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
-        if ((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
-            cs.regs[cs.I_R1] = (cs.ram.read_16(uaddr - cs.ram_base) << 16 >> 16);
-        } else {
-            load(cs, uaddr, 16, 16);
-        }
-    }
-
     function lh_e(es) {
         return load_e(es, 16, true);
-    }
-
-    function lhu(cs) {
-        var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
-        if ((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
-            cs.regs[cs.I_R1] = cs.ram.read_16(uaddr - cs.ram_base);
-        } else {
-            load(cs, uaddr, 16, 0);
-        }
     }
 
     function lhu_e(es) {
         return load_e(es, 16, false);
     }
 
-    function lw(cs) {
-        var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
-        if ((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
-            cs.regs[cs.I_R1] = cs.ram.read_32(uaddr - cs.ram_base);
-        } else {
-            load(cs, uaddr, 32, 0);
-        }
-    }
-
     function lw_e(es) {
         return load_e(es, 32, false);
-    }
-
-    function store(cs, uaddr, width) {
-        var ok;
-        switch(width) {
-            case 8:
-                ok = cs.bus.write_8(uaddr, cs.regs[cs.I_R1]);
-                break;
-            case 16:
-                ok = cs.bus.write_16(uaddr, cs.regs[cs.I_R1]);
-                break;
-            case 32:
-                ok = cs.bus.write_32(uaddr, cs.regs[cs.I_R1]);
-                break;
-            default:
-                break;
-        }
-        if (!ok) {
-            console.log('Error writing to address ' + lm32.util.format(uaddr));
-            raise_exception(cs, EXCEPT_DATA_BUS_ERROR);
-        }
     }
 
     function ram_write_e(width) {
@@ -1079,109 +664,16 @@ lm32.cpu = function (params) {
             "}\n";
     }
 
-    function sb(cs) {
-        var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
-        if ((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
-            cs.ram.v8[uaddr - cs.ram_base] = cs.regs[cs.I_R1] & 0xff;
-            //cs.ram.write_8(uaddr - cs.ram_base, cs.regs[cs.I_R1] & 0xff);
-        } else {
-            store(cs, uaddr, 8);
-        }
-    }
-
     function sb_e(es) {
         return store_e(es, 8);
-    }
-
-    function sh(cs) {
-        var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
-        if ((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
-            cs.ram.write_16(uaddr - cs.ram_base, cs.regs[cs.I_R1] & 0xffff);
-        } else {
-            store(cs, uaddr, 16);
-        }
     }
 
     function sh_e(es) {
         return store_e(es, 16);
     }
 
-    function sw(cs) {
-        var uaddr = (cs.regs[cs.I_R0] + (cs.I_IMM16 << 16 >> 16)) >>> 0;
-        if ((uaddr >= cs.ram_base) && (uaddr < cs.ram_max)) {
-            cs.ram.write_32(uaddr - cs.ram_base, cs.regs[cs.I_R1] | 0);
-        } else {
-            store(cs, uaddr, 32);
-        }
-    }
-
     function sw_e(es) {
         return store_e(es, 32);
-    }
-
-    // csr instructions
-    function rcsr(cs) {
-        var csr = cs.I_R0;
-        var r2 = cs.I_R2;
-        var val;
-        var read = true;
-        switch (csr) {
-            // These cannot be read from:
-            case CSR_ICC:
-            case CSR_DCC:
-            case CSR_BP0:
-            case CSR_BP1:
-            case CSR_BP2:
-            case CSR_BP3:
-            case CSR_WP0:
-            case CSR_WP1:
-            case CSR_WP2:
-            case CSR_WP3:
-                read = false;
-                break;
-
-            case CSR_DC:
-                val = cs.dc_val();
-                break;
-
-            case CSR_IE:
-                val = cs.ie_val();
-                break;
-            case CSR_IM:
-                val = cs.pic.get_im();
-                break;
-            case CSR_IP:
-                val = cs.pic.get_ip();
-                break;
-            case CSR_CC:
-                val = cs.cc;
-                break;
-            case CSR_CFG:
-                val = cs.cfg;
-                break;
-            case CSR_EBA:
-                val = cs.eba;
-                break;
-
-            case CSR_DEBA:
-                val = cs.deba;
-                break;
-
-            case CSR_JTX:
-                val = cs.jtx;
-                break;
-            case CSR_JRX:
-                val = cs.jrx;
-                break;
-
-            default:
-                read = false;
-                throw ("No such CSR register: " + csr);
-                break;
-        }
-        if (read) {
-            cs.regs[r2] = (val) | 0;
-        }
     }
 
     function rcsr_e(es) {
@@ -1258,68 +750,6 @@ lm32.cpu = function (params) {
         return "$r[" + es.I_R2+ "] = (" + val + ") | 0;\n";
     }
 
-    function wcsr(cs) {
-        var csr = cs.I_R0;
-        var rx = cs.I_R1;
-        var val = cs.regs[rx];
-        switch(csr) {
-            // these cannot be written to:
-            case CSR_CC:
-            case CSR_CFG:
-                break;
-
-            case CSR_IP:
-                cs.pic.set_ip(val);
-                break;
-
-            case CSR_IE:
-                cs.ie_wrt(val);
-                break;
-            case CSR_IM:
-                cs.pic.set_im(val);
-                break;
-            case CSR_ICC:
-            case CSR_DCC:
-                break; // i just fake icc
-            case CSR_EBA:
-                cs.eba = val & 0xffffff00;
-                break;
-            case CSR_DC:
-                cs.dc_wrt(val);
-                break;
-
-            case CSR_DEBA:
-                cs.deba = val & 0xffffff00;
-                break;
-
-            case CSR_JTX:
-                cs.jtx = val;
-                break;
-
-            case CSR_JRX:
-                cs.jrx = val;
-                break;
-
-            case CSR_BP0:
-                cs.bp0 = val; break;
-            case CSR_BP1:
-                cs.bp1 = val; break;
-            case CSR_BP2:
-                cs.bp3 = val; break;
-            case CSR_BP3:
-                cs.bp3 = val; break;
-
-            case CSR_WP0:
-                cs.wp0 = val; break;
-            case CSR_WP1:
-                cs.wp1 = val; break;
-            case CSR_WP2:
-                cs.wp2 = val; break;
-            case CSR_WP3:
-                cs.wp3 = val; break;
-        }
-    }
-
     function wcsr_e(es) {
         var csr = es.I_R0;
         var val = "$r[" + es.I_R1 + "]";
@@ -1388,11 +818,6 @@ lm32.cpu = function (params) {
                 break;
         }
         return code + "$n = " + (es.I_PC + 4) + ";\n";
-    }
-
-    // reserved instruction
-    function reserved() {
-        throw "This should never be  called";
     }
 
     function reserved_e(es) {
@@ -1539,77 +964,6 @@ lm32.cpu = function (params) {
         /* 0x3f */    cmpne_e
     ];
 
-    var optable = [
-        /* OPCODE      OP */
-        /* 0x00 */     srui,
-        /* 0x01 */     nori,
-        /* 0x02 */     muli,
-        /* 0x03 */       sh,
-        /* 0x04 */       lb,
-        /* 0x05 */      sri,
-        /* 0x06 */     xori,
-        /* 0x07 */       lh,
-        /* 0x08 */     andi,
-        /* 0x09 */    xnori,
-        /* 0x0a */       lw,
-        /* 0x0b */      lhu,
-        /* 0x0c */       sb,
-        /* 0x0d */     addi,
-        /* 0x0e */      ori,
-        /* 0x0f */      sli,
-
-        /* 0x10 */      lbu,
-        /* 0x11 */       be,
-        /* 0x12 */       bg,
-        /* 0x13 */      bge,
-        /* 0x14 */     bgeu,
-        /* 0x15 */      bgu,
-        /* 0x16 */       sw,
-        /* 0x17 */      bne,
-        /* 0x18 */    andhi,
-        /* 0x19 */    cmpei,
-        /* 0x1a */    cmpgi,
-        /* 0x1b */   cmpgei,
-        /* 0x1c */  cmpgeui,
-        /* 0x1d */   cmpgui,
-        /* 0x1e */     orhi,
-        /* 0x1f */   cmpnei,
-
-        /* 0x20 */      sru,
-        /* 0x21 */      nor,
-        /* 0x22 */      mul,
-        /* 0x23 */     divu,
-        /* 0x24 */     rcsr,
-        /* 0x25 */       sr,
-        /* 0x26 */      xor,
-        /* 0x27 */      div,
-        /* 0x28 */      and,
-        /* 0x29 */     xnor,
-        /* 0x2a */ reserved,
-        /* 0x2b */    scall,
-        /* 0x2c */    sextb,
-        /* 0x2d */      add,
-        /* 0x2e */       or,
-        /* 0x2f */       sl,
-
-        /* 0x30 */        b,
-        /* 0x31 */     modu,
-        /* 0x32 */      sub,
-        /* 0x33 */ reserved,
-        /* 0x34 */     wcsr,
-        /* 0x35 */      mod,
-        /* 0x36 */     call_,
-        /* 0x37 */    sexth,
-        /* 0x38 */       bi,
-        /* 0x39 */     cmpe,
-        /* 0x3a */     cmpg,
-        /* 0x3b */    cmpge,
-        /* 0x3c */   cmpgeu,
-        /* 0x3d */    cmpgu,
-        /* 0x3e */    calli,
-        /* 0x3f */    cmpne
-    ];
-
     function tick(ticks) {
         var len = cs.timers.length;
         for (var i = 0; i < len; i++) {
@@ -1628,64 +982,7 @@ lm32.cpu = function (params) {
 
     }
 
-    function step_interpreter(instructions) {
-        var i = 0;
-        var ics = cs; // internal cs -> speeds things up
-        var ps = ics.pic.state; // pic state
-        var inc;
-        var op, pc, opcode;
-        var rpc; // ram-based pc
-        var max_ticks = 1000; // max_ticks without informing timer
-        var ticks = 0; // ticks to inform
-        var tick_f; // function to be called for ticks
-        var ioptable = optable;
-        if (ics.orig_timers.length == 1) {
-            // optimize when there's only one timer
-            tick_f = ics.orig_timers[0].on_tick;
-        } else {
-            tick_f = tick;
-        }
-        var ram_base = ics.ram_base;
-        var v8 = ics.ram.v8;
-
-        do {
-            if ((ps.ip & ps.im) && ics.ie.ie == 1) {
-                // here is the correct place to treat exceptions
-                raise_exception(ics, 6);
-            }
-
-            pc = ics.pc;
-            ics.next_pc = (pc + 4) >>> 0;
-
-            // Instruction fetching:
-            // supports only code from ram (faster)
-            rpc = pc - ram_base;
-            op = (v8[rpc] << 24) | (v8[rpc + 1] << 16) | (v8[rpc + 2] << 8) | (v8[rpc + 3]);
-
-            // supports code outside ram
-            // op = ibus.read_32(pc);
-
-            // Instruction decoding:
-            decode_instr(ics, op);
-
-            // Instruction execution:
-            opcode = ics.I_OPC;
-            (ioptable[opcode])(ics);
-
-            inc = 1;
-            ticks += inc;
-            if (ticks >= max_ticks) {
-                tick_f(max_ticks);
-                ticks -= max_ticks;
-            }
-            ics.cc = (ics.cc + inc) | 0;
-            ics.pc = ics.next_pc;
-        } while (++i < instructions);
-        tick_f(ticks);
-        return i;
-    }
-
-    function step_dynrec(instructions) {
+    function step(instructions) {
         instructions *= 5;
         var i = 0;
         var ics = cs; // internal cs -> speeds things up
@@ -1816,8 +1113,6 @@ lm32.cpu = function (params) {
         tick_f(ticks);
         return i;
     }
-
-    var step = step_dynrec;
 
     function set_timers(timers) {
         var len = timers.length;

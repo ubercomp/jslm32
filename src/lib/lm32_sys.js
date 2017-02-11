@@ -62,7 +62,7 @@ lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url, cb) {
         bootstrap_deba: DEBA_BASE
     };
 
-    var cpu = lm32.cpu(cpu_params);
+    var cpu = lm32.cpu_dynrec(cpu_params);
     var set_irq = cpu.cs.pic.irq_handler;
 
     var timer0 = lm32.timer({
@@ -195,7 +195,7 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name, cb) {
         bootstrap_deba: DEBA_BASE
     };
 
-    var cpu = lm32.cpu(cpu_params);
+    var cpu = lm32.cpu_dynrec(cpu_params);
     var set_irq = cpu.cs.pic.irq_handler;
 
     var timer0 = lm32.timer({

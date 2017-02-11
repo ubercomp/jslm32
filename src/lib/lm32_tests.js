@@ -21,7 +21,7 @@
  (function() {
 "use strict";
 
-function run_tests(wait_time, first_test, last_test) {
+function run_tests(cpu_f, wait_time, first_test, last_test) {
     if (! wait_time) {
         wait_time = 500;
     }
@@ -97,11 +97,11 @@ function run_tests(wait_time, first_test, last_test) {
         last_test = tests.length - 1;
     }
     console.log("Running tests " + first_test + " through " + last_test);
-    var sys = start_sys(term_element);
+    var sys = start_test_sys(term_element);
     var i = first_test;
     var f = function() {
         sys.shutdown.value = false;
-        sys.run_test(tests[i], i, sys.shutdown);
+        sys.run_test(tests[i], i, cpu_f, sys.shutdown);
         i++;
         if (i <= last_test) {
             setTimeout(f, wait_time);
@@ -110,7 +110,7 @@ function run_tests(wait_time, first_test, last_test) {
     f();
 };
 
-function start_sys(terminal_div) {
+function start_test_sys(terminal_div) {
     var RAM_BASE = 0x08000000;
     var RAM_SIZE = 1*1024*1024;
     var EBA_BASE = 0;
@@ -171,8 +171,8 @@ function start_sys(terminal_div) {
         testdev.get_mmio_handlers()
     );
 
-    function run_test(test_name, idx, shutdown) {
-        var cpu = lm32.cpu(cpu_params);
+    function run_test(test_name, idx, cpu_f, shutdown) {
+        var cpu = cpu_f(cpu_params);
         cpu.set_timers([timer]);
         // testdev.reset();
         var str = "\nRunning Test " + test_name + " (" + idx + ")\n";
@@ -200,18 +200,30 @@ function start_sys(terminal_div) {
     };
 };
 
-function start_tests(_event) {
-    run_tests(0);
+function start_tests_interp(_event) {
+    run_tests(lm32.cpu_interp, 0);
+}
+
+function start_tests_dynrec(_event) {
+    run_tests(lm32.cpu_dynrec, 0);
 }
 
 function main() {
     var div = document.getElementById('lm32_tests_container');
-    var button = document.createElement('button');
-    button.textContent = 'Run Tests!';
-    button.onclick = start_tests;
+
+    var button_interp = document.createElement('button');
+    button_interp.textContent = 'Test Interpreter';
+    button_interp.onclick = start_tests_interp;
+
+    var button_dynrec = document.createElement('button');
+    button_dynrec.textContent = 'Test Dynrec';
+    button_dynrec.onclick = start_tests_dynrec;
+
+
     var terminal = document.createElement('pre');
     terminal.id = 'terminal';
-    div.appendChild(button);
+    div.appendChild(button_interp);
+    div.appendChild(button_dynrec);
     div.appendChild(terminal);
 }
 
