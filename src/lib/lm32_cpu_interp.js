@@ -213,43 +213,6 @@ lm32.cpu_interp = function(params) {
         }
     }
 
-    /**
-     *
-     * @param width the width to read (8, 16 or 32)
-     * @param aft the function or mask to apply before assigning the result to a register
-     */
-    function load(cs, uaddr, width, aft) {
-        var ok = false;
-        var val = undefined;
-        switch(width) {
-            case 8:
-                val = cs.bus.read_8(uaddr);
-                break;
-            case 16:
-                val = cs.bus.read_16(uaddr);
-                break;
-            case 32:
-                val = cs.bus.read_32(uaddr);
-                break;
-            default:
-                // console.log("invalid width - should never happen");
-                break;
-        }
-
-        if (val !== undefined) {
-            ok = true;
-            if (aft != 0) {
-                val = val << aft >> aft;
-            }
-            cs.regs[cs.I_R1] = val;
-        }
-
-        if (!ok) {
-            console.log("Error reading at address " + lm32.util.format(uaddr) + " with width " + width);
-            raise_exception(cs, EXCEPT_DATA_BUS_ERROR);
-        }
-    }
-
     // csr instructions
     function rcsr(cs) {
         var csr = cs.I_R0;
@@ -407,9 +370,10 @@ lm32.cpu_interp = function(params) {
         var ram_base = ics.ram_base;
         var v8 = ics.ram.v8;
 
-        // TODO remove
+        // TODO make temporaries
         var uaddr; // addresses for load and stores
         var vr0, vr1; // temporaries for division instructions
+        var val; // value read on memory instructions
 
 
         do {
@@ -463,7 +427,13 @@ lm32.cpu_interp = function(params) {
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
                     ics.regs[I_R1] = (ram.read_8(uaddr - ics.ram_base) << 24 >> 24);
                 } else {
-                    load(ics, uaddr, 8, 24);
+                    val = ics.bus.read_8(uaddr);
+                    if(val != undefined) {
+                        ics.regs[I_R1] = (val << 24) >> 24;
+                    } else {
+                        console.log("ERROR on lb at addr " + uaddr);
+                        raise_exception(ics, EXCEPT_DATA_BUS_ERROR);
+                    }
                 }
                 break;
             case 0x05: // sri
@@ -477,7 +447,13 @@ lm32.cpu_interp = function(params) {
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
                     ics.regs[I_R1] = (ram.read_16(uaddr - ics.ram_base) << 16 >> 16);
                 } else {
-                    load(ics, uaddr, 16, 16);
+                    val = ics.bus.read_16(uaddr);
+                    if(val != undefined) {
+                        ics.regs[I_R1] = (val << 16) >> 16;
+                    } else {
+                        console.log("ERROR on lb at addr " + uaddr);
+                        raise_exception(ics, EXCEPT_DATA_BUS_ERROR);
+                    }
                 }
                 break;
             case 0x08: // andi
@@ -491,7 +467,14 @@ lm32.cpu_interp = function(params) {
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
                     ics.regs[I_R1] = ram.read_32(uaddr - ics.ram_base);
                 } else {
-                    load(ics, uaddr, 32, 0);
+                    val = ics.bus.read_32(uaddr);
+                    if(val != undefined) {
+                        ics.regs[I_R1] = val;
+                    } else {
+                        console.log("ERROR on lb at addr " + uaddr);
+                        raise_exception(ics, EXCEPT_DATA_BUS_ERROR);
+                    }
+
                 }
                 break;
             case 0x0b: // lhu
@@ -499,7 +482,13 @@ lm32.cpu_interp = function(params) {
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
                     ics.regs[I_R1] = ram.read_16(uaddr - ics.ram_base);
                 } else {
-                    load(ics, uaddr, 16, 0);
+                    val = ics.bus.read_16(uaddr);
+                    if(val != undefined) {
+                        ics.regs[I_R1] = val;
+                    } else {
+                        console.log("ERROR on lb at addr " + uaddr);
+                        raise_exception(ics, EXCEPT_DATA_BUS_ERROR);
+                    }
                 }
                 break;
             case 0x0c: // sb
@@ -524,7 +513,13 @@ lm32.cpu_interp = function(params) {
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
                     ics.regs[I_R1] = ram.read_8(uaddr - ics.ram_base);
                 } else {
-                    load(ics, uaddr, 8, 0);
+                    val = ics.bus.read_8(uaddr);
+                    if(val != undefined) {
+                        ics.regs[I_R1] = val;
+                    } else {
+                        console.log("ERROR on lb at addr " + uaddr);
+                        raise_exception(ics, EXCEPT_DATA_BUS_ERROR);
+                    }
                 }
                 break;
             case 0x11: // be
