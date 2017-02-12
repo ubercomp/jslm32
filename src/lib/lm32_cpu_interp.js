@@ -214,12 +214,10 @@ lm32.cpu_interp = function(params) {
     }
 
     // csr instructions
-    function rcsr(cs) {
-        var csr = cs.I_R0;
-        var r2 = cs.I_R2;
+    function rcsr(cs, I_R0, I_R2) {
         var val;
         var read = true;
-        switch (csr) {
+        switch (I_R0) {
             // These cannot be read from:
             case CSR_ICC:
             case CSR_DCC:
@@ -274,15 +272,13 @@ lm32.cpu_interp = function(params) {
                 break;
         }
         if (read) {
-            cs.regs[r2] = (val) | 0;
+            cs.regs[I_R2] = (val) | 0;
         }
     }
 
-    function wcsr(cs) {
-        var csr = cs.I_R0;
-        var rx = cs.I_R1;
-        var val = cs.regs[rx];
-        switch(csr) {
+    function wcsr(cs, I_R0, I_R1) {
+        var val = cs.regs[I_R1];
+        switch(I_R0) {
             // these cannot be written to:
             case CSR_CC:
             case CSR_CFG:
@@ -387,20 +383,20 @@ lm32.cpu_interp = function(params) {
 
             // Instruction fetching:
             // supports only code from ram (faster)
-            rpc = pc - ram_base;
+            rpc = (pc - ram_base) >>> 0;
             op = (v8[rpc] << 24) | (v8[rpc + 1] << 16) | (v8[rpc + 2] << 8) | (v8[rpc + 3]);
 
             // supports code outside ram
             // op = ibus.read_32(pc);
 
             // Instruction decoding:
-            ics.I_OPC = I_OPC = (op & 0xfc000000) >>> 26;
-            ics.I_IMM5 = I_IMM5 = op & 0x1f;
-            ics.I_IMM16 = I_IMM16 = op & 0xffff;
-            ics.I_IMM26 = I_IMM26 = op & 0x3ffffff;
-            ics.I_R0 = I_R0 = (op & 0x03e00000) >> 21;
-            ics.I_R1 = I_R1 = (op & 0x001f0000) >> 16;
-            ics.I_R2 = I_R2 = (op & 0x0000f800) >> 11;
+            I_OPC = (op & 0xfc000000) >>> 26;
+            I_IMM5 = op & 0x1f;
+            I_IMM16 = op & 0xffff;
+            I_IMM26 = op & 0x3ffffff;
+            I_R0 = (op & 0x03e00000) >> 21;
+            I_R1 = (op & 0x001f0000) >> 16;
+            I_R2 = I_R2 = (op & 0x0000f800) >> 11;
 
 
             // Instruction execution:
@@ -624,7 +620,7 @@ lm32.cpu_interp = function(params) {
                 }
                 break;
             case 0x24: // rcsr
-                rcsr(ics);
+                rcsr(ics, I_R0, I_R2);
                 break;
             case 0x25: // sr
                 ics.regs[I_R2] = ics.regs[I_R0] >> (ics.regs[I_R1] & 0x1f);
@@ -692,7 +688,7 @@ lm32.cpu_interp = function(params) {
                 // empty
                 break;
             case 0x34: // wcsr
-                wcsr(ics);
+                wcsr(ics, I_R0, I_R1);
                 break;
             case 0x35: // mod
                 vr0 = ics.regs[I_R0];
