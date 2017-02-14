@@ -35,15 +35,10 @@ lm32.cpu_interp = function(params) {
 
     function reset(params) {
         cs.ram = params.ram;
-        cs.v8 = cs.ram.v8;
         cs.ram_base = params.ram_base;
         cs.ram_size = params.ram_size;
         cs.ram_max  = cs.ram_base + cs.ram_size;
         cs.bus = params.bus;
-
-        // To speed up bus accesses
-        cs.bus_w = cs.bus.write;
-        cs.bus_r = cs.bus.read;
 
         // general purpose registers
         cs.regs = new Int32Array(32);
