@@ -390,10 +390,6 @@ lm32.cpu_interp = function(params) {
 
             op = v32[rpc >>> 2];
             I_OPC = (op & 0x000000fc) >> 2;
-            I_IMM5 = (op & 0x1f000000) >> 24;
-            I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
-            I_IMM26 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8) |
-                ((op & 0x0000ff00) << 8) | ((op & 0x00000003) << 24);
             I_R0 = ((op & 0x00000003) << 3)| ((op & 0x0000e000) >> 13);
             I_R1 = (op & 0x00001f00) >> 8;
             I_R2 = (op & 0x00f80000) >> 19;
@@ -401,15 +397,19 @@ lm32.cpu_interp = function(params) {
             // Instruction execution:
             switch(I_OPC) {
             case 0x00: // srui
+                I_IMM5 = (op & 0x1f000000) >> 24;
                 ics.regs[I_R1] = ics.regs[I_R0] >>> I_IMM5;
                 break;
             case 0x01: // nori
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 ics.regs[I_R1] = ~(ics.regs[I_R0] | I_IMM16);
                 break;
             case 0x02: // muli
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 ics.regs[I_R1] = (ics.regs[I_R0] * (I_IMM16 << 16 >> 16)) | 0;
                 break;
             case 0x03: // sh
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 uaddr = (ics.regs[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
                     ram.write_16(uaddr - ics.ram_base, ics.regs[I_R1] & 0xffff);
@@ -418,6 +418,7 @@ lm32.cpu_interp = function(params) {
                 }
                 break;
             case 0x04: // lb
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 uaddr = (ics.regs[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
                     ics.regs[I_R1] = (ram.read_8(uaddr - ics.ram_base) << 24 >> 24);
@@ -432,12 +433,15 @@ lm32.cpu_interp = function(params) {
                 }
                 break;
             case 0x05: // sri
+                I_IMM5 = (op & 0x1f000000) >> 24;
                 ics.regs[I_R1] = ics.regs[I_R0] >> I_IMM5;
                 break;
             case 0x06: // xori
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 ics.regs[I_R1] = ics.regs[I_R0] ^ I_IMM16;
                 break;
             case 0x07: // lh
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 uaddr = (ics.regs[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
                     ics.regs[I_R1] = (ram.read_16(uaddr - ics.ram_base) << 16 >> 16);
@@ -452,12 +456,15 @@ lm32.cpu_interp = function(params) {
                 }
                 break;
             case 0x08: // andi
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 ics.regs[I_R1] = ics.regs[I_R0] & I_IMM16;
                 break;
             case 0x09: // xnori
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 ics.regs[I_R1] = ~(ics.regs[I_R0] ^ I_IMM16);
                 break;
             case 0x0a: // lw
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 uaddr = (ics.regs[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
                     ics.regs[I_R1] = ram.read_32(uaddr - ics.ram_base);
@@ -473,6 +480,7 @@ lm32.cpu_interp = function(params) {
                 }
                 break;
             case 0x0b: // lhu
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 uaddr = (ics.regs[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
                     ics.regs[I_R1] = ram.read_16(uaddr - ics.ram_base);
@@ -487,6 +495,7 @@ lm32.cpu_interp = function(params) {
                 }
                 break;
             case 0x0c: // sb
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 uaddr = (ics.regs[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
                     ram.v8[uaddr - ics.ram_base] = ics.regs[I_R1] & 0xff;
@@ -495,15 +504,19 @@ lm32.cpu_interp = function(params) {
                 }
                 break;
             case 0x0d: // addi
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 ics.regs[I_R1] = (ics.regs[I_R0] + (I_IMM16 << 16 >> 16)) | 0;
                 break;
             case 0x0e: // ori
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 ics.regs[I_R1] = (ics.regs[I_R0] | I_IMM16);
                 break;
             case 0x0f: // sli
+                I_IMM5 = (op & 0x1f000000) >> 24;
                 ics.regs[I_R1] = ics.regs[I_R0] << I_IMM5;
                 break;
             case 0x10: // lbu
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 uaddr = (ics.regs[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
                     ics.regs[I_R1] = ram.read_8(uaddr - ics.ram_base);
@@ -519,30 +532,36 @@ lm32.cpu_interp = function(params) {
                 break;
             case 0x11: // be
                 if (ics.regs[I_R0] == ics.regs[I_R1]) {
+                    I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                   ics.next_pc = (ics.pc + ((I_IMM16 << 16) >> 14)) >>> 0;
                 }
                 break;
             case 0x12: // bg
                 if (ics.regs[I_R0] > ics.regs[I_R1]) {
+                    I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                     ics.next_pc = (ics.pc + ((I_IMM16 << 16) >> 14)) >>> 0;
                 }
                 break;
             case 0x13: // bge
                 if (ics.regs[I_R0] >= ics.regs[I_R1]) {
+                    I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                     ics.next_pc = (ics.pc + ((I_IMM16 << 16) >> 14)) >>> 0;
                 }
                 break;
             case 0x14: // bgeu
                 if ((ics.regs[I_R0] >>> 0) >= (ics.regs[I_R1] >>> 0)) {
-                  ics.next_pc = (ics.pc + ((I_IMM16 << 16) >> 14)) >>> 0;
+                    I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
+                    ics.next_pc = (ics.pc + ((I_IMM16 << 16) >> 14)) >>> 0;
                 }
                 break;
             case 0x15: // bgu
                 if ((ics.regs[I_R0] >>> 0) > (ics.regs[I_R1] >>> 0)) {
+                    I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                     ics.next_pc = (ics.pc + ((I_IMM16 << 16) >> 14)) >>> 0;
                 }
                 break;
             case 0x16: // sw
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 uaddr = (ics.regs[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
                     ram.write_32(uaddr - ics.ram_base, ics.regs[I_R1] | 0);
@@ -552,13 +571,16 @@ lm32.cpu_interp = function(params) {
                 break;
             case 0x17: // bne
                 if (ics.regs[I_R0] != ics.regs[I_R1]) {
+                    I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                     ics.next_pc = (ics.pc + ((I_IMM16 << 16) >> 14)) >>> 0;
                 }
                 break;
             case 0x18: // andhi
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 ics.regs[I_R1] = ics.regs[I_R0] & (I_IMM16 << 16);
                 break;
             case 0x19: // cmpei
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 if (ics.regs[I_R0] == ((I_IMM16 << 16) >> 16)) {
                     ics.regs[I_R1] = 1;
                 } else {
@@ -566,6 +588,7 @@ lm32.cpu_interp = function(params) {
                 }
                 break;
             case 0x1a: // cmpgi
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 if (ics.regs[I_R0] > ((I_IMM16 << 16) >> 16)) {
                     ics.regs[I_R1] = 1;
                 } else {
@@ -573,6 +596,7 @@ lm32.cpu_interp = function(params) {
                 }
                 break;
             case 0x1b: // cmpgei
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 if (ics.regs[I_R0] >= ((I_IMM16 << 16) >> 16)) {
                     ics.regs[I_R1] = 1;
                 } else {
@@ -580,6 +604,7 @@ lm32.cpu_interp = function(params) {
                 }
                 break;
             case 0x1c: // cmpgeui
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 if ((ics.regs[I_R0] >>> 0) >= I_IMM16) {
                     ics.regs[I_R1] = 1;
                 } else {
@@ -587,13 +612,16 @@ lm32.cpu_interp = function(params) {
                 }
                 break;
             case 0x1d: // cmpgui
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 ics.regs[I_R1] = ((ics.regs[I_R0] >>> 0) > I_IMM16) | 0;
 
                 break;
             case 0x1e: // orhi
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 ics.regs[I_R1] = ics.regs[I_R0] | (I_IMM16 << 16);
                 break;
             case 0x1f: // cmpnei
+                I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 if (ics.regs[I_R0] != ((I_IMM16 << 16) >> 16)) {
                     ics.regs[I_R1] = 1;
                 } else {
@@ -707,6 +735,11 @@ lm32.cpu_interp = function(params) {
                 ics.regs[I_R2] = (ics.regs[I_R0] << 16) >> 16;
                 break;
             case 0x38: // bi
+                I_IMM26 =
+                    ((op & 0xff000000) >>> 24) |
+                    ((op & 0x00ff0000) >> 8) |
+                    ((op & 0x0000ff00) << 8) |
+                    ((op & 0x00000003) << 24);
                 ics.next_pc = (ics.pc + ((I_IMM26 << 2) << 4 >> 4)) >>> 0;
                 break;
             case 0x39: // cmpe
@@ -745,6 +778,11 @@ lm32.cpu_interp = function(params) {
                 }
                 break;
             case 0x3e: // calli
+                I_IMM26 =
+                    ((op & 0xff000000) >>> 24) |
+                    ((op & 0x00ff0000) >> 8) |
+                    ((op & 0x0000ff00) << 8) |
+                    ((op & 0x00000003) << 24);
                 ics.regs[REG_RA] = (ics.pc + 4) | 0;
                 ics.next_pc = (ics.pc + ((I_IMM26 << 2) << 4 >> 4)) >>> 0;
                 break;
