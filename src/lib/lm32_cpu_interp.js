@@ -365,6 +365,7 @@ lm32.cpu_interp = function(params) {
         }
         var ram_base = ics.ram_base;
         var v8 = ics.ram.v8;
+        var v32 = ics.ram.v32;
 
         // TODO make temporaries
         var uaddr; // addresses for load and stores
@@ -381,23 +382,21 @@ lm32.cpu_interp = function(params) {
             pc = ics.pc;
             ics.next_pc = (pc + 4) >>> 0;
 
-            // Instruction fetching:
-            // supports only code from ram (faster)
-            rpc = (pc - ram_base) >>> 0;
-            op = (v8[rpc] << 24) | (v8[rpc + 1] << 16) | (v8[rpc + 2] << 8) | (v8[rpc + 3]);
+            // Instruction and decoding:
 
-            // supports code outside ram
-            // op = ibus.read_32(pc);
+            // Code not in RAM is not supported.
+            // Use litte endian read to make instruction decoding more efficient
+            rpc = pc - ram_base;
 
-            // Instruction decoding:
-            I_OPC = (op & 0xfc000000) >>> 26;
-            I_IMM5 = op & 0x1f;
-            I_IMM16 = op & 0xffff;
-            I_IMM26 = op & 0x3ffffff;
-            I_R0 = (op & 0x03e00000) >> 21;
-            I_R1 = (op & 0x001f0000) >> 16;
-            I_R2 = I_R2 = (op & 0x0000f800) >> 11;
-
+            op = v32[rpc >>> 2];
+            I_OPC = (op & 0x000000fc) >> 2;
+            I_IMM5 = (op & 0x1f000000) >> 24;
+            I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
+            I_IMM26 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8) |
+                ((op & 0x0000ff00) << 8) | ((op & 0x00000003) << 24);
+            I_R0 = ((op & 0x00000003) << 3)| ((op & 0x0000e000) >> 13);
+            I_R1 = (op & 0x00001f00) >> 8;
+            I_R2 = (op & 0x00f80000) >> 19;
 
             // Instruction execution:
             switch(I_OPC) {
