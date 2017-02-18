@@ -610,7 +610,7 @@ lm32.cpu_interp = function(params) {
             case 0x1d: // cmpgui
                 I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 r[I_R1] = ((r[I_R0] >>> 0) > I_IMM16) | 0;
-
+                console.log(r[I_R1]);
                 break;
             case 0x1e: // orhi
                 I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
@@ -670,7 +670,15 @@ lm32.cpu_interp = function(params) {
                 // empty
                 break;
             case 0x2b: // scall
-                raise_exception(ics, EXCEPT_SYSTEM_CALL);
+                I_IMM5 = (op & 0x1f000000) >> 24;
+                switch(I_IMM5) {
+                case 7:
+                    raise_exception(ics, EXCEPT_SYSTEM_CALL);
+                    break;
+                case 2:
+                    raise_exception(ics, EXCEPT_BREAKPOINT);
+                    break;
+                }
                 break;
             case 0x2c: // sextb
                 // sign extend byte to word
