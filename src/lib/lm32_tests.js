@@ -116,7 +116,7 @@ function start_test_sys(cpu_f, terminal_div) {
     var EBA_BASE = 0;
     var DEBA_BASE = 0;
 
-    var TESTDEV_BASE = 0xffff0000;
+    var TESTDEV_BASE = 0x04000000;
     var MAX_STEPS = 2000;
     var BOOT_PC = RAM_BASE;
 
