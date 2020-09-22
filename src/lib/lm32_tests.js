@@ -193,7 +193,7 @@ function start_test_sys(cpu_f, terminal_div) {
             }
 
         }
-        bus.load_binary("../test/" + test_name, BOOT_PC,on_load_binary_result);
+        bus.load_binary("../../third_party/qemu-tcg-lm32-tests/" + test_name, BOOT_PC,on_load_binary_result);
     }
 
     return {
