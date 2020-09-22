@@ -26,8 +26,7 @@ function run_tests(cpu_f, wait_time, first_test, last_test) {
         wait_time = 500;
     }
     var term_element = 'terminal';
-    var tests = ['test_bret.bin'];
-    var tests_ = [
+    var tests = [
         'test_add.bin',
         'test_addi.bin',
         'test_and.bin',
