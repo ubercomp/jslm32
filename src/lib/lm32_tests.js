@@ -26,69 +26,70 @@ function run_tests(cpu_f, wait_time, first_test, last_test) {
         wait_time = 500;
     }
     var term_element = 'terminal';
-    var tests = [
-        'test_add.tst.bin',
-        'test_addi.tst.bin',
-        'test_and.tst.bin',
-        'test_andhi.tst.bin',
-        'test_andi.tst.bin',
-        'test_b.tst.bin',
-        'test_be.tst.bin',
-        'test_bg.tst.bin',
-        'test_bge.tst.bin',
-        'test_bgeu.tst.bin',
-        'test_bgu.tst.bin',
-        'test_bi.tst.bin',
-        'test_bne.tst.bin',
-        'test_break.tst.bin',
-        'test_bret.tst.bin',
-        'test_call.tst.bin',
-        'test_calli.tst.bin',
-        'test_cmpe.tst.bin',
-        'test_cmpei.tst.bin',
-        'test_cmpg.tst.bin',
-        'test_cmpge.tst.bin',
-        'test_cmpgei.tst.bin',
-        'test_cmpgeu.tst.bin',
-        'test_cmpgeui.tst.bin',
-        'test_cmpgi.tst.bin',
-        'test_cmpgu.tst.bin',
-        'test_cmpgui.tst.bin',
-        'test_cmpne.tst.bin',
-        'test_cmpnei.tst.bin',
-        'test_divu.tst.bin',
-        'test_eret.tst.bin',
-        'test_lb.tst.bin',
-        'test_lbu.tst.bin',
-        'test_lh.tst.bin',
-        'test_lhu.tst.bin',
-        'test_lw.tst.bin',
-        'test_modu.tst.bin',
-        'test_mul.tst.bin',
-        'test_muli.tst.bin',
-        'test_nor.tst.bin',
-        'test_nori.tst.bin',
-        'test_or.tst.bin',
-        'test_orhi.tst.bin',
-        'test_ori.tst.bin',
-        'test_ret.tst.bin',
-        'test_sb.tst.bin',
-        'test_scall.tst.bin',
-        'test_sextb.tst.bin',
-        'test_sexth.tst.bin',
-        'test_sh.tst.bin',
-        'test_sl.tst.bin',
-        'test_sli.tst.bin',
-        'test_sr.tst.bin',
-        'test_sri.tst.bin',
-        'test_sru.tst.bin',
-        'test_srui.tst.bin',
-        'test_sub.tst.bin',
-        'test_sw.tst.bin',
-        'test_xnor.tst.bin',
-        'test_xnori.tst.bin',
-        'test_xor.tst.bin',
-        'test_xori.tst.bin'
+    var tests = ['test_bret.bin'];
+    var tests_ = [
+        'test_add.bin',
+        'test_addi.bin',
+        'test_and.bin',
+        'test_andhi.bin',
+        'test_andi.bin',
+        'test_b.bin',
+        'test_be.bin',
+        'test_bg.bin',
+        'test_bge.bin',
+        'test_bgeu.bin',
+        'test_bgu.bin',
+        'test_bi.bin',
+        'test_bne.bin',
+        'test_break.bin',
+        'test_bret.bin',
+        'test_call.bin',
+        'test_calli.bin',
+        'test_cmpe.bin',
+        'test_cmpei.bin',
+        'test_cmpg.bin',
+        'test_cmpge.bin',
+        'test_cmpgei.bin',
+        'test_cmpgeu.bin',
+        'test_cmpgeui.bin',
+        'test_cmpgi.bin',
+        'test_cmpgu.bin',
+        'test_cmpgui.bin',
+        'test_cmpne.bin',
+        'test_cmpnei.bin',
+        'test_divu.bin',
+        'test_eret.bin',
+        'test_lb.bin',
+        'test_lbu.bin',
+        'test_lh.bin',
+        'test_lhu.bin',
+        'test_lw.bin',
+        'test_modu.bin',
+        'test_mul.bin',
+        'test_muli.bin',
+        'test_nor.bin',
+        'test_nori.bin',
+        'test_or.bin',
+        'test_orhi.bin',
+        'test_ori.bin',
+        'test_ret.bin',
+        'test_sb.bin',
+        'test_scall.bin',
+        'test_sextb.bin',
+        'test_sexth.bin',
+        'test_sh.bin',
+        'test_sl.bin',
+        'test_sli.bin',
+        'test_sr.bin',
+        'test_sri.bin',
+        'test_sru.bin',
+        'test_srui.bin',
+        'test_sub.bin',
+        'test_sw.bin',
+        'test_xnor.bin',
+        'test_xnori.bin',
+        'test_xor.bin',
+        'test_xori.bin'
     ];
     if (first_test === undefined) {
         first_test = 0;
@@ -97,11 +98,11 @@ function run_tests(cpu_f, wait_time, first_test, last_test) {
         last_test = tests.length - 1;
     }
     console.log("Running tests " + first_test + " through " + last_test);
-    var sys = start_test_sys(term_element);
+    var sys = start_test_sys(cpu_f, term_element);
     var i = first_test;
     var f = function() {
         sys.shutdown.value = false;
-        sys.run_test(tests[i], i, cpu_f, sys.shutdown);
+        sys.run_test(tests[i], i, sys.shutdown);
         i++;
         if (i <= last_test) {
             setTimeout(f, wait_time);
@@ -110,29 +111,17 @@ function run_tests(cpu_f, wait_time, first_test, last_test) {
     f();
 };
 
-function start_test_sys(terminal_div) {
+function start_test_sys(cpu_f, terminal_div) {
     var RAM_BASE = 0x08000000;
-    var RAM_SIZE = 1*1024*1024;
+    var RAM_SIZE = 1 * 1024 * 1024;
     var EBA_BASE = 0;
     var DEBA_BASE = 0;
 
     var TESTDEV_BASE = 0xffff0000;
-    var MAX_STEPS = 200;
+    var MAX_STEPS = 2000;
     var BOOT_PC = RAM_BASE;
 
-    var bus = lm32.bus();
-
     var ram = lm32.ram(RAM_SIZE, true);
-
-    var cpu_params = {
-        bus: bus,
-        ram: ram,
-        ram_base: RAM_BASE,
-        ram_size: RAM_SIZE,
-        bootstrap_pc: BOOT_PC,
-        bootstrap_eba: EBA_BASE,
-        bootstrap_deba: DEBA_BASE
-    };
 
     var term = document.getElementById(terminal_div);
     var terminal = (function() {
@@ -151,34 +140,48 @@ function start_test_sys(terminal_div) {
         shutdown.value = true;
     }
 
-    var testdev_params = {
-        bus: bus,
-        shutdown: shutdown_f,
-        terminal: terminal
-    };
-    var testdev = lm32.test_dev(testdev_params);
-    var dummyTimer = function() {
-        return {
-            on_tick: function() {}
-        }
-    };
-    var timer = dummyTimer();
 
-    bus.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
-    bus.add_memory(
-        TESTDEV_BASE,
-        testdev.iomem_size,
-        testdev.get_mmio_handlers()
-    );
-
-    function run_test(test_name, idx, cpu_f, shutdown) {
+    function run_test(test_name, idx, shutdown) {
+        var bus = lm32.bus();
+        var cpu_params = {
+            bus: bus,
+            ram: ram,
+            ram_base: RAM_BASE,
+            ram_size: RAM_SIZE,
+            bootstrap_pc: BOOT_PC,
+            bootstrap_eba: EBA_BASE,
+            bootstrap_deba: DEBA_BASE
+        };
         var cpu = cpu_f(cpu_params);
+        var dummyTimer = function() {
+            return {
+                on_tick: function() {}
+            }
+        };
+        var timer = dummyTimer();
         cpu.set_timers([timer]);
-        // testdev.reset();
+
+        var testdev_params = {
+            bus: bus,
+            cpu: cpu,
+            shutdown: shutdown_f,
+            terminal: terminal
+        };
+        var testdev = lm32.test_dev(testdev_params);
+
+        bus.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
+        bus.add_memory(
+            TESTDEV_BASE,
+            testdev.iomem_size,
+            testdev.get_mmio_handlers()
+        );
+
+
         var str = "\nRunning Test " + test_name + " (" + idx + ")\n";
         terminal.write(str);
         console.log(str);
         bus.log = false;
+        cpu.cs.pc = BOOT_PC;
         var on_load_binary_result = function(result) {
             bus.log = true;
             var steps = 0;

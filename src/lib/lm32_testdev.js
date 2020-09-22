@@ -2,7 +2,7 @@
  *
  * Device for tests
  *
- * Copyright (c) 2011-2012, 2016-2017 Reginaldo Silva (reginaldo@ubercomp.com)
+ * Copyright (c) 2011-2020 Reginaldo Silva (reginaldo@ubercomp.com)
  *
  *
  * This Javascript code is free software; you can redistribute it
@@ -23,87 +23,56 @@
 lm32.test_dev = function(params) {
     // dependencies:
     var bus = params.bus;
+    var cpu = params.cpu;
     var shutdown = params.shutdown;
     var terminal = params.terminal;
 
     // constants
     var R_CTRL = 0;
-    var R_PASSFAIL = 1;
-    var R_TESTNAME = 2;
-    var R_MAX = 3;
+    var R_MAX = 1;
 
-    var MAX_TESTNAME_LEN = 16;
 
     // state:
     var regs;
-    var testname;
 
-
-    function copy_testname() {
-        var addr = regs[R_TESTNAME];
-        for (var i = 0; i < MAX_TESTNAME_LEN; i++) {
-            var val = bus.read_8(addr + i);
-            testname[i] = val;
-            if (val == 0) {
-                break;
-            }
-        }
-        testname[MAX_TESTNAME_LEN - 1] = 0;
-    }
-
-    function testname_charr_to_str() {
-        var  s = '';
-        var i;
-        for (i = 0; i < MAX_TESTNAME_LEN; i ++) {
-            var val = testname[i];
-            if (val == 0) {
-                break;
-            }
-            s += String.fromCharCode(val);
-        }
-        while (i < MAX_TESTNAME_LEN) {
-            s = s + ' ';
-            i++;
-        }
-        return s;
-    }
-
-    function reset() {
-        // registers
-        regs = new Int32Array(R_MAX);
-        for (var i = 0; i < R_MAX; i++) {
-            regs[i] = 0;
-        }
-
-        // array of characters forming testname
-        testname = new Int8Array(MAX_TESTNAME_LEN);
-        for (var i = 0; i < MAX_TESTNAME_LEN; i++) {
-            testname[i] = 0;
-        }
-    }
 
     function write_32(addr, value) {
+        var BREAKPOINT = 1<<0;
+        var INSTRUCTION_BUS_ERROR = 1<<1;
+        var WATCHPOINT = 1<<2;
+        var DATA_BUS_ERROR = 1<<3;
+        var DIVIDE_BY_ZERO = 1<<4;
+        var INTERRUPT = 1<<5;
+        var SYSTEM_CALL = 1<<6;
+
+        var r = cpu.cs.regs;
+
+        // called by CPU when executing the exception handler
         addr >>= 2;
-        switch (addr) {
-            case R_CTRL:
-                shutdown();
-                break;
-
-            case R_PASSFAIL:
-                regs[addr] = value;
-                var testname = testname_charr_to_str();
-                var result = (value != 0) ? "FAILED" : "OK";
-                terminal.write("TC    " +  testname + " RESULT: " + result + "\n");
-                break;
-
-            case R_TESTNAME:
-                regs[addr] = value;
-                copy_testname();
-                break;
-
-            default:
-                terminal.write("Writing to invalid register: " + addr);
-                break;
+        if (addr === 0) {
+            if (value & SYSTEM_CALL) {
+                // system call:
+                // r8 -> system call number
+                // r1 ... rn -> syscall arguments
+                var n = r[8];
+                switch (n) {
+                case 1: // exit
+                    shutdown();
+                    break;
+                case 5: // write
+                    var fd = r[1];
+                    var buf = r[2];
+                    var nbytes = r[3];
+                    if (fd == 1) { // stdout
+                        for(var c  = buf; c < buf + nbytes; c++) {
+                            terminal.write(String.fromCharCode(bus.read_8(c)));
+                        }
+                    }
+                    break;
+                default:
+                    console.log("System call not implemented: " + n);
+                }
+            }
         }
     }
 
@@ -115,7 +84,6 @@ lm32.test_dev = function(params) {
     }
 
     // Initialization and publication
-    reset();
     return {
         get_mmio_handlers: get_mmio_handlers,
         iomem_size: (4 * R_MAX)
