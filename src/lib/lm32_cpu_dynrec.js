@@ -324,6 +324,11 @@ lm32.cpu_dynrec = function(params) {
            cond  + "((" + (es.I_IMM16 << 16 >> 16) + ")" + wrap + ")) ? 1 : 0;\n";
     }
 
+    function compare_rui_e(es, cond, wrap) {
+         return "$r[" + es.I_R1 + "] = (($r[" + es.I_R0 + "]" + wrap + ") " +
+           cond  + "((" + (es.I_IMM16) + ")" + wrap + ")) ? 1 : 0;\n";
+    }
+
     function cmpe_e(es) {
         return compare_rr_e(es, "===", "");
     }
@@ -354,7 +359,7 @@ lm32.cpu_dynrec = function(params) {
     }
 
     function cmpgeui_e(es) {
-        return compare_ri_e(es, ">=", " >>> 0");
+        return compare_rui_e(es, ">=", " >>> 0");
     }
 
     function cmpgu_e(es) {
@@ -362,7 +367,7 @@ lm32.cpu_dynrec = function(params) {
     }
 
     function cmpgui_e(es) {
-        return compare_ri_e(es, ">", " >>> 0");
+        return compare_rui_e(es, ">", " >>> 0");
     }
 
     function cmpne_e(es) {
