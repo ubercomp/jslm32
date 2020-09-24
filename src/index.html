@@ -19,17 +19,17 @@
     <script src="../third_party/bellard/term.js"></script>
 
     <!-- lm32 -->
-    <script src="lib/lm32_base.js"></script>
-    <script src="lib/lm32_fb.js"></script>
-    <script src="lib/lm32_pic.js"></script>
-    <script src="lib/lm32_cpu_dynrec.js"></script>
-    <script src="lib/lm32_cpu_interp.js"></script>
-    <script src="lib/lm32_bus.js"></script>
-    <script src="lib/lm32_ram.js"></script>
-    <script src="lib/lm32_hwsetup.js"></script>
-    <script src="lib/lm32_sys.js"></script>
-    <script src="lib/lm32_timer.js"></script>
-    <script src="lib/lm32_uart.js"></script>
+    <script src="js/lm32_base.js"></script>
+    <script src="js/lm32_fb.js"></script>
+    <script src="js/lm32_pic.js"></script>
+    <script src="js/lm32_cpu_dynrec.js"></script>
+    <script src="js/lm32_cpu_interp.js"></script>
+    <script src="js/lm32_bus.js"></script>
+    <script src="js/lm32_ram.js"></script>
+    <script src="js/lm32_hwsetup.js"></script>
+    <script src="js/lm32_sys.js"></script>
+    <script src="js/lm32_timer.js"></script>
+    <script src="js/lm32_uart.js"></script>
 
     <script>
         "use strict";
@@ -168,7 +168,7 @@
 
         function lm32_start_worker() {
             terminal.write("Loading with Web Worker...\r\n")
-            window.worker = new Worker('lib/lm32_worker.js');
+            window.worker = new Worker('js/lm32_worker.js');
             worker.onmessage = lm32_receive_worker_message;
 
             function terminal_send_str(str) {
