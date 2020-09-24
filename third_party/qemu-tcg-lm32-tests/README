@@ -10,9 +10,9 @@ On Arch Linux, which is what I'm using, I suggest installing the following packa
 * lm32-elf-newlib
 
 
-2) Clone the jslm32-qemu repository and compile everything
-$ git clone https://github.com/jslm32-qemu/
-$ cd jslm32-qemu/tests/tcg/lm32
+2) Clone the qemu-jslm32 repository and compile everything
+$ git clone https://github.com/ubercomp/qemu-jslm32/
+$ cd qemu-jslm32/tests/tcg/lm32
 $ make
 
 3) Copy everything here
