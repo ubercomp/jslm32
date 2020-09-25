@@ -429,7 +429,7 @@ lm32.cpu_interp = function(params) {
                     r[I_R1] = (ram.read_8(uaddr - ics.ram_base) << 24 >> 24);
                 } else {
                     val = ics.bus.read_8(uaddr);
-                    if(val != undefined) {
+                    if (val != undefined) {
                         r[I_R1] = (val << 24) >> 24;
                     } else {
                         console.log("ERROR on lb at addr " + uaddr);
@@ -452,7 +452,7 @@ lm32.cpu_interp = function(params) {
                     r[I_R1] = (ram.read_16(uaddr - ics.ram_base) << 16 >> 16);
                 } else {
                     val = ics.bus.read_16(uaddr);
-                    if(val != undefined) {
+                    if (val != undefined) {
                         r[I_R1] = (val << 16) >> 16;
                     } else {
                         console.log("ERROR on lb at addr " + uaddr);
@@ -475,7 +475,7 @@ lm32.cpu_interp = function(params) {
                     r[I_R1] = ram.read_32(uaddr - ics.ram_base);
                 } else {
                     val = ics.bus.read_32(uaddr);
-                    if(val != undefined) {
+                    if (val != undefined) {
                         r[I_R1] = val;
                     } else {
                         console.log("ERROR on lb at addr " + uaddr);
@@ -491,7 +491,7 @@ lm32.cpu_interp = function(params) {
                     r[I_R1] = ram.read_16(uaddr - ics.ram_base);
                 } else {
                     val = ics.bus.read_16(uaddr);
-                    if(val != undefined) {
+                    if (val != undefined) {
                         r[I_R1] = val;
                     } else {
                         console.log("ERROR on lb at addr " + uaddr);
@@ -527,7 +527,7 @@ lm32.cpu_interp = function(params) {
                     r[I_R1] = ram.read_8(uaddr - ics.ram_base);
                 } else {
                     val = ics.bus.read_8(uaddr);
-                    if(val != undefined) {
+                    if (val != undefined) {
                         r[I_R1] = val;
                     } else {
                         console.log("ERROR on lb at addr " + uaddr);

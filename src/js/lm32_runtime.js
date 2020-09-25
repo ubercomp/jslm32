@@ -60,7 +60,7 @@ lm32.runtime = (function() {
                 var buf = r[2];
                 var nbytes = r[3];
                 if (fd == 1) { // stdout
-                    for(var c  = buf; c < buf + nbytes; c++) {
+                    for (var c  = buf; c < buf + nbytes; c++) {
                         cs.runtime_args.putc(String.fromCharCode(cs.bus.read_8(c)));
                     }
                 }

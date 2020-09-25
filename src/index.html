@@ -71,9 +71,9 @@
         }
 
         function terminal_putchar(c) {
-            if(lm32_debug_terminal) {
+            if (lm32_debug_terminal) {
                 var ta = document.getElementById('text_mode');
-                if(c == 8) {
+                if (c == 8) {
                     ta.textContent = ta.textContent.substring(0, ta.textContent.length - 1);
                 } else {
                     ta.textContent += String.fromCharCode(c);
@@ -85,7 +85,7 @@
 
         function lm32_start_evr(kernel_filename) {
             var on_start_evr_result = function(result) {
-                if(result.success) {
+                if (result.success) {
                     sys = result.system;
                     ics_init();
                     setTimeout(step_forever, 0);
@@ -108,7 +108,7 @@
         function lm32_start_regular() {
             terminal.write("Loading...\r\n");
             var on_start_uclinux_result = function(result) {
-                if(result.success) {
+                if (result.success) {
                     sys = result.system;
                     ics_init();
                     setTimeout(step_forever, 0);
@@ -135,7 +135,7 @@
                     break;
 
                 case 'work_done':
-                    if(worker_pending_str !== false) {
+                    if (worker_pending_str !== false) {
                         var payload = worker_pending_str;
                         worker_pending_str = false;
                         worker.postMessage(
@@ -172,7 +172,7 @@
             worker.onmessage = lm32_receive_worker_message;
 
             function terminal_send_str(str) {
-                if(worker_pending_str === false) {
+                if (worker_pending_str === false) {
                     worker_pending_str = '';
                 }
                 worker_pending_str += str;
@@ -198,7 +198,7 @@
                 }
             }
 
-            if(lm32_debug_terminal) {
+            if (lm32_debug_terminal) {
                 var ta = document.createElement('textarea');
                 ta.id ='text_mode';
                 ta.rows=25;
