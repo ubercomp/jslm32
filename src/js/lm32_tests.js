@@ -1,8 +1,8 @@
 /**
  *
- * Test Runner
+ * Test Runner. Uses QEMU's tests for TCG.
  *
- * Copyright (c) 2011-2012, 2016-2017 Reginaldo Silva (reginaldo@ubercomp.com)
+ * Copyright (c) 2011-2020 Reginaldo Silva (reginaldo@ubercomp.com)
  *
  *
  * This Javascript code is free software; you can redistribute it
@@ -116,7 +116,6 @@ function start_test_sys(cpu_f, terminal_div) {
     var EBA_BASE = 0;
     var DEBA_BASE = 0;
 
-    var TESTDEV_BASE = 0x04000000;
     var MAX_STEPS = 2000;
     var BOOT_PC = RAM_BASE;
 
@@ -149,9 +148,12 @@ function start_test_sys(cpu_f, terminal_div) {
             ram_size: RAM_SIZE,
             bootstrap_pc: BOOT_PC,
             bootstrap_eba: EBA_BASE,
-            bootstrap_deba: DEBA_BASE
+            bootstrap_deba: DEBA_BASE,
+            runtime: lm32.runtime.test_runtime,
+            runtime_args: { exit: shutdown_f, putc: terminal.write}
         };
         var cpu = cpu_f(cpu_params);
+
         var dummyTimer = function() {
             return {
                 on_tick: function() {}
@@ -160,21 +162,7 @@ function start_test_sys(cpu_f, terminal_div) {
         var timer = dummyTimer();
         cpu.set_timers([timer]);
 
-        var testdev_params = {
-            bus: bus,
-            cpu: cpu,
-            shutdown: shutdown_f,
-            terminal: terminal
-        };
-        var testdev = lm32.test_dev(testdev_params);
-
         bus.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
-        bus.add_memory(
-            TESTDEV_BASE,
-            testdev.iomem_size,
-            testdev.get_mmio_handlers()
-        );
-
 
         var str = "\nRunning Test " + test_name + " (" + idx + ")\n";
         terminal.write(str);
@@ -193,7 +181,12 @@ function start_test_sys(cpu_f, terminal_div) {
             }
 
         }
-        bus.load_binary("../../third_party/qemu-tcg-lm32-tests/" + test_name, BOOT_PC,on_load_binary_result);
+
+        var test_dir = "../../third_party/qemu-tcg-lm32-tests/";
+        var cache_buster = (new Date()).getTime();
+        bus.load_binary(
+            test_dir + test_name + "?nocache=" + cache_buster,
+            BOOT_PC,on_load_binary_result);
     }
 
     return {

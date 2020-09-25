@@ -48,6 +48,13 @@ lm32.cpu_dynrec = function(params) {
         cs.ram_max  = cs.ram_base + cs.ram_size;
         cs.bus = params.bus;
 
+        if (params.runtime) {
+            cs.runtime = params.runtime;
+        } else {
+            cs.runtime = lm32.runtime.null_runtime;
+        }
+        cs.runtime_args = params.runtime_args; // may be undefined
+
         // To speed up bus accesses
         cs.bus_w = cs.bus.write;
         cs.bus_r = cs.bus.read;
@@ -164,6 +171,8 @@ lm32.cpu_dynrec = function(params) {
         cs.wp1 = 0;
         cs.wp2 = 0;
         cs.wp3 = 0;
+
+        cs.runtime.reset(cs, cs.runtime_args);
     }
 
     // block label and variable names
@@ -825,6 +834,10 @@ lm32.cpu_dynrec = function(params) {
         return code + "$n = " + (es.I_PC + 4) + ";\n";
     }
 
+    function user_e(es) {
+        return "cs.runtime.user(cs, " + es.op + ");\n";
+    }
+
     function reserved_e(es) {
         return 'throw "Reserved instruction should not be used";\n';
     }
@@ -883,7 +896,7 @@ lm32.cpu_dynrec = function(params) {
         /* 0x30 */        "b_e",
         /* 0x31 */     "modu_e",
         /* 0x32 */      "sub_e",
-        /* 0x33 */ "reserved_e",
+        /* 0x33 */     "user_e",
         /* 0x34 */     "wcsr_e",
         /* 0x35 */      "mod_e",
         /* 0x36 */     "call__e",
@@ -954,7 +967,7 @@ lm32.cpu_dynrec = function(params) {
         /* 0x30 */        b_e,
         /* 0x31 */     modu_e,
         /* 0x32 */      sub_e,
-        /* 0x33 */ reserved_e,
+        /* 0x33 */     user_e,
         /* 0x34 */     wcsr_e,
         /* 0x35 */      mod_e,
         /* 0x36 */     call__e,
@@ -977,13 +990,14 @@ lm32.cpu_dynrec = function(params) {
     }
 
     function decode_instr(ics, op) {
-            ics.I_OPC   = (op & 0xfc000000) >>> 26;
-            ics.I_IMM5  = op & 0x1f;
-            ics.I_IMM16 = op & 0xffff;
-            ics.I_IMM26 = op & 0x3ffffff;
-            ics.I_R0   = (op & 0x03e00000) >> 21;
-            ics.I_R1    = (op & 0x001f0000) >> 16;
-            ics.I_R2    = (op & 0x0000f800) >> 11;
+        ics.op = op >>> 0;
+        ics.I_OPC   = (op & 0xfc000000) >>> 26;
+        ics.I_IMM5  = op & 0x1f;
+        ics.I_IMM16 = op & 0xffff;
+        ics.I_IMM26 = op & 0x3ffffff;
+        ics.I_R0   = (op & 0x03e00000) >> 21;
+        ics.I_R1    = (op & 0x001f0000) >> 16;
+        ics.I_R2    = (op & 0x0000f800) >> 11;
 
     }
 

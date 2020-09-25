@@ -40,6 +40,13 @@ lm32.cpu_interp = function(params) {
         cs.ram_max  = cs.ram_base + cs.ram_size;
         cs.bus = params.bus;
 
+        if (params.runtime) {
+            cs.runtime = params.runtime;
+        } else {
+            cs.runtime = lm32.runtime.null_runtime;
+        }
+        cs.runtime_args = params.runtime_args; // may be undefined
+
         // general purpose registers
         cs.regs = new Int32Array(32);
         for (var i = 0; i < 32; i++) {
@@ -130,6 +137,8 @@ lm32.cpu_interp = function(params) {
         cs.wp1 = 0;
         cs.wp2 = 0;
         cs.wp3 = 0;
+
+        cs.runtime.reset(cs, cs.runtime_args);
     }
 
     // exception ids
@@ -610,7 +619,6 @@ lm32.cpu_interp = function(params) {
             case 0x1d: // cmpgui
                 I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
                 r[I_R1] = ((r[I_R0] >>> 0) > I_IMM16) | 0;
-                console.log(r[I_R1]);
                 break;
             case 0x1e: // orhi
                 I_IMM16 = ((op & 0xff000000) >>> 24) | ((op & 0x00ff0000) >> 8);
@@ -715,8 +723,8 @@ lm32.cpu_interp = function(params) {
             case 0x32: // sub
                 r[I_R2] = (r[I_R0] - r[I_R1]) | 0;
                 break;
-            case 0x33: // reserved
-                // empty
+            case 0x33: // reserved (user instruction)
+                ics.runtime.user(ics, op);
                 break;
             case 0x34: // wcsr
                 wcsr(ics, I_R0, I_R1);
