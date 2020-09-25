@@ -19,15 +19,18 @@
  */
 importScripts(
     'lm32_base.js',
-    'lm32_pic.js',
+    'lm32_bus.js',
+    'lm32_cpu_common.js',
     'lm32_cpu_dynrec.js',
     'lm32_cpu_interp.js',
-    'lm32_bus.js',
-    'lm32_ram.js',
     'lm32_hwsetup.js',
+    'lm32_pic.js',
+    'lm32_ram.js',
+    'lm32_runtime.js',
     'lm32_sys.js',
     'lm32_timer.js',
-    'lm32_uart.js');
+    'lm32_uart.js'
+);
 
 var sys;
 var console_send_str;

@@ -136,7 +136,7 @@ lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url, cb) {
             cpu.cs.regs[3] = INITRD_BASE;
             cpu.cs.regs[4] = INITRD_BASE + initrd_size;
 
-            cpu.set_timers([timer0]);//, timer1, timer2]);
+            cpu.set_timers(cpu.cs, [timer0]);//, timer1, timer2]);
             cb(
                 {
                     success: true,
@@ -233,7 +233,7 @@ lm32.start_evr = function(console_putchar_fn, kernel_file_name, cb) {
         var cb_result = {success: false, system: undefined};
         if (result.success) {
             cpu.cs.pc = KERNEL_BASE;
-            cpu.set_timers([timer0, timer1]);
+            cpu.set_timers(cpu.cs, [timer0, timer1]);
             cb_result.success = true;
             cb_result.system = {
                 step: cpu.step,

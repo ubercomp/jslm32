@@ -41,19 +41,8 @@ lm32.cpu_dynrec = function(params) {
     cs.I_R2    = 0;  // R2
 
     function reset(params) {
-        cs.ram = params.ram;
-        cs.v8 = cs.ram.v8;
-        cs.ram_base = params.ram_base;
-        cs.ram_size = params.ram_size;
-        cs.ram_max  = cs.ram_base + cs.ram_size;
-        cs.bus = params.bus;
-
-        if (params.runtime) {
-            cs.runtime = params.runtime;
-        } else {
-            cs.runtime = lm32.runtime.null_runtime;
-        }
-        cs.runtime_args = params.runtime_args; // may be undefined
+        // invoke common code first
+        lm32.cpu_common.reset(cs, params);
 
         // To speed up bus accesses
         cs.bus_w = cs.bus.write;
@@ -81,98 +70,6 @@ lm32.cpu_dynrec = function(params) {
         bex[0x38] = v; // bi
         bex[0x3e] = v; // calli
 
-        // general purpose registers
-        cs.regs = new Int32Array(32);
-        for (var i = 0; i < 32; i++) {
-            cs.regs[i] = 0;
-        }
-
-        // control and status registers
-        // program counter: unsigned, two lower bits should always be 0
-        cs.pc = params.bootstrap_pc;
-        cs.next_pc = cs.pc + 4; // jumps write on next_pc
-        cs.pic = lm32.pic();
-
-        // interrupt enable
-        cs.ie = {
-            ie: 0,
-            bie: 0,
-            eie: 0
-        };
-
-        cs.ie_val = function() {
-            var ie = cs.ie.ie ? 1 : 0;
-            var bie = cs.ie.bie ? 1 : 0;
-            var eie = cs.ie.eie ? 1 : 0;
-            return (ie) | (eie << 1) | (bie << 2);
-        };
-
-        cs.ie_wrt = function(val) {
-            val = val & 0x7; // only 3 bits;
-            cs.ie.ie = (val & 0x1) ? 1 : 0;
-            cs.ie.eie = (val & 0x2) ? 1 : 0;
-            cs.ie.bie = (val & 0x4) ? 1 : 0;
-        };
-
-        cs.cc = 0;        // cycle counter
-
-        // configuration:
-        // revision: 3
-        // watchpoints: 4
-        // breakpoints: 4
-        // interrupts: 32
-        // REV                  WP       BP          INT               J  R  H  G  IC DC CC  X  U  S  D  M
-        // 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10 09 08 07 06 05 04 03 02 01 00
-        // 0  0  0  0  1  1  0  1  0  0  0  1  0  0  1  0  0  0  0  0  0  0  0  0  1  1  1  1  1  1  1  1
-        //(0  0  0  0)(1  1  0  1)(0  0  0  1)(0  0  1  0)(0  0  0  0)(0  0  0  0)(0  0  1  1)(0  1  1  1)
-        //     0           d           1           2            0          0            3          7
-        cs.cfg = 0x0d120037;
-
-        cs.eba = params.bootstrap_eba;       // exception base address
-
-        // debug control and status registers
-        cs.dc = {
-            ss: 0,  // single step enabled (1 bit)
-            re: 0,  // remap exceptions (1 bit) - if set, use DEBA for all exceptions
-            c0: 0, // 2 bit value
-            c1: 0, // 2 bit value
-            c2: 0, // 2 bit value
-            c3: 0 // 2 bit value
-        };
-
-        cs.dc_val = function() {
-            var ss = cs.dc.ss?1:0;
-            var re = cs.dc.re?1:0;
-            var c0 = cs.dc.c0 & 0x3;
-            var c1 = cs.dc.c1 & 0x3;
-            var c2 = cs.dc.c2 & 0x3;
-            var c3 = cs.dc.c3 & 0x3;
-            return (ss)|(re<<1)|(c0<<2)|(c1<<4)|(c2<<6)|(c3<<8);
-        };
-
-        cs.dc_wrt = function(val) {
-            val = val & 0x3ff; // 10 bits only
-            cs.dc.ss = val & 0x1 ? 1: 0;
-            cs.dc.re = val & 0x2 ? 1: 0;
-            cs.dc.c0 = (val & (0x3 << 2)) >> 2;
-            cs.dc.c1 = (val & (0x3 << 4)) >> 4;
-            cs.dc.c2 = (val & (0x3 << 6)) >> 6;
-            cs.dc.c3 = (val & (0x3 << 8)) >> 8;
-        };
-
-        cs.deba = params.bootstrap_deba;
-        cs.jtx = 0;
-        cs.jrx = 0;
-        cs.bp0 = 0;
-        cs.bp1 = 0;
-        cs.bp2 = 0;
-        cs.bp3 = 0;
-        cs.wp0 = 0;
-        cs.wp1 = 0;
-        cs.wp2 = 0;
-        cs.wp3 = 0;
-
-        cs.runtime.reset(cs, cs.runtime_args);
     }
 
     // block label and variable names
@@ -982,13 +879,6 @@ lm32.cpu_dynrec = function(params) {
         /* 0x3f */    cmpne_e
     ];
 
-    function tick(ticks) {
-        var len = cs.timers.length;
-        for (var i = 0; i < len; i++) {
-            (cs.timers[i])(ticks);
-        }
-    }
-
     function decode_instr(ics, op) {
         ics.op = op >>> 0;
         ics.I_OPC   = (op & 0xfc000000) >>> 26;
@@ -1014,13 +904,6 @@ lm32.cpu_dynrec = function(params) {
         var rpc; // ram-based pc
         var max_ticks = 1000; // max_ticks without informing timer
         var ticks = 0; // ticks to inform
-        var tick_f; // function to be called for ticks
-        if (ics.orig_timers.length == 1) {
-            // optimize when there's only one timer
-            tick_f = ics.orig_timers[0].on_tick;
-        } else {
-            tick_f = tick;
-        }
         var ram_base = ics.ram_base;
         var v8 = ics.ram.v8;
 
@@ -1058,7 +941,7 @@ lm32.cpu_dynrec = function(params) {
                 // $t : tmp
                 prologue.push("var $i, $u, $t;\n");
                 prologue.push("var $r = cs.regs;\n");
-                prologue.push("var v8 = cs.v8;\n");
+                prologue.push("var v8 = cs.ram.v8;\n");
                 prologue.push("var $c = 0;\n"); // loop counter
                 prologue.push("var $n = " + pc + ";\n");
 
@@ -1122,47 +1005,15 @@ lm32.cpu_dynrec = function(params) {
             i += inc;
             ticks += inc;
             if (ticks >= max_ticks) {
-                tick_f(max_ticks);
+                ics.tick_f(max_ticks);
                 ticks -= max_ticks;
             }
             ics.cc = (ics.cc + inc) | 0;
             ics.pc = ics.next_pc;
         } while (i < instructions);
 
-        tick_f(ticks);
+        ics.tick_f(ticks);
         return i;
-    }
-
-    function set_timers(timers) {
-        var len = timers.length;
-        cs.timers = new Array(len);
-        cs.orig_timers = timers;
-        for (var i = 0; i < len; i++) {
-            var cur = timers[i];
-            (cs.timers)[i] = cur.on_tick;
-        }
-    }
-
-    function dump_ie() {
-        var fmt = lm32.util.format;
-        console.log('ie=' + fmt(cs.ie_val()) + '(IE=' + cs.ie.ie + ' EIE=' + cs.ie.eie + ' BIE=' + cs.ie.bie + ')');
-    }
-
-    function dump() {
-        var i;
-        var fmt = lm32.util.format;
-        console.log("DUMP:");
-        console.log('');
-        console.log('IN: PC=' + fmt(cs.pc));
-        console.log('ie=' + fmt(cs.ie_val()) + '(IE=' + cs.ie.ie + ' EIE=' + cs.ie.eie + ' BIE=' + cs.ie.bie + ')');
-        console.log('im='+ fmt(cs.pic.get_im()) + ' ip=' + fmt(cs.pic.get_ip()));
-        console.log('eba=' + fmt(cs.eba) + ' deba=' + fmt(cs.deba));
-
-        for (i = 0; i < 32; i++) {
-            if (cs.regs[i] != 0) {
-                console.log("r" + i + " = " + lm32.util.format(cs.regs[i]));
-            }
-        }
     }
 
     // initialization
@@ -1171,7 +1022,6 @@ lm32.cpu_dynrec = function(params) {
     return {
         cs: cs,
         step: step,
-        dump: dump,
-        set_timers: set_timers
+        set_timers: lm32.cpu_common.set_timers
     }
 };

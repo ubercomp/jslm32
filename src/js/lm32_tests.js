@@ -160,7 +160,7 @@ function start_test_sys(cpu_f, terminal_div) {
             }
         };
         var timer = dummyTimer();
-        cpu.set_timers([timer]);
+        cpu.set_timers(cpu.cs, [timer]);
 
         bus.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
 
