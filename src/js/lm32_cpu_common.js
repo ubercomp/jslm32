@@ -132,32 +132,6 @@ lm32.cpu_common = (function() {
         cs.runtime.reset(cs, cs.runtime_args);
     }
 
-    function set_timers(cs, timers) {
-        var len = timers.length;
-        cs.timers = new Array(len);
-        for (var i = 0; i < len; i++) {
-            var cur = timers[i];
-            (cs.timers)[i] = cur.on_tick;
-        }
-        set_tick_f(cs);
-    }
-
-    function set_tick_f(cs) {
-        // returns the tick function
-        if (cs.timers.length === 1) {
-            cs.tick_f = cs.timers[0].on_tick;
-        }
-        cs.tick_f = (function(cs) {
-            function tick(ticks) {
-                var len = cs.timers.length;
-                for (var i = 0; i < len; i++) {
-                    (cs.timers[i])(ticks);
-                }
-            }
-            return tick;
-        })(cs);
-    }    
-
     function dump_ie(cs) {
         var fmt = lm32.util.format;
         console.log('ie=' + fmt(cs.ie_val()) + '(IE=' + cs.ie.ie + ' EIE=' + cs.ie.eie + ' BIE=' + cs.ie.bie + ')');
@@ -183,6 +157,5 @@ lm32.cpu_common = (function() {
     return {
         reset: reset,
         dump: dump,
-        set_timers: set_timers
     };
 })();

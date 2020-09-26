@@ -142,7 +142,7 @@ lm32.cpu_interp = function(params) {
                 val = cs.pic.get_ip();
                 break;
             case CSR_CC:
-                val = cs.cc;
+                val = cs.cc; // note: cycle counter is 0 now
                 break;
             case CSR_CFG:
                 val = cs.cfg;
@@ -240,11 +240,8 @@ lm32.cpu_interp = function(params) {
         var ram = ics.ram;
 
         var ps = ics.pic.state; // pic state
-        var inc;
         var op, pc;
         var rpc; // ram-based pc
-        var max_ticks = 1000; // max_ticks without informing timer
-        var ticks = 0; // ticks to inform
 
         var I_OPC, I_IMM5, I_IMM16, I_IMM26, I_R0, I_R1, I_R2;
 
@@ -687,16 +684,8 @@ lm32.cpu_interp = function(params) {
                 break;
             }
 
-            inc = 1;
-            ticks += inc;
-            if (ticks >= max_ticks) {
-                ics.tick_f(max_ticks);
-                ticks -= max_ticks;
-            }
-            ics.cc = (ics.cc + inc) | 0;
             ics.pc = ics.next_pc;
         } while (++i < instructions);
-        ics.tick_f(ticks);
         return i;
     }
 
@@ -707,6 +696,5 @@ lm32.cpu_interp = function(params) {
     return {
         cs: cs,
         step: step,
-        set_timers: lm32.cpu_common.set_timers
     }
 };

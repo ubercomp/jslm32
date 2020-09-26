@@ -2,7 +2,7 @@
  *
  * LatticeMico32 CPU emulation: dynamic recompilation
  *
- * Copyright (c) 2011-2012, 2016-2017 Reginaldo Silva (reginaldo@ubercomp.com)
+ * Copyright (c) 2011-2020 Reginaldo Silva (reginaldo@ubercomp.com)
  *
  * Specification available at http://www.latticesemi.com/
  *
@@ -634,7 +634,7 @@ lm32.cpu_dynrec = function(params) {
                 val = "cs.pic.get_ip()";
                 break;
             case CSR_CC:
-                val = "cs.cc";
+                val = "cs.cc"; // always zero
                 break;
             case CSR_CFG:
                 val = "cs.cfg";
@@ -892,18 +892,15 @@ lm32.cpu_dynrec = function(params) {
     }
 
     function step(instructions) {
-        instructions *= 5;
         var i = 0;
+        var blocks = 10 * instructions;
         var ics = cs; // internal cs -> speeds things up
         var bc = ics.block_cache;
         var block;
         var es; // emmiter state
         var ps = ics.pic.state; // pic state
-        var inc;
         var op, pc, opcode;
         var rpc; // ram-based pc
-        var max_ticks = 1000; // max_ticks without informing timer
-        var ticks = 0; // ticks to inform
         var ram_base = ics.ram_base;
         var v8 = ics.ram.v8;
 
@@ -1001,18 +998,9 @@ lm32.cpu_dynrec = function(params) {
             }
             block = bc[pc];
             (block[1])(ics);
-            inc = block[2];
-            i += inc;
-            ticks += inc;
-            if (ticks >= max_ticks) {
-                ics.tick_f(max_ticks);
-                ticks -= max_ticks;
-            }
-            ics.cc = (ics.cc + inc) | 0;
             ics.pc = ics.next_pc;
-        } while (i < instructions);
+        } while (++i < blocks);
 
-        ics.tick_f(ticks);
         return i;
     }
 
@@ -1022,6 +1010,5 @@ lm32.cpu_dynrec = function(params) {
     return {
         cs: cs,
         step: step,
-        set_timers: lm32.cpu_common.set_timers
     }
 };

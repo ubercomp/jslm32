@@ -154,14 +154,6 @@ function start_test_sys(cpu_f, terminal_div) {
         };
         var cpu = cpu_f(cpu_params);
 
-        var dummyTimer = function() {
-            return {
-                on_tick: function() {}
-            }
-        };
-        var timer = dummyTimer();
-        cpu.set_timers(cpu.cs, [timer]);
-
         bus.add_memory(RAM_BASE, RAM_SIZE, ram.get_mmio_handlers());
 
         var str = "\nRunning Test " + test_name + " (" + idx + ")\n";

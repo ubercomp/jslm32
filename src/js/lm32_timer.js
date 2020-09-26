@@ -24,9 +24,6 @@
 "use strict";
 
 lm32.timer = function(params) {
-    // dependencies
-    var bits = lm32.util;
-
     // parameters
     var id = params.id;
     var set_irq  = params.set_irq;  // function(irq_line, irq_value)
@@ -49,6 +46,10 @@ lm32.timer = function(params) {
 
     // state
     var regs = new Int32Array(R_MAX);
+    var timeout_id = null;
+    var timeout_ms = null;
+    var last_start_time_ms = 0;
+    var last_stop_time_ms = 0;
 
     function update_irq() {
         // the line below works only because ITO is the LSB
@@ -57,22 +58,42 @@ lm32.timer = function(params) {
         return state;
     }
 
-    function read_32(addr) {
-        var r = 0;
-        addr = addr >> 2;
 
-        switch (addr) {
-            case R_SR:
-            case R_CR:
-            case R_PERIOD:
-            case R_SNAPSHOT:
-                r = regs[addr];
-                break;
-            default:
-                r = 0;
-                break;
+
+    function start_timeout() {
+        if (regs[R_SR] & SR_RUN) {
+            timeout_ms = Math.round((1000 * regs[R_PERIOD])/ params.frequency);
+            last_start_time_ms = performance.now();
+            timeout_id = setTimeout(hit, timeout_ms);
         }
-        return r;
+    }
+
+
+    function stop_timeout() {
+        if (timeout_id !== null) {
+            clearTimeout(timeout_id);
+            timeout_id = null;
+            last_stop_time_ms = performance.now();
+        }
+
+    }
+
+    function read_32(addr) {
+        var i = addr >> 2;
+
+        // update snapshot / estimate
+        if (i == R_SNAPSHOT) {
+            if (regs[R_SR] & SR_RUN) {
+                // running, estimate from last period
+                var delta = performance.now() - last_start_time_ms;
+                regs[R_SNAPSHOT] =
+                    Math.round(regs[R_PERIOD]*(1.0 - (delta / timeout_ms)));
+                if (regs[R_SNAPSHOT] < 0) {
+                    regs[R_SNAPSHOT] = 0;
+                }
+            }
+        }
+        return regs[i];
     }
 
     function write_32(addr, value) {
@@ -80,7 +101,7 @@ lm32.timer = function(params) {
         value = value | 0;
         switch (addr) {
             case R_SR:
-                if (value & SR_TO) {
+            if (value & SR_TO) {
                     regs[R_SR] |= SR_TO;
                 } else {
                     regs[R_SR] &= ~SR_TO;
@@ -88,19 +109,23 @@ lm32.timer = function(params) {
                 break;
             case R_CR:
                 regs[R_CR] = value;
-                if ((value & CR_START) != 0) {
+                if (value & CR_START) {
                     regs[R_SR] |= SR_RUN;
+                    start_timeout();
                 }
-                if ((value & CR_STOP) != 0) {
+
+                if (value & CR_STOP) {
                     regs[R_SR] &= ~SR_RUN;
+                    stop_timeout();
                 }
                 break;
             case R_PERIOD:
                 if (value < 0) {
                     throw ('timer' + id + 'bad period ' + value);
                 } else {
-                    regs[addr] = value;
+                    regs[R_PERIOD] = value;
                     regs[R_SNAPSHOT] = value;
+                    start_timeout();
                 }
                 break;
             case R_SNAPSHOT:
@@ -110,26 +135,19 @@ lm32.timer = function(params) {
         update_irq();
     }
 
-    function on_tick(ticks) {
-        if ((regs[R_SR] & SR_RUN)) {
-            regs[R_SNAPSHOT] -= ticks;
-            if (regs[R_SNAPSHOT] <= 0) {
-                hit(-regs[R_SNAPSHOT]);
-            }
-        }
-
-    }
-
-    function hit(remainder) {
+    function hit() {
         // timeout
         regs[R_SR] = regs[R_SR] | SR_TO;
 
         // when counter is zero, snapshot is updated, regardless of CR_CONT
         regs[R_SNAPSHOT] = regs[R_PERIOD];
 
-        if ((regs[R_CR] & CR_CONT) == 0) {
+        if (!(regs[R_CR] & CR_CONT)) {
             // not continuous, stop running
             regs[R_SR] &= ~SR_RUN;
+            stop_timeout();
+        } else {
+            start_timeout();
         }
         update_irq();
     }
@@ -137,6 +155,7 @@ lm32.timer = function(params) {
     function reset() {
         for (var i = 0; i < R_MAX; i++) {
             regs[i] = 0;
+            stop_timeout();
         }
     }
 
@@ -154,7 +173,6 @@ lm32.timer = function(params) {
     return {
         iomem_size: 4 * R_MAX,
         get_mmio_handlers: get_mmio_handlers,
-        on_tick: on_tick,
         reset: reset,
         update_irq: update_irq
     };
