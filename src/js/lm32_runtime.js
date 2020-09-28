@@ -39,8 +39,7 @@ lm32.runtime = (function() {
 
     
     function handle_user_newlib_exception(cs, opcode) {
-        // interp does little endian read, and dynrec does big endian, this will change soon
-        var should_handle = (opcode ===  0x070000cc || opcode == 0xcc000007)
+        var should_handle = (opcode === 0xcc000007)
 
         if (should_handle) {
             // system call:

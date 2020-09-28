@@ -27,8 +27,7 @@
 lm32.ram = function(size) {
     var buff = new ArrayBuffer(size);
     var v8 = new Uint8Array(buff);
-    var v16 = new Uint16Array(buff);
-    var v32 = new Uint32Array(buff);
+    var dv = new DataView(buff);
 
     var read_8 = function(offset) {
         return v8[offset];
@@ -84,8 +83,7 @@ lm32.ram = function(size) {
 
     return {
         v8: v8,
-        v16: v16,
-        v32: v32,
+        dv: dv,
         read_8: read_8,
         read_16: read_16,
         read_32: read_32,
