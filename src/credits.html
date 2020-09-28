@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+  <head>
+    <title>jslm32: credits</title>
+  </head>
+  <body>
+    <h1>jslm32 uses and/or distributes the following third party software:</h1>
+    
+    <h2>Fabrice Bellard's term.js</h2>
+    <h3>Description</h3>
+    <p>This is the terminal emulator you see in action when you use
+      jslm32. It was written by Fabrice Bellard, who also started the
+      QEMU project (referenced below).
+      <h3>License</h3>
+      <pre>
+/*
+ * Javascript terminal
+ * 
+ * Copyright (c) 2011 Fabrice Bellard
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+ </pre>
+    
+    <h2>QEMU</h2>
+    <h3>Description</h3>
+    <p>The test files I'm using are a port of QEMU's lm32 test files,
+      source from QEMU's tests/tcg/lm32 directory. See the
+      third-party/qemu-tcg-lm32-tests directory in your jslm32 for
+      information on how to build your own test files.</p>
+    <p>My fork of QEMU is
+    on <a href="https://github.com/ubercomp/qemu-jslm32">GitHub</a></p>
+    <h3>License</h3>
+    <p>See GitHub link above for detailed licensing information.</p>
+    <pre>
+The QEMU distribution includes both the QEMU emulator and
+various firmware files.  These are separate programs that are
+distributed together for our users' convenience, and they have
+separate licenses.
+
+The following points clarify the license of the QEMU emulator:
+
+1) The QEMU emulator as a whole is released under the GNU General
+Public License, version 2.
+
+2) Parts of the QEMU emulator have specific licenses which are compatible
+with the GNU General Public License, version 2. Hence each source file
+contains its own licensing information.  Source files with no licensing
+information are released under the GNU General Public License, version
+2 or (at your option) any later version.
+
+As of July 2013, contributions under version 2 of the GNU General Public
+License (and no later version) are only accepted for the following files
+or directories: bsd-user/, linux-user/, hw/vfio/, hw/xen/xen_pt*.
+
+3) The Tiny Code Generator (TCG) is mostly under the BSD or MIT licenses;
+   but some parts may be GPLv2 or other licenses. Again, see the
+   specific licensing information in each source file.
+
+4) QEMU is a trademark of Fabrice Bellard.
+
+Fabrice Bellard and the QEMU team
+</pre>
+  </body>
+</html>
