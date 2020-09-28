@@ -34,39 +34,27 @@ lm32.ram = function(size) {
     };
 
     var read_16 = function(offset) {
-        var hi = v8[offset];
-        var lo = v8[offset + 1];
-        return (hi<<8)|lo
+        return dv.getUint16(offset);
     };
 
     var read_32 = function(offset) {
-        var h0 = v8[offset];
-        var h1 = v8[offset + 1];
-        var l0 = v8[offset + 2];
-        var l1 = v8[offset + 3];
-        return (h0<<24)|(h1<<16)|(l0<<8)|(l1);
+        return dv.getUint32(offset);
+
     };
 
     var write_8 = function(offset, value) {
-    v8[offset] = value;
+        v8[offset] = (value & 0xff);;
+
     };
 
     var write_16 = function(offset, value) {
-        var hi = (value & 0xff00) >> 8;
-        var lo = (value & 0xff);
-        v8[offset] = hi;
-        v8[offset + 1] = lo;
+        dv.setUint16(offset, value)
+
     };
 
     var write_32 = function(offset, value) {
-        var h0 = (value & 0xff000000) >>> 24;
-        var h1 = (value & 0x00ff0000) >> 16;
-        var l0 = (value & 0x0000ff00) >> 8;
-        var l1 = (value & 0x000000ff);
-        v8[offset] = h0;
-        v8[offset + 1] = h1;
-        v8[offset + 2] = l0;
-        v8[offset + 3] = l1;
+        dv.setUint32(offset, value);
+
     };
 
     var get_mmio_handlers = function() {

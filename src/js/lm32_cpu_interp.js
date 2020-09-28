@@ -365,7 +365,7 @@ lm32.cpu_interp = function(params) {
                 I_IMM16 = op & 0xffff;
                 uaddr = (r[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
-                    r[I_R1] = ram.read_16(uaddr - ics.ram_base);
+                    r[I_R1] = ram.read_16(uaddr - ics.ram_base) >>> 0;
                 } else {
                     val = ics.bus.read_16(uaddr);
                     if (val != undefined) {

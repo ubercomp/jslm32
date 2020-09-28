@@ -488,13 +488,13 @@ lm32.cpu_dynrec = function(params) {
         var code = "";
         switch(width) {
             case 8:
-                code = "v8[$i]";
+                code = "$v8[$i]";
                 break;
             case 16:
-                code = "(v8[$i] << 8) | v8[$i + 1]";
+                code = "$dv.getUint16($i)";
                 break
             case 32:
-                code = "(v8[$i] << 24) | (v8[$i + 1] << 16) | (v8[$i + 2] << 8) | v8[$i + 3]";
+                code = "$dv.getUint32($i)";
                 break;
             default:
                 throw "Unknown ram width: " + width;
@@ -542,17 +542,13 @@ lm32.cpu_dynrec = function(params) {
         var code = "";
         switch(width) {
             case 8:
-                code = "v8[$i] = $t & 0xff;\n";
+                code = "$v8[$i] = $t & 0xff;\n";
                 break;
             case 16:
-                code = "v8[$i] = ($t >> 8) & 0xff;\n";
-                code+= "v8[$i + 1] = $t & 0xff;\n";
+                code = "$dv.setUint16($i, $t);\n";
                 break;
             case 32:
-                code = "v8[$i] = ($t >>> 24) & 0xff;\n";
-                code+= "v8[$i + 1] = ($t >> 16) & 0xff;\n";
-                code+= "v8[$i + 2] = ($t >> 8) & 0xff;\n";
-                code+= "v8[$i + 3] = $t & 0xff;\n";
+                code = "$dv.setUint32($i, $t);\n";
                 break
             default:
                 throw "Invalid width for data: " + width;
@@ -902,7 +898,7 @@ lm32.cpu_dynrec = function(params) {
         var op, pc, opcode;
         var rpc; // ram-based pc
         var ram_base = ics.ram_base;
-        var v8 = ics.ram.v8;
+        var dv = ics.ram.dv;
 
         var prologue;
         var body;
@@ -938,7 +934,8 @@ lm32.cpu_dynrec = function(params) {
                 // $t : tmp
                 prologue.push("var $i, $u, $t;\n");
                 prologue.push("var $r = cs.regs;\n");
-                prologue.push("var v8 = cs.ram.v8;\n");
+                prologue.push("var $v8 = cs.ram.v8;\n");
+                prologue.push("var $dv = cs.ram.dv;\n");
                 prologue.push("var $c = 0;\n"); // loop counter
                 prologue.push("var $n = " + pc + ";\n");
 
@@ -953,7 +950,8 @@ lm32.cpu_dynrec = function(params) {
                     // Instruction fetching:
                     // supports only code from ram (faster)
                     rpc = block[0] - ram_base;
-                    op = (v8[rpc] << 24) | (v8[rpc + 1] << 16) | (v8[rpc + 2] << 8) | (v8[rpc + 3]);
+                    op = dv.getUint32(rpc);
+
                     // supports code outside ram
                     // op = ibus.read_32(block[0]);
 
