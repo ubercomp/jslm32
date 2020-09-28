@@ -43,7 +43,7 @@ lm32.ram = function(size) {
     };
 
     var write_8 = function(offset, value) {
-        v8[offset] = (value & 0xff);;
+        v8[offset] = value;
 
     };
 

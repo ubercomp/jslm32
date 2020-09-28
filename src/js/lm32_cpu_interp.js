@@ -294,7 +294,7 @@ lm32.cpu_interp = function(params) {
                 I_IMM16 = op & 0xffff;
                 uaddr = (r[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
-                    ram.write_16(uaddr - ics.ram_base, r[I_R1] & 0xffff);
+                    dv.setUint16(uaddr - ics.ram_base, r[I_R1] & 0xffff);
                 } else {
                     ics.bus.write_16(uaddr, r[I_R1]);
                 }
@@ -303,7 +303,7 @@ lm32.cpu_interp = function(params) {
                 I_IMM16 = op & 0xffff;
                 uaddr = (r[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
-                    r[I_R1] = (ram.read_8(uaddr - ics.ram_base) << 24 >> 24);
+                    r[I_R1] = (ram.v8[uaddr - ics.ram_base] << 24 >> 24);
                 } else {
                     val = ics.bus.read_8(uaddr);
                     if (val != undefined) {
@@ -326,7 +326,7 @@ lm32.cpu_interp = function(params) {
                 I_IMM16 = op & 0xffff;
                 uaddr = (r[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
-                    r[I_R1] = (ram.read_16(uaddr - ics.ram_base) << 16 >> 16);
+                    r[I_R1] = dv.getInt16(uaddr - ics.ram_base);
                 } else {
                     val = ics.bus.read_16(uaddr);
                     if (val != undefined) {
@@ -349,7 +349,7 @@ lm32.cpu_interp = function(params) {
                 I_IMM16 = op & 0xffff;
                 uaddr = (r[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
-                    r[I_R1] = ram.read_32(uaddr - ics.ram_base);
+                    r[I_R1] = dv.getUint32(uaddr - ics.ram_base);
                 } else {
                     val = ics.bus.read_32(uaddr);
                     if (val != undefined) {
@@ -365,7 +365,7 @@ lm32.cpu_interp = function(params) {
                 I_IMM16 = op & 0xffff;
                 uaddr = (r[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
-                    r[I_R1] = ram.read_16(uaddr - ics.ram_base) >>> 0;
+                    r[I_R1] = dv.getUint16(uaddr - ics.ram_base);
                 } else {
                     val = ics.bus.read_16(uaddr);
                     if (val != undefined) {
@@ -401,7 +401,7 @@ lm32.cpu_interp = function(params) {
                 I_IMM16 = op & 0xffff;
                 uaddr = (r[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
-                    r[I_R1] = ram.read_8(uaddr - ics.ram_base);
+                    r[I_R1] = v8[uaddr - ics.ram_base];
                 } else {
                     val = ics.bus.read_8(uaddr);
                     if (val != undefined) {
@@ -446,7 +446,7 @@ lm32.cpu_interp = function(params) {
                 I_IMM16 = op & 0xffff;
                 uaddr = (r[I_R0] + (I_IMM16 << 16 >> 16)) >>> 0;
                 if ((uaddr >= ics.ram_base) && (uaddr < ics.ram_max)) {
-                    ram.write_32(uaddr - ics.ram_base, r[I_R1] | 0);
+                    dv.setUint32(uaddr - ics.ram_base, r[I_R1] | 0);
                 } else {
                     ics.bus.write_32(uaddr, r[I_R1]);
                 }
