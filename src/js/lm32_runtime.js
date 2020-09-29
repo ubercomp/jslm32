@@ -40,7 +40,6 @@ lm32.runtime = (function() {
     
     function handle_user_newlib_exception(cs, opcode) {
         var should_handle = (opcode === 0xcc000007)
-
         if (should_handle) {
             // system call:
             // r8 -> system call number
@@ -79,7 +78,7 @@ lm32.runtime = (function() {
 
     function init_barebones_newlib_runtime(cs, args) {
         // set stack
-        cpu.cs.regs[28] = cs.RAM_BASE + cs.RAM_SIZE - 4
+        cs.regs[28] = cs.ram_base + cs.ram_size - 4
     }
 
 
