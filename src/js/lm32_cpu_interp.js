@@ -271,10 +271,10 @@ lm32.cpu_interp = function(params) {
             rpc = pc - ram_base;
 
             op = dv.getUint32(rpc);
-            I_OPC = (op & 0xfc000000) >>> 26;
-            I_R0 = (op & 0x03e00000) >> 21;
-            I_R1 = (op & 0x001f0000) >> 16;
-            I_R2 = (op & 0x0000f800) >> 11;
+            I_OPC = op >>> 26;
+            I_R0 = (op >> 21) & 0x1f;
+            I_R1 = (op >> 16) & 0x1f;
+            I_R2 = (op >> 11) & 0x1f;
 
             // Instruction execution:
             switch(I_OPC) {

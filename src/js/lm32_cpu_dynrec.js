@@ -877,14 +877,13 @@ lm32.cpu_dynrec = function(params) {
 
     function decode_instr(ics, op) {
         ics.op = op >>> 0;
-        ics.I_OPC   = (op & 0xfc000000) >>> 26;
+        ics.I_OPC   = op >>> 26;
         ics.I_IMM5  = op & 0x1f;
         ics.I_IMM16 = op & 0xffff;
         ics.I_IMM26 = op & 0x3ffffff;
-        ics.I_R0   = (op & 0x03e00000) >> 21;
-        ics.I_R1    = (op & 0x001f0000) >> 16;
-        ics.I_R2    = (op & 0x0000f800) >> 11;
-
+        ics.I_R0    = (op >> 21) & 0x1f;
+        ics.I_R1    = (op >> 16) & 0x1f;
+        ics.I_R2    = (op >> 11) & 0x1f;
     }
 
     function step(instructions) {
