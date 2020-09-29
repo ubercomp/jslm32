@@ -19,7 +19,7 @@
  * <http://www.gnu.org/licenses/lgpl-2.1.html>
  */
 "use strict";
-lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url, cb) {
+lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url, wake_up_on_interrupt, cb) {
     var CPU_FREQ = 75000000; // TODO make it a parameter?
 
     var RAM_BASE = 0x08000000;
@@ -59,10 +59,11 @@ lm32.start_uclinux = function(console_putchar_fn, kernel_url, romfs_url, cb) {
         ram_size: RAM_SIZE,
         bootstrap_pc: BOOT_PC,
         bootstrap_eba: EBA_BASE,
-        bootstrap_deba: DEBA_BASE
+        bootstrap_deba: DEBA_BASE,
+        wake_up_on_interrupt: wake_up_on_interrupt
     };
 
-    var cpu = lm32.cpu_dynrec(cpu_params);
+    var cpu = lm32.cpu_interp(cpu_params);
     var set_irq = cpu.cs.pic.irq_handler;
 
     var timer0 = lm32.timer({

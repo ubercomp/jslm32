@@ -48,7 +48,8 @@ lm32.cpu_common = (function() {
         // program counter: unsigned, two lower bits should always be 0
         cs.pc = params.bootstrap_pc;
         cs.next_pc = cs.pc + 4; // jumps write on next_pc
-        cs.pic = lm32.pic();
+        cs.waiting = false;
+        cs.pic = lm32.pic(cs, params.wake_up_on_interrupt);
 
         // interrupt enable
         cs.ie = {

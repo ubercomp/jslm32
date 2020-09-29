@@ -19,8 +19,14 @@
 
  */
 "use strict";
-lm32.pic = function() {
+lm32.pic = function(cs, wake_up) {
     var state = {ip: 0, im: 0, irq_state: 0};
+
+    function reset() {
+        if (typeof(wake_up) != "function") {
+            wake_up = function() {};
+        }
+    }
 
     function dump() {
         return ("im=" + state.im + " ip=" + state.ip + ' irq_state=' + state.irq_state);
@@ -28,6 +34,9 @@ lm32.pic = function() {
 
     function update_irq() {
         state.ip |= state.irq_state;
+        if (state.ip && cs.waiting) {
+            wake_up();
+        }
     }
 
     function irq_handler (irq, level) {
@@ -64,6 +73,8 @@ lm32.pic = function() {
     function get_ip() {
         return state.ip;
     }
+
+    reset();
 
     return {
         dump: dump,

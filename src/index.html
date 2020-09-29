@@ -68,8 +68,14 @@
         function step_forever() {
             var requested = 50000;
             var stepped = sys.step(requested);
-            ics_update(stepped);
-            setTimeout(step_forever, 0);
+            if (stepped != 0) {
+                ics_update(stepped);
+                setTimeout(step_forever, 0);
+            }
+        }
+
+        function wake_up() {
+            step_forever();
         }
 
         function terminal_putchar(c) {
@@ -122,6 +128,7 @@
                 terminal_putchar,
                 '../linux/vmlinux.bin',
                 '../linux/romfs.ext2',
+                wake_up,
                 on_start_uclinux_result
             );
 

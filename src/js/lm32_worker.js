@@ -47,8 +47,10 @@ function worker_on_message(e) {
     switch(type) {
         case 'work':
             stepped = step(10000);
-            self.postMessage({type: 'work_done', instructions: stepped});
-            break;
+            if (stepped !== 0) {
+                self.postMessage({type: 'work_done', instructions: stepped});
+                break;
+            }
 
         case 'terminal_send_str':
             console_send_str(msg.payload);
@@ -58,6 +60,10 @@ function worker_on_message(e) {
             throw({error: 'Unknown message', msg: msg});
             break;
     }
+}
+
+function worker_wake_up_on_interrupt() {
+    self.worker_on_message({data: {type: "work"}});
 }
 
 function worker_start(e) {
@@ -84,6 +90,7 @@ function worker_start(e) {
             worker_terminal_putchar,
             msg.kernel_url,
             msg.romfs_url,
+            worker_wake_up_on_interrupt,
             on_start_uclinux_result
         );
 
