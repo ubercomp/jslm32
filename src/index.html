@@ -113,6 +113,14 @@
         }
 
 
+        function lm32_start() {
+            if (typeof Worker !== "undefined") {
+                lm32_start_worker();
+            } else {
+                lm32_start_regular();
+            }
+        }
+
         function lm32_start_regular() {
             terminal.write("Loading...\r\n");
             var on_start_uclinux_result = function(result) {
@@ -226,8 +234,7 @@
 <p> Copyright (c) 2011-2020 Reginaldo Silva </p>
 <p> Contact: reginaldo at ubercomp </p>
 <p> See <a href="credits.html">Credits</a> for information about third-party software used by jslm32</p>
-<button onclick="lm32_start_regular()">Start!</button>
-<button onclick="lm32_start_worker()">Start with web workers!</button>
+<button onclick="lm32_start()">Start!</button>
 <p>Login: root ; Password: lattice</p>
 <div>Processor real time speed: <span id="mips">0.00</span> MIPS</div>
 <div id="frameBuffer"></div>
